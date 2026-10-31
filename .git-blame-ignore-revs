@@ -1,0 +1,17 @@
+# Formatting-only commits for git blame to skip. GitHub reads this file
+# automatically; locally, run:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# ESLint adoption autofixes
+5b625f343ad29bf275d7045ea5700ac60e62f88e # Switch string literals to single quotes
+e6f955b3c4e406d588da80310a391b858f398cf5 # Drop parentheses around single arrow parameters
+ab6ce7732b1e731db77aa62f086d35ba8401dd22 # Normalize trailing commas
+da79cc0a04b4be206156dad35cac23d7ef7bc843 # Quote all keys where any key needs quotes
+dfc36304d4572919260b81d03db202a1bc8be310 # Normalize multiline ternary layout
+bd19fadf14dc561ecabf1eff446caefe9c318e6e # Format non-script files with Prettier
+745f71d801b5bfef12b981d166b92eb23524d53a # Normalize YAML document starts
+d169d95bf61f62201b67828961b8580051cc9676 # Sort pnpm workspace keys
+6ccbd0e0e6fd1a37579dc36c329ca39decb4f90a # Sort named imports
+ed1d90e34cf241289103199cb532f865aa10612f # Order imports by group
+e8e1624e206e0f9f71476d93dbb068d24e0340d8 # Pad test blocks with blank lines
+88ea035d84c541df7aeb3d06d0b5f268db5a6b13 # Drop separators from four-digit numbers
