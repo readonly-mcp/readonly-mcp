@@ -36,7 +36,7 @@ These are non-negotiable. Every change must preserve them:
 ## Adding a New Tool
 
 1. Create `tools/<name>.ts` — export a function that takes a `McpServer` and
-   registers the tool via `server.tool()`
+   registers the tool via `server.registerTool()`
 1. Define a `SUBCOMMANDS` set of allowed subcommands
 1. Define `BLOCKED_FLAGS` for any flags that could mutate state, leak secrets,
    or enable SSRF

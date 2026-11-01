@@ -16,10 +16,12 @@ const SUBCOMMANDS = new Set([
 const BLOCKED_FLAGS = new Set(['--fix', '--registry']);
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'pnpm',
-    'Run read-only pnpm commands (--version, --help, audit, bin, licenses list, list, outdated, root, search, store status, why)',
-    ArgsSchema,
+    {
+      description: 'Run read-only pnpm commands (--version, --help, audit, bin, licenses list, list, outdated, root, search, store status, why)',
+      inputSchema: ArgsSchema,
+    },
     async ({ args }) => {
       const [only, ...rest] = args;
       const isGlobal = only !== undefined && rest.length === 0 && GLOBAL_FLAGS.has(only);

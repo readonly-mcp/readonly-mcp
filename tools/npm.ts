@@ -12,10 +12,12 @@ const SUBCOMMANDS = new Set([
 const BLOCKED_FLAGS = new Set(['--fix', '--registry', '--no-ignore-scripts', '--ignore-scripts']);
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'npm',
-    'Run read-only npm commands (audit, bin, explain, fund, ls, outdated, root, search, view)',
-    ArgsSchema,
+    {
+      description: 'Run read-only npm commands (audit, bin, explain, fund, ls, outdated, root, search, view)',
+      inputSchema: ArgsSchema,
+    },
     async ({ args }) => {
       if (!matchesAllowlist(args, SUBCOMMANDS))
         return rejectSubcommand(args, SUBCOMMANDS);

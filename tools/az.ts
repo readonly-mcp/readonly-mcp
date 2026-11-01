@@ -76,10 +76,12 @@ const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | null =>
 };
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'az',
-    'Run read-only Azure DevOps CLI commands (devops invoke for GET-only REST API limited to build-debugging endpoints, devops project/team/extension/service-endpoint/wiki, pipelines list/show/build/release/runs/pool/agent). Prefer dedicated subcommands when available; use devops invoke only for endpoints without a CLI equivalent (e.g., build logs/timeline).',
-    ArgsSchema,
+    {
+      description: 'Run read-only Azure DevOps CLI commands (devops invoke for GET-only REST API limited to build-debugging endpoints, devops project/team/extension/service-endpoint/wiki, pipelines list/show/build/release/runs/pool/agent). Prefer dedicated subcommands when available; use devops invoke only for endpoints without a CLI equivalent (e.g., build logs/timeline).',
+      inputSchema: ArgsSchema,
+    },
     async ({ args }) => {
       if (!matchesAllowlist(args, SUBCOMMANDS))
         return rejectSubcommand(args, SUBCOMMANDS);

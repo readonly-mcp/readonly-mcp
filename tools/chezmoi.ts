@@ -8,10 +8,12 @@ const SUBCOMMANDS = new Set([
 ]);
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'chezmoi',
-    'Run read-only chezmoi commands (diff, doctor, managed, source-path, status, target-path, verify)',
-    ArgsSchema,
+    {
+      description: 'Run read-only chezmoi commands (diff, doctor, managed, source-path, status, target-path, verify)',
+      inputSchema: ArgsSchema,
+    },
     async ({ args }) => {
       if (!matchesAllowlist(args, SUBCOMMANDS))
         return rejectSubcommand(args, SUBCOMMANDS);

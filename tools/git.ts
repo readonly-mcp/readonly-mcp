@@ -68,10 +68,12 @@ const GitSchema = {
 };
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'git',
-    'Run read-only git commands (blame, branch, describe, diff, log, ls-files, ls-tree, merge-base, reflog, remote, rev-parse, shortlog, show, stash, status, worktree). Pass cwd when operating from a linked worktree.',
-    GitSchema,
+    {
+      description: 'Run read-only git commands (blame, branch, describe, diff, log, ls-files, ls-tree, merge-base, reflog, remote, rev-parse, shortlog, show, stash, status, worktree). Pass cwd when operating from a linked worktree.',
+      inputSchema: GitSchema,
+    },
     async ({ args, cwd }) => {
       const sub = args[0];
       if (sub === undefined || !SUBCOMMANDS.has(sub)) return rejectSubcommand(args, SUBCOMMANDS);

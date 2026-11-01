@@ -65,12 +65,14 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | null => {
 };
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'shell',
-    'Run read-only shell utilities (basename, date, dirname, eza, file, jq, ls, pwd, readlink, realpath, stat, wc, which, whoami)',
     {
-      command: z.string().describe('Command name from the allowlist'),
-      ...ArgsSchema,
+      description: 'Run read-only shell utilities (basename, date, dirname, eza, file, jq, ls, pwd, readlink, realpath, stat, wc, which, whoami)',
+      inputSchema: {
+        command: z.string().describe('Command name from the allowlist'),
+        ...ArgsSchema,
+      },
     },
     async ({ command, args }) => {
       if (!COMMANDS.has(command))

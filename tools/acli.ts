@@ -14,10 +14,12 @@ const SUBCOMMANDS = new Set([
 ]);
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'acli',
-    'Run read-only Atlassian CLI commands (jira board/filter/project/sprint/workitem list/search/view/comment list)',
-    ArgsSchema,
+    {
+      description: 'Run read-only Atlassian CLI commands (jira board/filter/project/sprint/workitem list/search/view/comment list)',
+      inputSchema: ArgsSchema,
+    },
     async ({ args }) => {
       if (!matchesAllowlist(args, SUBCOMMANDS))
         return rejectSubcommand(args, SUBCOMMANDS);

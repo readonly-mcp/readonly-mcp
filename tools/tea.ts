@@ -241,10 +241,12 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
 };
 
 export const register = (server: McpServer) =>
-  server.tool(
+  server.registerTool(
     'tea',
-    'Run read-only Gitea/Forgejo CLI commands (--version, --help, branches list, comments list, issues [index]/list, labels list, logins list, milestones issues/list, pulls [index]/list/review-comments, releases list, repos list/search, whoami, api GET: pulls/reviews, commits/status+statuses, contents, raw, user)',
-    ArgsSchema,
+    {
+      description: 'Run read-only Gitea/Forgejo CLI commands (--version, --help, branches list, comments list, issues [index]/list, labels list, logins list, milestones issues/list, pulls [index]/list/review-comments, releases list, repos list/search, whoami, api GET: pulls/reviews, commits/status+statuses, contents, raw, user)',
+      inputSchema: ArgsSchema,
+    },
     async ({ args }) => {
       const [only, ...others] = args;
       const isGlobal = only !== undefined && others.length === 0 && GLOBAL_FLAGS.has(only);
