@@ -1,35 +1,17 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { type ExpectStatic, afterAll, beforeAll, describe, it } from 'vitest';
-import { assertBlocked, startServer } from './helpers.ts';
+import { describe, it } from 'vitest';
+import { type Canary, assertCanaryIntact, useCanary } from './canary.ts';
+import { type Server, assertBlocked, useServer } from './helpers.ts';
+
+const integration = it.extend<{ canary: Canary; server: Server }>({
+  canary: async ({}, use) => useCanary(use),
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
 
 describe.concurrent('shell injection', () => {
-  let server: ReturnType<typeof startServer>;
-  let tmpDir: string;
-  let canaryFile: string;
-
-  beforeAll(async () => {
-    server = startServer();
-    await server.initialize();
-    tmpDir = await mkdtemp(join(tmpdir(), 'mcp-test-'));
-    canaryFile = join(tmpDir, 'canary.txt').replaceAll('\\', '/');
-    await writeFile(canaryFile, 'ORIGINAL', 'utf8');
-  });
-
-  afterAll(async () => {
-    server.close();
-    await rm(tmpDir, { recursive: true });
-  });
-
-  const assertCanaryIntact = async (expect: ExpectStatic, label: string) => {
-    const content = await readFile(canaryFile, 'utf8');
-
-    expect(content, `canary modified by ${label}`).toBe('ORIGINAL');
-  };
+  integration.beforeAll(({ server }) => server.initialize());
 
   describe('via git args', () => {
-    it.for(
+    integration.for(
       [
         ['status', ';', 'rm'],
         ['status', '&&', 'rm'],
@@ -41,15 +23,15 @@ describe.concurrent('shell injection', () => {
         label: t.map(a => a.replace('{f}', 'CANARY')).join(' '),
         template: t,
       })),
-    )('prevents: git $label', async ({ label, template }, { expect }) => {
-      const realArgs = template.map(a => a.replace('{f}', canaryFile));
+    )('prevents: git $label', async ({ label, template }, { canary, expect, server }) => {
+      const realArgs = template.map(a => a.replace('{f}', canary.file));
       await server.callTool('git', { args: realArgs });
-      await assertCanaryIntact(expect, `git ${label}`);
+      await assertCanaryIntact(expect, canary, `git ${label}`);
     });
   });
 
   describe('via shell args', () => {
-    it.for(
+    integration.for(
       [
         { command: 'ls', args: ['; rm {f}'] },
         { command: 'ls', args: ['&& rm {f}'] },
@@ -69,21 +51,21 @@ describe.concurrent('shell injection', () => {
         label: `${t.command} ${t.args.map(a => JSON.stringify(a.replace('{f}', 'CANARY'))).join(' ')}`,
         template: t,
       })),
-    )('prevents: $label', async ({ label, template }, { expect }) => {
+    )('prevents: $label', async ({ label, template }, { canary, expect, server }) => {
       const call = {
         command: template.command,
-        args: template.args.map(a => a.replace('{f}', canaryFile)),
+        args: template.args.map(a => a.replace('{f}', canary.file)),
       };
       await server.callTool('shell', call);
-      await assertCanaryIntact(expect, label);
+      await assertCanaryIntact(expect, canary, label);
     });
   });
 
   describe('blocked rm via shell tool', () => {
-    it('blocks rm and preserves canary', async ({ expect }) => {
-      const result = await server.callTool('shell', { command: 'rm', args: [canaryFile] });
+    integration('blocks rm and preserves canary', async ({ canary, expect, server }) => {
+      const result = await server.callTool('shell', { command: 'rm', args: [canary.file] });
       assertBlocked(expect, result);
-      await assertCanaryIntact(expect, 'shell rm');
+      await assertCanaryIntact(expect, canary, 'shell rm');
     });
   });
 });

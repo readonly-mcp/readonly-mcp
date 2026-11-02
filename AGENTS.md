@@ -19,6 +19,7 @@ test/
   <tool>.test.ts    Per-tool security + functionality tests
   shell-injection.test.ts   Cross-tool injection attack tests
   builders.ts       Arbitrary test-data builders (faker)
+  canary.ts         Per-test file that injection tests prove untouched
   helpers.ts        Shared test utilities
   package-fixture.ts  Throwaway npm/pnpm project for package-manager integration tests
 ```
