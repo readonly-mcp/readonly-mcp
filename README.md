@@ -179,20 +179,21 @@ pnpm test
 ## Project structure
 
 ```text
-index.ts            Server entry point
-lib/
-  allowlist.ts      Allowlist matching and validation
-  exec.ts           Sandboxed command execution
-tools/
-  index.ts          Tool registry
-  acli.ts           Atlassian CLI tool
-  az.ts             Azure DevOps CLI tool
-  chezmoi.ts        Chezmoi tool
-  gh.ts             GitHub CLI tool
-  git.ts            Git tool
-  npm.ts            npm tool
-  pnpm.ts           pnpm tool
-  shell.ts          Shell utilities tool
-  tea.ts            Gitea/Forgejo CLI tool
+src/
+  index.ts          Server entry point
+  lib/
+    allowlist.ts    Allowlist matching and validation
+    exec.ts         Sandboxed command execution
+  tools/
+    index.ts        Tool registry
+    acli.ts         Atlassian CLI tool
+    az.ts           Azure DevOps CLI tool
+    chezmoi.ts      Chezmoi tool
+    gh.ts           GitHub CLI tool
+    git.ts          Git tool
+    npm.ts          npm tool
+    pnpm.ts         pnpm tool
+    shell.ts        Shell utilities tool
+    tea.ts          Gitea/Forgejo CLI tool
 test/               Unit and integration tests (vitest)
 ```

@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { z } from 'zod';
-import { type Server, useServer } from './helpers.ts';
+import { type Server, useServer } from '#test/helpers.js';
 
 const run = promisify(execFile);
 

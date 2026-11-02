@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { fail } from './exec.ts';
+import { fail } from '#src/lib/exec.js';
 
 // What a reject helper returns: the failure, or undefined when nothing is rejected.
 export type Rejection = CallToolResult | undefined;

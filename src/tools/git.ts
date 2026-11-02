@@ -4,8 +4,8 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server
 import { z } from 'zod';
 import {
   ArgsSchema, type Rejection, rejectBlockedFlags, rejectSubcommand,
-} from '../lib/allowlist.ts';
-import { exec, fail } from '../lib/exec.ts';
+} from '#src/lib/allowlist.js';
+import { exec, fail } from '#src/lib/exec.js';
 
 const subcommands = new Set([
   'blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree',

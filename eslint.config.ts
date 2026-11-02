@@ -6,7 +6,7 @@ const fixtureHook = "CallExpression[callee.property.name='beforeAll']";
 export default [
   ...await configure({
     // The server entry point sits at the root, outside the default bin directories.
-    entryPoints: [...defaultEntryPoints, 'index.ts'],
+    entryPoints: [...defaultEntryPoints, 'src/index.ts'],
     tsconfigRootDir: import.meta.dirname,
   }),
   {

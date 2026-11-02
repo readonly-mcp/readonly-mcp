@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import { type Canary, assertCanaryIntact, useCanary } from './canary.ts';
-import { type Server, assertBlocked, useServer } from './helpers.ts';
+import { type Canary, assertCanaryIntact, useCanary } from '#test/canary.js';
+import { type Server, assertBlocked, useServer } from '#test/helpers.js';
 
 const integration = it.extend<{ canary: Canary; server: Server }>({
   canary: async ({}, use) => useCanary(use),

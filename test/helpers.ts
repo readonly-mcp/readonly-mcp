@@ -13,9 +13,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { ExpectStatic } from 'vitest';
 import { z } from 'zod';
-import type * as ExecModule from '../lib/exec.ts';
+import type * as ExecModule from '#src/lib/exec.js';
 
-const serverPath = fileURLToPath(new URL('../index.ts', import.meta.url));
+const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
 
 const ResponseSchema = z.object({
   error: z.object({ message: z.string() }).optional(),
@@ -207,8 +207,8 @@ const echoExec = (cmd: string, args: readonly string[]): Promise<CallToolResult>
  * spawns nothing:
  *
  * ```ts
- * vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
- *   const { withEchoExec } = await import('./helpers.ts');
+ * vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
+ *   const { withEchoExec } = await import('#test/helpers.js');
  *   return withEchoExec(importOriginal);
  * });
  * ```

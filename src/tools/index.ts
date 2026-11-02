@@ -1,0 +1,9 @@
+export { register as acli } from '#src/tools/acli.js';
+export { register as az } from '#src/tools/az.js';
+export { register as chezmoi } from '#src/tools/chezmoi.js';
+export { register as gh } from '#src/tools/gh.js';
+export { register as git } from '#src/tools/git.js';
+export { register as npm } from '#src/tools/npm.js';
+export { register as pnpm } from '#src/tools/pnpm.js';
+export { register as shell } from '#src/tools/shell.js';
+export { register as tea } from '#src/tools/tea.js';

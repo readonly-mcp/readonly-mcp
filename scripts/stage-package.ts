@@ -5,8 +5,10 @@
  * directory cannot run a lifecycle hook written for the source checkout.
  *
  * The source manifest's bin points into dist/source, where the compiled entry
- * lives; publishConfig.bin holds the path relative to the package root. pnpm
- * applies that override on publish and npm does not, so it is applied here.
+ * lives, and its imports map the #src aliases to the .ts sources;
+ * publishConfig holds both relative to the package root, mapping the aliases
+ * to compiled .js. pnpm applies those overrides on publish and npm does not,
+ * so they are applied here.
  */
 import { copyFileSync, writeFileSync } from 'node:fs';
 import packageJson from '../package.json' with { type: 'json' };
@@ -16,12 +18,12 @@ const outDir = 'dist/source';
 
 const {
   devDependencies, packageManager, scripts,
-  publishConfig: { bin, ...publishConfig },
+  publishConfig: { bin, imports, ...publishConfig },
   ...manifest
 } = packageJson;
 
 writeFileSync(
   `${outDir}/package.json`,
-  `${JSON.stringify({ ...manifest, bin, publishConfig }, undefined, jsonIndent)}\n`,
+  `${JSON.stringify({ ...manifest, bin, imports, publishConfig }, undefined, jsonIndent)}\n`,
 );
 for (const file of ['README.md', 'LICENSE']) copyFileSync(file, `${outDir}/${file}`);

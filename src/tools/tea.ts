@@ -3,8 +3,8 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
   ArgsSchema, type Rejection, isAllowedApiPath, normalizeApiPath,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
-} from '../lib/allowlist.ts';
-import { exec, fail } from '../lib/exec.ts';
+} from '#src/lib/allowlist.js';
+import { exec, fail } from '#src/lib/exec.js';
 
 const globalFlags = new Set(['--help', '--version', '-h', '-v']);
 

@@ -4,8 +4,8 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server
 // execShell is a no-op on non-Windows and wraps with bash on Windows.
 import {
   ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
-} from '../lib/allowlist.ts';
-import { execShell } from '../lib/exec.ts';
+} from '#src/lib/allowlist.js';
+import { execShell } from '#src/lib/exec.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 

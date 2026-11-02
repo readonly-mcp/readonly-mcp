@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { errorResult, fail, maxBuffer, text } from '../lib/exec.ts';
-import * as build from './builders.ts';
-import { textOf } from './helpers.ts';
+import { errorResult, fail, maxBuffer, text } from '#src/lib/exec.js';
+import * as build from '#test/builders.js';
+import { textOf } from '#test/helpers.js';
 
 // exec() and execShell() are integration-tested through every tool test.
 // These unit tests cover the pure helper functions.

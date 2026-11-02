@@ -1,7 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ArgsSchema, type Rejection } from '../lib/allowlist.ts';
-import { execShell, fail } from '../lib/exec.ts';
+import { ArgsSchema, type Rejection } from '#src/lib/allowlist.js';
+import { execShell, fail } from '#src/lib/exec.js';
 
 const commands = new Set([
   'basename', 'date', 'dirname', 'eza', 'file', 'jq', 'ls', 'pwd',

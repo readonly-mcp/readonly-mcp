@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { describe, it } from 'vitest';
-import * as build from './builders.ts';
-import { type Call, type Server, assertNotBlocked, textOf, useServer } from './helpers.ts';
+import * as build from '#test/builders.js';
+import { type Call, type Server, assertNotBlocked, textOf, useServer } from '#test/helpers.js';
 
 const run = promisify(execFile);
 

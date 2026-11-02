@@ -6,13 +6,14 @@ See `README.md` for the full security model and tool reference.
 ## Architecture
 
 ```text
-index.ts            Server entry point (security rationale in header comment)
-lib/
-  allowlist.ts      Allowlist matching, flag blocking, JSON array coercion
-  exec.ts           Sandboxed command execution (execFile, no shell)
-tools/
-  index.ts          Tool registry (barrel export)
-  <tool>.ts         One file per CLI tool (git, gh, az, npm, pnpm, chezmoi, acli, shell, tea)
+src/
+  index.ts          Server entry point (security rationale in header comment)
+  lib/
+    allowlist.ts    Allowlist matching, flag blocking, JSON array coercion
+    exec.ts         Sandboxed command execution (execFile, no shell)
+  tools/
+    index.ts        Tool registry (barrel export)
+    <tool>.ts       One file per CLI tool (git, gh, az, npm, pnpm, chezmoi, acli, shell, tea)
 scripts/
   stage-package.ts  Stages the npm package in dist/source (`pnpm run build`)
 test/
@@ -32,18 +33,18 @@ These are non-negotiable. Every change must preserve them:
 - **`execFile`, no shell** — prevents metacharacter injection
 - **Prefix flag matching** — defeats CLI flag abbreviation bypass
 - **No `cwd` parameter** — except when validated against an enumerable trusted source
-  (see `cwd` exception criteria in `index.ts` header)
+  (see `cwd` exception criteria in `src/index.ts` header)
 
 ## Adding a New Tool
 
-1. Create `tools/<name>.ts` — export a function that takes a `McpServer` and
+1. Create `src/tools/<name>.ts` — export a function that takes a `McpServer` and
    registers the tool via `server.registerTool()`
 1. Define a `subcommands` set of allowed subcommands
 1. Define `blockedFlags` for any flags that could mutate state, leak secrets,
    or enable SSRF
-1. Use `rejectSubcommand()` and `rejectBlockedFlags()` from `lib/allowlist.ts`
-1. Use `exec()` from `lib/exec.ts` — never `child_process` directly
-1. Re-export from `tools/index.ts`
+1. Use `rejectSubcommand()` and `rejectBlockedFlags()` from `src/lib/allowlist.ts`
+1. Use `exec()` from `src/lib/exec.ts` — never `child_process` directly
+1. Re-export from `src/tools/index.ts`
 1. Add tests in `test/<name>.test.ts` covering allowed commands, blocked
    subcommands, blocked flags, and injection attempts.
 
@@ -78,6 +79,9 @@ args, so test names stay the same across runs.
 
 ## Formatting
 
-See `.editorconfig`. TypeScript, ESM only. Import relative modules by their
-`.ts` path: Node runs the sources directly, and `tsc` resolves a `.js`
-specifier that Node then cannot find.
+See `.editorconfig`. TypeScript, ESM only. Import a package's own modules
+through its `#src/` and `#test/` aliases, with a `.js` extension
+(`#src/lib/exec.js`). The package's `imports` map points them at the `.ts`
+sources, which Node runs directly, and `publishConfig.imports` at the compiled
+`.js`. A `.ts` alias would break once compiled, since `tsc` rewrites only
+relative specifiers.

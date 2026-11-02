@@ -10,13 +10,15 @@
   },
   "license": "MIT",
   "type": "module",
+  "imports": {
+    "#src/*.js": "./src/*.ts",
+    "#test/*.js": "./test/*.ts"
+  },
   "bin": {
-    "readonly-mcp": "./dist/source/index.js"
+    "readonly-mcp": "./dist/source/src/index.js"
   },
   "files": [
-    "index.js",
-    "lib/",
-    "tools/"
+    "src/"
   ],
   "scripts": {
     "build": "pnpm run compile:ts && node scripts/stage-package.ts",
@@ -47,7 +49,10 @@
   "publishConfig": {
     "access": "public",
     "bin": {
-      "readonly-mcp": "./index.js"
+      "readonly-mcp": "./src/index.js"
+    },
+    "imports": {
+      "#src/*.js": "./src/*.js"
     }
   }
 }

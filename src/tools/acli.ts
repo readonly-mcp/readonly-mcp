@@ -1,6 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ArgsSchema, isAllowlisted, rejectSubcommand } from '../lib/allowlist.ts';
-import { exec } from '../lib/exec.ts';
+import { ArgsSchema, isAllowlisted, rejectSubcommand } from '#src/lib/allowlist.js';
+import { exec } from '#src/lib/exec.js';
 
 const subcommands = new Set([
   'jira board list',

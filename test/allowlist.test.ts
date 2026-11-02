@@ -3,9 +3,9 @@ import { describe, it } from 'vitest';
 import { z } from 'zod';
 import {
   ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
-} from '../lib/allowlist.ts';
-import * as build from './builders.ts';
-import { textOf } from './helpers.ts';
+} from '#src/lib/allowlist.js';
+import * as build from '#test/builders.js';
+import { textOf } from '#test/helpers.js';
 
 describe('ArgsSchema coercion', () => {
   const schema = z.object(ArgsSchema);

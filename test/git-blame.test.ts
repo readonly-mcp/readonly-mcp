@@ -1,6 +1,8 @@
 import { describe, it } from 'vitest';
-import * as build from './builders.ts';
-import { type Call, type Server, assertBlocked, assertNotBlocked, useServer } from './helpers.ts';
+import * as build from '#test/builders.js';
+import {
+  type Call, type Server, assertBlocked, assertNotBlocked, useServer,
+} from '#test/helpers.js';
 
 const integration = it.extend<{ call: Call; server: Server }>({
   call: async ({ server }, use) => use(args => server.callTool('git', { args })),

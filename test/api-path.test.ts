@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { isAllowedApiPath, rejectApiEndpoint } from '../lib/allowlist.ts';
-import * as build from './builders.ts';
-import { textOf } from './helpers.ts';
+import { isAllowedApiPath, rejectApiEndpoint } from '#src/lib/allowlist.js';
+import * as build from '#test/builders.js';
+import { textOf } from '#test/helpers.js';
 
 describe('isAllowedApiPath', () => {
   const patterns = [

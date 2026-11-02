@@ -119,8 +119,8 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import packageJson from './package.json' with { type: 'json' };
-import * as tools from './tools/index.ts';
+import * as tools from '#src/tools/index.js';
+import packageJson from '../package.json' with { type: 'json' };
 
 const { version } = packageJson;
 

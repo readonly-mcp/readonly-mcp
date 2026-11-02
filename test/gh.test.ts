@@ -1,14 +1,14 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
-import { type Server, assertBlocked, connectTool, textOf, useServer } from './helpers.ts';
+import { type Server, assertBlocked, connectTool, textOf, useServer } from '#test/helpers.js';
 
 // --- Unit tests (mocked exec) ---
-vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
-  const { withEchoExec } = await import('./helpers.ts');
+vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
+  const { withEchoExec } = await import('#test/helpers.js');
   return withEchoExec(importOriginal);
 });
 
-const { register } = await import('../tools/gh.ts');
+const { register } = await import('#src/tools/gh.js');
 
 const callTool = await connectTool(register);
 

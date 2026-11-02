@@ -1,8 +1,8 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
-} from '../lib/allowlist.ts';
-import { execShell } from '../lib/exec.ts';
+} from '#src/lib/allowlist.js';
+import { execShell } from '#src/lib/exec.js';
 
 const subcommands = new Set([
   'audit', 'bin', 'explain', 'fund', 'ls', 'outdated', 'root', 'search', 'view',

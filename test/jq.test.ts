@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import * as build from './builders.ts';
-import { type Canary, useCanary } from './canary.ts';
+import * as build from '#test/builders.js';
+import { type Canary, useCanary } from '#test/canary.js';
 import {
   type Call, type Server, assertBlocked, assertNotBlocked, textOf, useServer,
-} from './helpers.ts';
+} from '#test/helpers.js';
 
 const integration = it.extend<{ call: Call; canary: Canary; server: Server }>({
   call: async ({ server }, use) => use(args => server.callTool('shell', { command: 'jq', args })),

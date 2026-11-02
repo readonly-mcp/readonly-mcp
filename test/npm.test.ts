@@ -1,21 +1,21 @@
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
-import * as build from './builders.ts';
+import * as build from '#test/builders.js';
 import {
   type Call, type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf,
-} from './helpers.ts';
+} from '#test/helpers.js';
 import {
   packageCommandTimeout, packageServerTimeout, usePackageServer,
-} from './package-fixture.ts';
+} from '#test/package-fixture.js';
 
 // --- Unit tests (mocked execShell) ---
-vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
-  const { withEchoExec } = await import('./helpers.ts');
+vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
+  const { withEchoExec } = await import('#test/helpers.js');
   return withEchoExec(importOriginal);
 });
 
-const { register } = await import('../tools/npm.ts');
+const { register } = await import('#src/tools/npm.js');
 
 const callTool = await connectTool(register);
 
