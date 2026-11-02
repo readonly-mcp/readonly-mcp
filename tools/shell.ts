@@ -35,23 +35,29 @@ const rejectFileFlag = (arg: string): CallToolResult | undefined => {
   return undefined;
 };
 
-// Walks the args, skipping flag values (like --arg k v). The first positional
-// is the filter expression; any positional after it is a file path.
+/*
+ * Walks the args, skipping flag values (like --arg k v). The first positional
+ * is the filter expression; any positional after it is a file path. After
+ * `--`, jq reads every arg as a positional, dash-led or not.
+ */
 const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => {
   let hasFilter = false;
+  let isPastOptions = false;
   // The index skips flag values, so this stays a counted loop. It binds each
   // element once; the undefined check never fires within the length bound.
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === undefined) break;
-    const blocked = rejectFileFlag(arg);
-    if (blocked) return blocked;
-    if (jqPairFlags.has(arg)) index += pairFlagValues;
-    else if (jqValueFlags.has(arg)) index++;
-    else if (!arg.startsWith('-')) {
+    if (isPastOptions || !arg.startsWith('-')) {
       if (hasFilter)
         return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
       hasFilter = true;
+    } else if (arg === '--') isPastOptions = true;
+    else {
+      const blocked = rejectFileFlag(arg);
+      if (blocked) return blocked;
+      if (jqPairFlags.has(arg)) index += pairFlagValues;
+      else if (jqValueFlags.has(arg)) index++;
     }
   }
   return undefined;

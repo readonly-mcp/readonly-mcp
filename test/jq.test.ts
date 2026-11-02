@@ -61,6 +61,24 @@ describe.concurrent('jq file argument blocking', () => {
     integration('blocks --arg k v . <file>', async ({ call, canary, expect }) => {
       assertBlocked(expect, await call(['--arg', 'k', faker.lorem.word(), '.', canary.file]));
     });
+
+    /*
+     * After --, jq reads a dash-led arg as a positional, not a flag. These
+     * names are literal: one holding f or L would trip the file-flag check
+     * instead.
+     */
+    integration('blocks a dash-led file after --', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['.', '--', '-data.json']));
+    });
+
+    integration('blocks a dash-led file after -- and a filter', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['--', '.', '-data.json']));
+    });
+
+    // Without --, jq would reject -length as an unknown option.
+    integration('allows a dash-led filter after --', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['-n', '--', '-length']));
+    });
   });
 
   describe('blocked file-reading flags', () => {
