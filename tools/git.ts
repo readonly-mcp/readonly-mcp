@@ -63,6 +63,15 @@ const isKnownWorktree = (dir: string): boolean => {
   );
 };
 
+/**
+ * The first arg that is not a flag, or undefined when none comes before the
+ * end of options (`--`).
+ */
+const firstPositional = (args: readonly string[]): string | undefined => {
+  const end = args.indexOf('--');
+  return args.slice(0, end === -1 ? undefined : end).find(arg => !arg.startsWith('-'));
+};
+
 const GitSchema = {
   ...ArgsSchema,
   cwd: z.string().min(1).optional()
@@ -101,40 +110,19 @@ export const register = (server: McpServer): RegisteredTool =>
         if (rejected) return rejected;
       }
       if (sub === 'stash') {
-        let stashSub: string | undefined;
-        for (const arg of args.slice(1)) {
-          if (arg === '--') break;
-          if (!arg.startsWith('-')) {
-            stashSub = arg;
-            break;
-          }
-        }
+        const stashSub = firstPositional(args.slice(1));
         if (!stashSub || !stashAllowedSubs.has(stashSub))
           return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. ` +
             `Allowed: ${[...stashAllowedSubs].join(', ')}`);
       }
       if (sub === 'worktree') {
-        let wSub: string | undefined;
-        for (const arg of args.slice(1)) {
-          if (arg === '--') break;
-          if (!arg.startsWith('-')) {
-            wSub = arg;
-            break;
-          }
-        }
+        const wSub = firstPositional(args.slice(1));
         if (!wSub || !worktreeAllowedSubs.has(wSub))
           return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. ` +
             `Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
       }
       if (sub === 'reflog') {
-        let rSub: string | undefined;
-        for (const arg of args.slice(1)) {
-          if (arg === '--') break;
-          if (!arg.startsWith('-')) {
-            rSub = arg;
-            break;
-          }
-        }
+        const rSub = firstPositional(args.slice(1));
         // Bare `git reflog` is safe (equivalent to `git reflog show`)
         if (rSub && !reflogAllowedSubs.has(rSub))
           return fail(`Subcommand not allowed for git reflog: ${rSub}. ` +
