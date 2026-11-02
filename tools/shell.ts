@@ -22,14 +22,14 @@ const pairFlagValues = 2;
 // Flags that take one following argument
 const jqValueFlags = new Set(['--indent']);
 
-// Single characters corresponding to file-reading short flags (-f, -L)
-const jqFileChars = 'fL';
+// A character of a file-reading short flag (-f, -L) within a short-flag group
+const jqFileChar = /[fL]/v;
 
 const rejectFileFlag = (arg: string): CallToolResult | undefined => {
   const base = arg.split('=', 1)[0] ?? arg;
   if (jqFileFlags.has(base)) return fail(`Flag not allowed for jq: ${base}`);
   if (arg.startsWith('-') && !arg.startsWith('--')) {
-    const fileChar = [...arg.slice(1)].find(char => jqFileChars.includes(char));
+    const fileChar = jqFileChar.exec(arg.slice(1))?.[0];
     if (fileChar) return fail(`Flag not allowed for jq: -${fileChar}`);
   }
   return undefined;

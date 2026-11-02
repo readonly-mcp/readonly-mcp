@@ -86,7 +86,7 @@ export const register = (server: McpServer): RegisteredTool =>
       if (sub === 'diff') {
         const shortO = args.slice(1).find(arg =>
           arg.startsWith('-') && !arg.startsWith('--') && arg !== '-' &&
-          [...(arg.slice(1).split('=', 1)[0] ?? arg.slice(1))].includes('o'),
+          (arg.slice(1).split('=', 1)[0] ?? arg.slice(1)).includes('o'),
         );
         if (shortO) return fail(`Flag not allowed: ${shortO}`);
       }
