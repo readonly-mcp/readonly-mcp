@@ -1,7 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { ArgsSchema } from '../lib/allowlist.ts';
+import { ArgsSchema, type Rejection } from '../lib/allowlist.ts';
 import { execShell, fail } from '../lib/exec.ts';
 
 const commands = new Set([
@@ -9,41 +8,41 @@ const commands = new Set([
   'readlink', 'realpath', 'stat', 'wc', 'which', 'whoami',
 ]);
 
-// jq: block file-path arguments to prevent reading arbitrary files.
-// Allow only flags (-r, -e, -S, --arg, etc.) and filter expressions.
-// Flags that read files — block entirely (data exfiltration via --slurpfile/--rawfile,
-// arbitrary filter loading via --from-file/-f, library path probing via -L)
-const jqFileFlags = new Set([
-  '--slurpfile', '--rawfile', '--from-file', '-f', '-L', '--library-path',
+/*
+ * The jq options allowed, from `jq --help` (jq 1.8), each with the number of
+ * args it spans: the flag plus its values. Every other option is rejected,
+ * among them the file readers (-f, -L, --slurpfile, --rawfile), hidden ones
+ * such as --run-tests, which prints a file's lines as failing tests, and the
+ * `--name=value` form, which jq does not parse. jq matches long names
+ * exactly, so no abbreviation can reach an option outside this list.
+ */
+const flagOnly = 1;
+const flagAndValue = 2;
+const flagAndPair = 3;
+const jqLongOptions = new Map([
+  ['--arg', flagAndPair], ['--argjson', flagAndPair], ['--args', flagOnly],
+  ['--ascii-output', flagOnly], ['--binary', flagOnly], ['--color-output', flagOnly],
+  ['--compact-output', flagOnly], ['--exit-status', flagOnly], ['--help', flagOnly],
+  ['--indent', flagAndValue], ['--join-output', flagOnly], ['--jsonargs', flagOnly],
+  ['--monochrome-output', flagOnly], ['--null-input', flagOnly], ['--raw-input', flagOnly],
+  ['--raw-output', flagOnly], ['--raw-output0', flagOnly], ['--seq', flagOnly],
+  ['--slurp', flagOnly], ['--sort-keys', flagOnly], ['--stream', flagOnly],
+  ['--stream-errors', flagOnly], ['--tab', flagOnly], ['--unbuffered', flagOnly],
+  ['--version', flagOnly],
 ]);
-// Flags that take two following arguments (name + value)
-const jqPairFlags = new Set(['--arg', '--argjson']);
-const pairFlagValues = 2;
-// Flags that take one following argument
-const jqValueFlags = new Set(['--indent']);
+
+// One or more of jq's short options, none of which takes a value (-n, -nrc)
+const jqShortOptions = /^-[CMRSVabcehjnrs]+$/v;
 
 /*
  * Names a filter must not use: env and $ENV print the server's environment,
  * and import, include and modulemeta load modules from jq's default search
- * path, which -L being blocked does not cover. jq cannot build a name at
+ * path, which blocking -L does not cover. jq cannot build a name at
  * runtime, so matching the word is enough. `.env` is a field, never the
  * builtin, so it is skipped. A string holding one of these words is
  * rejected too, which fails closed.
  */
 const jqBlockedNames = /(?<!\.)\b(?:env|ENV|import|include|modulemeta)\b/v;
-
-// A character of a file-reading short flag (-f, -L) within a short-flag group
-const jqFileChar = /[fL]/v;
-
-const rejectFileFlag = (arg: string): CallToolResult | undefined => {
-  const base = arg.split('=', 1)[0] ?? arg;
-  if (jqFileFlags.has(base)) return fail(`Flag not allowed for jq: ${base}`);
-  if (arg.startsWith('-') && !arg.startsWith('--')) {
-    const fileChar = jqFileChar.exec(arg.slice(1))?.[0];
-    if (fileChar) return fail(`Flag not allowed for jq: -${fileChar}`);
-  }
-  return undefined;
-};
 
 /*
  * jq reads an arg as an option only when a letter, a second dash, or nothing
@@ -53,7 +52,7 @@ const rejectFileFlag = (arg: string): CallToolResult | undefined => {
 const isJqOption = (arg: string): boolean => /^-(?:[a-zA-Z\-]|$)/v.test(arg);
 
 // The first positional is the filter; any after it is a file path.
-const rejectPositional = (arg: string, hasFilter: boolean): CallToolResult | undefined => {
+const rejectPositional = (arg: string, hasFilter: boolean): Rejection => {
   if (hasFilter)
     return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
   const name = jqBlockedNames.exec(arg)?.[0];
@@ -61,31 +60,24 @@ const rejectPositional = (arg: string, hasFilter: boolean): CallToolResult | und
 };
 
 /*
- * Walks the args, skipping flag values (like --arg k v). The first positional
- * is the filter expression; any positional after it is a file path. After
- * `--`, jq reads every arg as a positional, dash-led or not.
+ * Walks the args, stepping over each option's values (like --arg k v). The
+ * first positional is the filter expression; any positional after it is a
+ * file path. After `--`, jq reads every arg as a positional, dash-led or not.
  */
-const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => {
-  let hasFilter = false;
-  let isPastOptions = false;
-  // The index skips flag values, so this stays a counted loop. It binds each
-  // element once; the undefined check never fires within the length bound.
-  for (let index = 0; index < args.length; index++) {
+const validateJqArgs = (args: readonly string[]): Rejection => {
+  const step = (index: number, hasFilter: boolean, isPastOptions: boolean): Rejection => {
+    // Past the end, whether by one or by a skipped option value.
     const arg = args[index];
-    if (arg === undefined) break;
-    if (isPastOptions || !isJqOption(arg)) {
-      const rejected = rejectPositional(arg, hasFilter);
-      if (rejected) return rejected;
-      hasFilter = true;
-    } else if (arg === '--') isPastOptions = true;
-    else {
-      const blocked = rejectFileFlag(arg);
-      if (blocked) return blocked;
-      if (jqPairFlags.has(arg)) index += pairFlagValues;
-      else if (jqValueFlags.has(arg)) index++;
-    }
-  }
-  return undefined;
+    if (arg === undefined) return undefined;
+    if (isPastOptions || !isJqOption(arg))
+      return rejectPositional(arg, hasFilter) ?? step(index + 1, true, isPastOptions);
+    if (arg === '--') return step(index + 1, hasFilter, true);
+    const span = jqShortOptions.test(arg) ? flagOnly : jqLongOptions.get(arg);
+    return span === undefined
+      ? fail(`Flag not allowed for jq: ${arg}`)
+      : step(index + span, hasFilter, false);
+  };
+  return step(0, false, false);
 };
 
 export const register = (server: McpServer): RegisteredTool =>

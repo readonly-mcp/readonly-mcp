@@ -110,6 +110,22 @@ describe.concurrent('jq file argument blocking', () => {
     integration('blocks --from-file=path (equals form)', async ({ call, expect }) => {
       assertBlocked(expect, await call([`--from-file=${build.fileName('jq')}`]));
     });
+
+    // Hidden options: --run-tests prints a file's lines as failing tests.
+    integration.for(['--run-tests', '--debug-trace', '--debug-dump-disasm'])(
+      'blocks %s, which jq --help does not list', async (flag, { call, canary, expect }) => {
+        assertBlocked(expect, await call([flag, canary.file]));
+      },
+    );
+  });
+
+  describe('allowed options', () => {
+    integration.for([
+      ['-nrc', 'empty'], ['--tab', '-n', '.'], ['--indent', '2', '-n', '.'],
+      ['--seq', '-n', '.'], ['--null-input', '--compact-output', '.'],
+    ])('allows %s', async (args, { call, expect }) => {
+      assertNotBlocked(expect, await call(args));
+    });
   });
 
   describe('blocked filters', () => {
