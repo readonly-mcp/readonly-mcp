@@ -38,13 +38,6 @@ export const rejectSubcommand = (args: readonly string[], allowlist: ReadonlySet
   return fail(`Subcommand not allowed: ${sub}. Allowed: ${[...allowlist].join(', ')}`);
 };
 
-// Uses prefix matching to defeat CLI flag abbreviation. Many CLIs (notably npm
-// and pnpm) expand unique prefixes internally, so `--reg` resolves to
-// `--registry`. Exact matching would be bypassable via abbreviation. The
-// trade-off is that a blocked flag like `--fix` also blocks any flag starting
-// with `--fix` (e.g., a hypothetical `--fixup`). This errs on the side of
-// safety: false positives (blocking a legitimate flag) are preferable to false
-// negatives (allowing a dangerous abbreviated flag through).
 export const normalizeApiPath = (endpoint: string | undefined): string =>
   endpoint?.replace(/^\//, '').split('?', 1)[0]?.replace(/\/$/, '') || '';
 
@@ -75,6 +68,13 @@ export const rejectApiEndpoint = (endpoint: string | undefined, patterns: readon
   return fail(`API endpoint not allowed: ${normalized}. Allowed patterns: ${patterns.join(', ')}`);
 };
 
+// Uses prefix matching to defeat CLI flag abbreviation. Many CLIs (notably npm
+// and pnpm) expand unique prefixes internally, so `--reg` resolves to
+// `--registry`. Exact matching would be bypassable via abbreviation. The
+// trade-off is that a blocked flag like `--fix` also blocks any flag starting
+// with `--fix` (e.g., a hypothetical `--fixup`). This errs on the side of
+// safety: false positives (blocking a legitimate flag) are preferable to false
+// negatives (allowing a dangerous abbreviated flag through).
 export const rejectBlockedFlags = (args: readonly string[], blockedFlags: ReadonlySet<string>): CallToolResult | null => {
   const flag = args.slice(1).find(arg =>
     arg !== '--' && arg !== '-' &&
