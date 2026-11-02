@@ -79,7 +79,7 @@ interface BarePolicy {
 const barePolicies: Record<string, BarePolicy> = {
   'issues': {
     booleans: new Set(['comments', 'h', 'help']),
-    positional: arg => /^\d+$/.test(arg),
+    positional: arg => /^\d+$/v.test(arg),
     values: new Set([
       ...sharedValueFlags,
       'A', 'a', 'assignee', 'author', 'F', 'from', 'K', 'k', 'keyword', 'kind',
@@ -93,7 +93,7 @@ const barePolicies: Record<string, BarePolicy> = {
   },
   'pulls': {
     booleans: new Set(['comments', 'h', 'help']),
-    positional: arg => /^\d+$/.test(arg),
+    positional: arg => /^\d+$/v.test(arg),
     values: new Set(sharedValueFlags),
   },
 };
@@ -101,9 +101,9 @@ const barePolicies: Record<string, BarePolicy> = {
 // tea (urfave/cli) treats `-name` and `--name` alike, so `-debug` must be
 // caught as `--debug`. Single-dash forms are lengthened for the prefix
 // matcher; single-letter flags already match as short flags.
-const toLongForm = (arg: string): string => /^-[^-][^=]/.test(arg) ? '-' + arg : arg;
+const toLongForm = (arg: string): string => /^-[^\-][^=]/v.test(arg) ? '-' + arg : arg;
 
-const flagName = (arg: string): string => arg.replace(/^--?/, '').split('=', 1)[0] ?? '';
+const flagName = (arg: string): string => arg.replace(/^--?/v, '').split('=', 1)[0] ?? '';
 
 const isFlag = (arg: string): boolean => arg.startsWith('-') && arg !== '-' && arg !== '--';
 
@@ -121,8 +121,8 @@ const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): Cal
 // directory outside the server's working directory. Only `owner/name` slugs
 // pass; `.` and `..` segments are paths, not names.
 const isRepoSlug = (value: string): boolean =>
-  /^[\w.-]+\/[\w.-]+$/.test(value) &&
-  value.split('/').every(segment => !/^\.+$/.test(segment));
+  /^[\w.\-]+\/[\w.\-]+$/v.test(value) &&
+  value.split('/').every(segment => !/^\.+$/v.test(segment));
 
 const repoValues = (args: readonly string[]): string[] => args.flatMap((arg, index) => {
   if (!isFlag(arg) || !['r', 'repo'].includes(flagName(arg))) return [];
@@ -224,8 +224,8 @@ const apiBlockedFlags = new Set([
 const isPlainSegment = (segment: string): boolean => {
   try {
     const decoded = decodeURIComponent(segment);
-    return !/^\.+$/.test(decoded) && !/[/\\]/.test(decoded) &&
-      !/%(2e|2f|5c)/i.test(decoded);
+    return !/^\.+$/v.test(decoded) && !/[\/\\]/v.test(decoded) &&
+      !/%(?:2e|2f|5c)/iv.test(decoded);
   } catch {
     return false;
   }

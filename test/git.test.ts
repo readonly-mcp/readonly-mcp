@@ -114,7 +114,7 @@ describe.concurrent('git tool (unit)', () => {
       const result = await callMocked(['status'], '');
 
       expect(result.isError).toBe(true);
-      expect(textOf(result)).toMatch(/Input validation error[\s\S]*"cwd"/);
+      expect(textOf(result)).toMatch(/Input validation error[\s\S]*"cwd"/v);
     });
 
     it.runIf(process.platform === 'win32')(

@@ -39,14 +39,14 @@ export const rejectSubcommand = (args: readonly string[], allowlist: ReadonlySet
 };
 
 export const normalizeApiPath = (endpoint: string | undefined): string =>
-  endpoint?.replace(/^\//, '').split('?', 1)[0]?.replace(/\/$/, '') || '';
+  endpoint?.replace(/^\//v, '').split('?', 1)[0]?.replace(/\/$/v, '') || '';
 
 // Matches a GitHub API endpoint path against a list of segment patterns.
 // `*` matches exactly one segment; trailing `**` matches one or more remaining
 // segments (for variable-depth paths like repos/*/*/contents/**).
 // Rejects full URLs (http:// / https://) to prevent targeting arbitrary hosts.
 export const isAllowedApiPath = (endpoint: string | undefined, patterns: readonly string[]): boolean => {
-  if (/^https?:\/\//.test(endpoint ?? '')) return false;
+  if (/^https?:\/\//v.test(endpoint ?? '')) return false;
   const normalized = normalizeApiPath(endpoint);
   if (!normalized) return false;
   const segments = normalized.split('/');
