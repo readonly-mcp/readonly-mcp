@@ -1,4 +1,5 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
   ArgsSchema, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
@@ -79,6 +80,28 @@ const apiBlockedFlags = new Set([
   '-H', '--header',
 ]);
 
+const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
+  const [, endpoint, ...apiArgs] = args;
+  if (!endpoint || endpoint.startsWith('-'))
+    return rejectApiEndpoint(endpoint, apiPaths);
+  const rejected = rejectBlockedFlags(args, apiBlockedFlags);
+  if (rejected) return rejected;
+  if (!isAllowedApiPath(endpoint, apiPaths))
+    return rejectApiEndpoint(endpoint, apiPaths);
+  // Auto-inject raw Accept header for contents endpoints so file
+  // responses return plain text instead of base64-encoded JSON.
+  // Directory listings are unaffected — GitHub ignores the media type
+  // for directory responses and still returns JSON.
+  const rawAccept = isAllowedApiPath(endpoint, contentsPaths)
+    ? ['-H', 'Accept: application/vnd.github.raw+json']
+    : [];
+  // Inject --method GET immediately after the endpoint, before any
+  // user-supplied flags. Appending it at the end would be defeated by
+  // a `--` (end-of-options marker) in user args, since everything after
+  // `--` is treated as positional, making the injected flag a no-op.
+  return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
+};
+
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'gh',
@@ -97,27 +120,7 @@ export const register = (server: McpServer): RegisteredTool =>
       const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
       if (isGlobal) return exec('gh', args);
 
-      if (args[0] === 'api') {
-        const [, endpoint, ...apiArgs] = args;
-        if (!endpoint || endpoint.startsWith('-'))
-          return rejectApiEndpoint(endpoint, apiPaths);
-        const rejected = rejectBlockedFlags(args, apiBlockedFlags);
-        if (rejected) return rejected;
-        if (!isAllowedApiPath(endpoint, apiPaths))
-          return rejectApiEndpoint(endpoint, apiPaths);
-        // Auto-inject raw Accept header for contents endpoints so file
-        // responses return plain text instead of base64-encoded JSON.
-        // Directory listings are unaffected — GitHub ignores the media type
-        // for directory responses and still returns JSON.
-        const rawAccept = isAllowedApiPath(endpoint, contentsPaths)
-          ? ['-H', 'Accept: application/vnd.github.raw+json']
-          : [];
-        // Inject --method GET immediately after the endpoint, before any
-        // user-supplied flags. Appending it at the end would be defeated by
-        // a `--` (end-of-options marker) in user args, since everything after
-        // `--` is treated as positional, making the injected flag a no-op.
-        return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
-      }
+      if (args[0] === 'api') return runApi(args);
 
       if (!isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
