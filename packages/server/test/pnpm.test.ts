@@ -5,7 +5,7 @@ import {
   type Call, type Server, assertBlocked, assertNotBlocked, connectTool, textOf,
 } from '#test/helpers.js';
 import {
-  packageCommandTimeout, packageServerTimeout, usePackageServer,
+  packageServerTimeout, usePackageServer,
 } from '#test/package-fixture.js';
 
 // --- Unit tests (mocked execShell) ---
@@ -58,7 +58,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => usePackageServer('pnpm', use), { scope: 'file' }],
 });
 
-describe.concurrent('pnpm tool (integration)', { timeout: packageCommandTimeout }, () => {
+describe.concurrent('pnpm tool (integration)', { tags: ['slow'] }, () => {
   integration.beforeAll(({ server }) => server.initialize(), packageServerTimeout);
 
   describe('allowed global flags', () => {

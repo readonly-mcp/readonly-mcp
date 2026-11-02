@@ -81,13 +81,6 @@ export const createPackageFixture = async (manager: PackageManager): Promise<Pac
  */
 export const packageServerTimeout = 60_000;
 
-/*
- * The test timeout for suites that run npm or pnpm. Even against the
- * one-dependency project, a command that walks the store or asks the
- * registry outlasts Vitest's default on a loaded machine.
- */
-export const packageCommandTimeout = 30_000;
-
 /**
  * The body of a `server` fixture running in a {@link PackageFixture}
  * installed by `manager`, as {@link useServer} is for the repository.
