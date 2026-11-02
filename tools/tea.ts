@@ -140,6 +140,17 @@ const rejectRepoPath = (args: readonly string[]): Rejection => {
 // A value flag spans one arg as --name=value, two as --name value.
 const flagAndValueArgs = 2;
 
+const rejectPositionals = (
+  positionals: readonly string[], positional: BarePolicy['positional'],
+): Rejection => {
+  if (positionals.length > 1)
+    return fail(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
+  const invalid = positionals.find(candidate => !positional(candidate));
+  return invalid === undefined
+    ? undefined
+    : fail(`Positional argument not allowed: ${invalid}`);
+};
+
 // Walks the args after a bare command, consuming each flag's value by arity.
 // Unknown flags are rejected because their arity, and so whether the next arg
 // is a value or a positional, cannot be known.
@@ -151,14 +162,7 @@ const rejectBareArgs = (
   ): Rejection => {
     // Past the end, whether by one or by a skipped flag value.
     const arg = args[index];
-    if (arg === undefined) {
-      if (positionals.length > 1)
-        return fail(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
-      const invalid = positionals.find(candidate => !positional(candidate));
-      return invalid === undefined
-        ? undefined
-        : fail(`Positional argument not allowed: ${invalid}`);
-    }
+    if (arg === undefined) return rejectPositionals(positionals, positional);
     if (isPastOptions || arg === '-' || !arg.startsWith('-'))
       return step(index + 1, [...positionals, arg], isPastOptions);
     if (arg === '--') return step(index + 1, positionals, true);
