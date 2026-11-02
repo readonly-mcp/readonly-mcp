@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, afterAll, beforeAll, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { assertBlocked, connectTool, echoed, startServer, textOf } from './helpers.ts';
+import { type Server, assertBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -287,14 +287,14 @@ describe.concurrent('gh tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
+const integration = it.extend<{ server: Server }>({
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
+
 describe.concurrent('gh tool (integration)', () => {
-  let server: ReturnType<typeof startServer>;
+  integration.beforeAll(({ server }) => server.initialize());
 
-  beforeAll(async () => { server = startServer(); await server.initialize(); });
-
-  afterAll(() => server.close());
-
-  it.for(
+  integration.for(
     [
       ['issue', 'create'], ['issue', 'close'], ['issue', 'delete'], ['issue', 'edit'],
       ['pr', 'create'], ['pr', 'close'], ['pr', 'merge'], ['pr', 'edit'],
@@ -310,26 +310,26 @@ describe.concurrent('gh tool (integration)', () => {
       ['cache', 'delete'],
       ['ruleset', 'create'],
     ].map(args => ({ name: args.join(' '), args })),
-  )('blocks $name', async ({ args }, { expect }) => {
+  )('blocks $name', async ({ args }, { expect, server }) => {
     assertBlocked(expect, await server.callTool('gh', { args }));
   });
 
   describe('blocked api endpoints', () => {
-    it.for(([
+    integration.for(([
       'repos/:owner/:repo/git/refs',
       'repos/:owner/:repo/pulls/:number/merge',
       'gists',
       'user/repos',
       'graphql',
     ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
-      'blocks api $name', async ({ args }, { expect }) => {
+      'blocks api $name', async ({ args }, { expect, server }) => {
         assertBlocked(expect, await server.callTool('gh', { args }));
       },
     );
   });
 
   describe('blocked api flags', () => {
-    it.for([
+    integration.for([
       { name: '--method POST', args: ['api', build.prCommentsPath(), '--method', 'POST'] },
       { name: '--method=DELETE', args: ['api', build.prCommentsPath(), '--method=DELETE'] },
       { name: '-X POST', args: ['api', build.prCommentsPath(), '-X', 'POST'] },
@@ -350,26 +350,26 @@ describe.concurrent('gh tool (integration)', () => {
       { name: '-H (header injection)', args: ['api', build.prCommentsPath(), '-H', 'Accept: text/plain'] },
       { name: '--header', args: ['api', build.prCommentsPath(), '--header', `X-${faker.lorem.word()}: ${faker.lorem.word()}`] },
       { name: '-HAccept:... (concatenated)', args: ['api', build.prCommentsPath(), '-HAccept:text/plain'] },
-    ])('blocks api $name', async ({ args }, { expect }) => {
+    ])('blocks api $name', async ({ args }, { expect, server }) => {
       assertBlocked(expect, await server.callTool('gh', { args }));
     });
   });
 
   describe('blocked api full URLs', () => {
-    it('blocks https:// URL', async ({ expect }) => {
+    integration('blocks https:// URL', async ({ expect, server }) => {
       assertBlocked(expect, await server.callTool('gh', {
         args: ['api', `https://api.github.com/${build.prCommentsPath()}`],
       }));
     });
 
-    it('blocks http:// URL', async ({ expect }) => {
+    integration('blocks http:// URL', async ({ expect, server }) => {
       assertBlocked(expect, await server.callTool('gh', {
         args: ['api', `http://api.github.com/${build.prCommentsPath()}`],
       }));
     });
   });
 
-  it('blocks bare api', async ({ expect }) => {
+  integration('blocks bare api', async ({ expect, server }) => {
     assertBlocked(expect, await server.callTool('gh', { args: ['api'] }));
   });
 });

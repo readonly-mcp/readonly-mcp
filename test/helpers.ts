@@ -114,6 +114,46 @@ export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } =
   return { initialize, callTool, close };
 };
 
+export type Server = ReturnType<typeof startServer>;
+
+/**
+ * A call to one tool with `args`, as a suite's `call` fixture binds it:
+ *
+ * ```ts
+ * call: async ({ server }, use) => use(args => server.callTool('npm', { args })),
+ * ```
+ */
+export type Call = (args: readonly string[]) => Promise<CallToolResult>;
+
+/**
+ * The body of a `server` fixture: hands `use` a server spawned in `cwd` and
+ * closes it once `use` settles.
+ *
+ * The suite initializes it in a `beforeAll` on the extended test function.
+ * A file-scoped fixture is otherwise set up inside whichever tests first ask
+ * for it, which under `describe.concurrent` is all of them, each paying for
+ * the startup against its own timeout; a suite-level hook that asks for it
+ * sets it up once, against the hook's.
+ *
+ * ```ts
+ * const integration = it.extend<{ server: Server }>({
+ *   server: [async ({}, use) => useServer(use), { scope: 'file' }],
+ * });
+ *
+ * describe.concurrent('…', () => {
+ *   integration.beforeAll(({ server }) => server.initialize());
+ * });
+ * ```
+ */
+export const useServer = async (use: (server: Server) => Promise<void>, options?: { readonly cwd?: string }) => {
+  const server = startServer(options);
+  try {
+    await use(server);
+  } finally {
+    await server.close();
+  }
+};
+
 /**
  * Registers one tool on a real McpServer and connects a client to it in
  * memory, so unit tests reach the handler the way production does: through

@@ -1,8 +1,8 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { assertBlocked, assertNotBlocked, connectTool, textOf } from './helpers.ts';
-import { itWithPackageServer, packageServerTimeout } from './package-fixture.ts';
+import { type Call, type Server, assertBlocked, assertNotBlocked, connectTool, textOf } from './helpers.ts';
+import { packageCommandTimeout, packageServerTimeout, usePackageServer } from './package-fixture.ts';
 
 // --- Unit tests (mocked execShell) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -47,24 +47,29 @@ describe.concurrent('pnpm tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
-const integration = itWithPackageServer('pnpm');
+const integration = it.extend<{ call: Call; server: Server }>({
+  call: async ({ server }, use) => use(args => server.callTool('pnpm', { args })),
+  server: [async ({}, use) => usePackageServer('pnpm', use), { scope: 'file' }],
+});
 
-describe.concurrent('pnpm tool (integration)', { timeout: packageServerTimeout }, () => {
+describe.concurrent('pnpm tool (integration)', { timeout: packageCommandTimeout }, () => {
+  integration.beforeAll(({ server }) => server.initialize(), packageServerTimeout);
+
   describe('allowed global flags', () => {
     integration.for([
       { name: '--version', args: ['--version'] },
       { name: '--help', args: ['--help'] },
       { name: '-h', args: ['-h'] },
-    ])('allows $name', async ({ args }, { expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('pnpm', { args }));
+    ])('allows $name', async ({ args }, { call, expect }) => {
+      assertNotBlocked(expect, await call(args));
     });
 
-    integration('blocks --help with trailing args', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['--help', 'install'] }));
+    integration('blocks --help with trailing args', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['--help', 'install']));
     });
 
-    integration('blocks -v (not in global flags)', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['-v'] }));
+    integration('blocks -v (not in global flags)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['-v']));
     });
   });
 
@@ -76,48 +81,48 @@ describe.concurrent('pnpm tool (integration)', { timeout: packageServerTimeout }
         ['publish'], ['init'], ['link'], ['unlink'],
         ['store', 'prune'], ['patch', 'lodash'],
       ].map(args => ({ name: args.join(' '), args })),
-    )('blocks $name', async ({ args }, { expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args }));
+    )('blocks $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
     });
   });
 
   describe('blocked flags', () => {
-    integration('blocks audit --fix', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['audit', '--fix'] }));
+    integration('blocks audit --fix', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['audit', '--fix']));
     });
 
-    integration('blocks --registry', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['list', '--registry', build.httpsUrl()] }));
+    integration('blocks --registry', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['list', '--registry', build.httpsUrl()]));
     });
 
-    integration('blocks --registry=<url>', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['list', `--registry=${build.httpsUrl()}`] }));
+    integration('blocks --registry=<url>', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['list', `--registry=${build.httpsUrl()}`]));
     });
 
-    integration('blocks abbreviated --reg (expands to --registry)', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['list', '--reg', build.httpsUrl()] }));
+    integration('blocks abbreviated --reg (expands to --registry)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['list', '--reg', build.httpsUrl()]));
     });
 
-    integration('blocks abbreviated --reg=<url>', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('pnpm', { args: ['list', `--reg=${build.httpsUrl()}`] }));
+    integration('blocks abbreviated --reg=<url>', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['list', `--reg=${build.httpsUrl()}`]));
     });
   });
 
   describe('allowed subcommands', () => {
-    integration('allows list', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('pnpm', { args: ['list'] }));
+    integration('allows list', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['list']));
     });
 
-    integration('allows why', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('pnpm', { args: ['why', 'zod'] }));
+    integration('allows why', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['why', 'zod']));
     });
 
-    integration('allows licenses list', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('pnpm', { args: ['licenses', 'list'] }));
+    integration('allows licenses list', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['licenses', 'list']));
     });
 
-    integration('allows store status', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('pnpm', { args: ['store', 'status'] }));
+    integration('allows store status', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['store', 'status']));
     });
   });
 });

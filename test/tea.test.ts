@@ -1,7 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, afterAll, beforeAll, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { assertBlocked, connectTool, echoed, startServer, textOf } from './helpers.ts';
+import { type Server, assertBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -269,14 +269,14 @@ describe.concurrent('tea tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
+const integration = it.extend<{ server: Server }>({
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
+
 describe.concurrent('tea tool (integration)', () => {
-  let server: ReturnType<typeof startServer>;
+  integration.beforeAll(({ server }) => server.initialize());
 
-  beforeAll(async () => { server = startServer(); await server.initialize(); });
-
-  afterAll(() => server.close());
-
-  it.for(
+  integration.for(
     ([
       ['actions', 'secrets', 'list'],
       ['admin', 'users'],
@@ -339,13 +339,13 @@ describe.concurrent('tea tool (integration)', () => {
       ['webhooks', 'list'],
       ['wiki', 'list'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })),
-  )('blocks $name', async ({ args }, { expect }) => {
+  )('blocks $name', async ({ args }, { expect, server }) => {
     assertBlocked(expect, await server.callTool('tea', { args }));
   });
 
   // --debug may print the Authorization header; blocked until shown not to.
   describe('blocked debug flags', () => {
-    it.for(([
+    integration.for(([
       ['--debug', 'pulls', 'list'],
       ['pulls', 'list', '--debug'],
       ['pulls', 'list', '-debug'],
@@ -354,7 +354,7 @@ describe.concurrent('tea tool (integration)', () => {
       ['pulls', ':number', '--debug'],
       ['whoami', '--debug'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
-      'blocks $name', async ({ args }, { expect }) => {
+      'blocks $name', async ({ args }, { expect, server }) => {
         assertBlocked(expect, await server.callTool('tea', { args }));
       },
     );
@@ -362,20 +362,20 @@ describe.concurrent('tea tool (integration)', () => {
 
   // --save writes the label set to a file.
   describe('blocked labels --save', () => {
-    it.for(([
+    integration.for(([
       ['labels', 'list', '--save'],
       ['labels', 'list', '--save=true'],
       ['labels', 'list', '-save'],
       ['labels', 'list', '-s'],
       ['label', 'ls', '-s'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
-      'blocks $name', async ({ args }, { expect }) => {
+      'blocks $name', async ({ args }, { expect, server }) => {
         assertBlocked(expect, await server.callTool('tea', { args }));
       },
     );
   });
 
-  it('blocks bare tea', async ({ expect }) => {
+  integration('blocks bare tea', async ({ expect, server }) => {
     assertBlocked(expect, await server.callTool('tea', { args: [] }));
   });
 });

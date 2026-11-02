@@ -14,9 +14,8 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { it } from 'vitest';
 import { z } from 'zod';
-import { startServer } from './helpers.ts';
+import { type Server, useServer } from './helpers.ts';
 
 const run = promisify(execFile);
 
@@ -72,28 +71,24 @@ export const createPackageFixture = async (manager: PackageManager): Promise<Pac
 };
 
 /*
- * Vitest gives a fixture no timeout of its own: a file-scoped one is set up
- * inside whichever tests first ask for it, and under `describe.concurrent`
- * that is all of them, each paying for the install against its own timeout.
- * Suites using {@link itWithPackageServer} take this bound, sized to an install
- * on a loaded machine rather than to the commands under test.
+ * The timeout for the `beforeAll` that initializes a server from
+ * {@link usePackageServer}, whose setup also installs the project: sized to
+ * an install on a loaded machine rather than to the commands under test.
  */
 export const packageServerTimeout = 60_000;
 
-/**
- * Extends `it` with a server running in a {@link PackageFixture} installed by
- * `manager`, shared by every test in the file.
+/*
+ * The test timeout for suites that run npm or pnpm. Even against the
+ * one-dependency project, a command that walks the store or asks the
+ * registry outlasts Vitest's default on a loaded machine.
  */
-export const itWithPackageServer = (manager: PackageManager) =>
-  it.extend<{ server: ReturnType<typeof startServer> }>({
-    server: [async ({}, use) => {
-      await using project = await createPackageFixture(manager);
-      const server = startServer({ cwd: project.dir });
-      try {
-        await server.initialize();
-        await use(server);
-      } finally {
-        await server.close();
-      }
-    }, { scope: 'file' }],
-  });
+export const packageCommandTimeout = 30_000;
+
+/**
+ * The body of a `server` fixture running in a {@link PackageFixture}
+ * installed by `manager`, as {@link useServer} is for the repository.
+ */
+export const usePackageServer = async (manager: PackageManager, use: (server: Server) => Promise<void>) => {
+  await using project = await createPackageFixture(manager);
+  await useServer(use, { cwd: project.dir });
+};

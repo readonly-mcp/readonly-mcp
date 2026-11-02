@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, afterAll, beforeAll, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { assertBlocked, assertNotBlocked, connectTool, echoed, startServer, textOf } from './helpers.ts';
+import { type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -142,298 +142,304 @@ describe.concurrent('git tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
+/**
+ * A call to git that also passes the tool's `cwd`.
+ */
+type GitCall = (args: readonly string[], cwd?: string) => Promise<CallToolResult>;
+
+const integration = it.extend<{ call: GitCall; server: Server }>({
+  call: async ({ server }, use) => use((args, cwd) => server.callTool('git', { args, cwd })),
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
+
 describe.concurrent('git tool (integration)', () => {
-  let server: ReturnType<typeof startServer>;
-
-  beforeAll(async () => { server = startServer(); await server.initialize(); });
-
-  afterAll(() => server.close());
+  integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked subcommands', () => {
-    it.for(['push', 'pull', 'fetch', 'checkout', 'reset', 'rebase', 'merge', 'commit', 'add', 'rm', 'clean'])(
-      'blocks %s', async (sub, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: [sub] }));
+    integration.for(['push', 'pull', 'fetch', 'checkout', 'reset', 'rebase', 'merge', 'commit', 'add', 'rm', 'clean'])(
+      'blocks %s', async (sub, { call, expect }) => {
+        assertBlocked(expect, await call([sub]));
       },
     );
   });
 
   describe('allowed subcommands', () => {
-    it('allows status', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['status'] }));
+    integration('allows status', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['status']));
     });
 
-    it('allows log', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['log', '--oneline', '-5'] }));
+    integration('allows log', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['log', '--oneline', '-5']));
     });
 
-    it('allows log with flags', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['log', '--all', '--oneline', '-1'] }));
+    integration('allows log with flags', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['log', '--all', '--oneline', '-1']));
     });
 
-    it('allows branch -a', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['branch', '-a'] }));
+    integration('allows branch -a', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['branch', '-a']));
     });
 
-    it('allows diff', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['diff'] }));
+    integration('allows diff', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['diff']));
     });
 
-    it('allows diff with flags', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['diff', '--stat'] }));
+    integration('allows diff with flags', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['diff', '--stat']));
     });
 
-    it('allows show HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['show', 'HEAD', '--stat'] }));
+    integration('allows show HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['show', 'HEAD', '--stat']));
     });
 
-    it('allows rev-parse HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['rev-parse', 'HEAD'] }));
+    integration('allows rev-parse HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['rev-parse', 'HEAD']));
     });
 
-    it('allows rev-parse --git-dir', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['rev-parse', '--git-dir'] }));
+    integration('allows rev-parse --git-dir', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['rev-parse', '--git-dir']));
     });
 
-    it('allows blame HEAD -- README.md', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['blame', 'HEAD', '--', 'README.md'] }));
+    integration('allows blame HEAD -- README.md', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['blame', 'HEAD', '--', 'README.md']));
     });
 
-    it('allows describe', async ({ expect }) => {
+    integration('allows describe', async ({ call, expect }) => {
       // May fail if no tags exist, but should not be blocked
-      const result = await server.callTool('git', { args: ['describe', '--tags'] });
+      const result = await call(['describe', '--tags']);
 
       expect(result?.isError).not.toBe(true);
     });
 
-    it('allows merge-base HEAD HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['merge-base', 'HEAD', 'HEAD'] }));
+    integration('allows merge-base HEAD HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['merge-base', 'HEAD', 'HEAD']));
     });
 
-    it('allows shortlog -1 HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['shortlog', '-1', 'HEAD'] }));
+    integration('allows shortlog -1 HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['shortlog', '-1', 'HEAD']));
     });
 
-    it('allows ls-files', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['ls-files'] }));
+    integration('allows ls-files', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['ls-files']));
     });
 
-    it('allows ls-files -o (--others)', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['ls-files', '-o'] }));
+    integration('allows ls-files -o (--others)', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['ls-files', '-o']));
     });
 
-    it('allows ls-tree HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['ls-tree', 'HEAD'] }));
+    integration('allows ls-tree HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['ls-tree', 'HEAD']));
     });
 
-    it('allows worktree list', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['worktree', 'list'] }));
+    integration('allows worktree list', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['worktree', 'list']));
     });
 
-    it('allows reflog show', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['reflog', 'show'] }));
+    integration('allows reflog show', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['reflog', 'show']));
     });
 
-    it('allows bare reflog', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['reflog'] }));
+    integration('allows bare reflog', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['reflog']));
     });
 
-    it('allows reflog exists HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['reflog', 'exists', 'HEAD'] }));
+    integration('allows reflog exists HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['reflog', 'exists', 'HEAD']));
     });
   });
 
   describe('blocked branch mutation flags', () => {
-    it.for(['-D', '-d', '-m', '-M', '-c', '-C', '--delete', '--move', '--copy', '--force', '--set-upstream-to', '--unset-upstream', '--edit-description'])(
-      'blocks branch %s', async (flag, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: ['branch', flag, 'test'] }));
+    integration.for(['-D', '-d', '-m', '-M', '-c', '-C', '--delete', '--move', '--copy', '--force', '--set-upstream-to', '--unset-upstream', '--edit-description'])(
+      'blocks branch %s', async (flag, { call, expect }) => {
+        assertBlocked(expect, await call(['branch', flag, 'test']));
       },
     );
 
-    it('blocks --set-upstream-to=value (equals form)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['branch', '--set-upstream-to=origin/main', 'test'] }));
+    integration('blocks --set-upstream-to=value (equals form)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['branch', '--set-upstream-to=origin/main', 'test']));
     });
   });
 
   describe('blocked flag abbreviations', () => {
-    it.for([
+    integration.for([
       { flag: '--outp', sub: 'show', desc: '--output abbreviation' },
       { flag: '--del', sub: 'branch', desc: '--delete abbreviation' },
       { flag: '--mov', sub: 'branch', desc: '--move abbreviation' },
       { flag: '--cop', sub: 'branch', desc: '--copy abbreviation' },
       { flag: '--forc', sub: 'branch', desc: '--force abbreviation' },
       { flag: '--edit', sub: 'branch', desc: '--edit-description abbreviation' },
-    ])('blocks $desc ($flag) on $sub', async ({ flag, sub }, { expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: [sub, flag, 'test'] }));
+    ])('blocks $desc ($flag) on $sub', async ({ flag, sub }, { call, expect }) => {
+      assertBlocked(expect, await call([sub, flag, 'test']));
     });
   });
 
   describe('remote subcommand filtering', () => {
-    it('allows bare remote (list)', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote'] }));
+    integration('allows bare remote (list)', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote']));
     });
 
-    it('allows remote -v', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote', '-v'] }));
+    integration('allows remote -v', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote', '-v']));
     });
 
-    it('allows remote --verbose', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote', '--verbose'] }));
+    integration('allows remote --verbose', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote', '--verbose']));
     });
 
-    it('allows remote get-url origin', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote', 'get-url', 'origin'] }));
+    integration('allows remote get-url origin', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote', 'get-url', 'origin']));
     });
 
-    it('allows remote get-url --push origin', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote', 'get-url', '--push', 'origin'] }));
+    integration('allows remote get-url --push origin', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote', 'get-url', '--push', 'origin']));
     });
 
-    it('allows remote get-url --all origin', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote', 'get-url', '--all', 'origin'] }));
+    integration('allows remote get-url --all origin', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote', 'get-url', '--all', 'origin']));
     });
 
-    it('allows remote show -n origin', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['remote', 'show', '-n', 'origin'] }));
+    integration('allows remote show -n origin', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['remote', 'show', '-n', 'origin']));
     });
 
-    it('blocks remote show without -n (SSRF risk)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['remote', 'show', 'origin'] }));
+    integration('blocks remote show without -n (SSRF risk)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['remote', 'show', 'origin']));
     });
 
-    it.for(['add', 'remove', 'rename', 'set-url', 'set-head', 'prune', 'update'])(
-      'blocks remote %s', async (sub, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: ['remote', sub, 'origin'] }));
+    integration.for(['add', 'remove', 'rename', 'set-url', 'set-head', 'prune', 'update'])(
+      'blocks remote %s', async (sub, { call, expect }) => {
+        assertBlocked(expect, await call(['remote', sub, 'origin']));
       },
     );
 
-    it('blocks unknown flags on remote', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['remote', '--unknown-flag'] }));
+    integration('blocks unknown flags on remote', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['remote', '--unknown-flag']));
     });
   });
 
   describe('stash subcommand filtering', () => {
-    it('allows stash list', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['stash', 'list'] }));
+    integration('allows stash list', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['stash', 'list']));
     });
 
-    it('allows stash show', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['stash', 'show'] }));
+    integration('allows stash show', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['stash', 'show']));
     });
 
-    it('blocks bare stash (implicit push)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['stash'] }));
+    integration('blocks bare stash (implicit push)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['stash']));
     });
 
-    it('blocks stash -- list (implicit push with pathspec)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['stash', '--', 'list'] }));
+    integration('blocks stash -- list (implicit push with pathspec)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['stash', '--', 'list']));
     });
 
-    it.for(['push', 'pop', 'apply', 'drop', 'clear', 'save', 'create', 'store'])(
-      'blocks stash %s', async (sub, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: ['stash', sub] }));
+    integration.for(['push', 'pop', 'apply', 'drop', 'clear', 'save', 'create', 'store'])(
+      'blocks stash %s', async (sub, { call, expect }) => {
+        assertBlocked(expect, await call(['stash', sub]));
       },
     );
   });
 
   describe('worktree subcommand filtering', () => {
-    it('allows worktree list', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['worktree', 'list'] }));
+    integration('allows worktree list', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['worktree', 'list']));
     });
 
-    it('blocks bare worktree', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['worktree'] }));
+    integration('blocks bare worktree', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['worktree']));
     });
 
-    it.for(['add', 'remove', 'move', 'prune', 'lock', 'unlock', 'repair'])(
-      'blocks worktree %s', async (sub, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: ['worktree', sub] }));
+    integration.for(['add', 'remove', 'move', 'prune', 'lock', 'unlock', 'repair'])(
+      'blocks worktree %s', async (sub, { call, expect }) => {
+        assertBlocked(expect, await call(['worktree', sub]));
       },
     );
   });
 
   describe('reflog subcommand filtering', () => {
-    it('allows bare reflog (= reflog show)', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['reflog'] }));
+    integration('allows bare reflog (= reflog show)', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['reflog']));
     });
 
-    it('allows reflog show', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['reflog', 'show'] }));
+    integration('allows reflog show', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['reflog', 'show']));
     });
 
-    it('allows reflog exists HEAD', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['reflog', 'exists', 'HEAD'] }));
+    integration('allows reflog exists HEAD', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['reflog', 'exists', 'HEAD']));
     });
 
-    it.for(['delete', 'expire'])(
-      'blocks reflog %s', async (sub, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: ['reflog', sub] }));
+    integration.for(['delete', 'expire'])(
+      'blocks reflog %s', async (sub, { call, expect }) => {
+        assertBlocked(expect, await call(['reflog', sub]));
       },
     );
   });
 
   describe('write-flag blocking', () => {
-    it.for(['log', 'diff', 'show'])(
-      'blocks %s --output=<path>', async (sub, { expect }) => {
-        assertBlocked(expect, await server.callTool('git', { args: [sub, `--output=${build.absolutePath()}`] }));
+    integration.for(['log', 'diff', 'show'])(
+      'blocks %s --output=<path>', async (sub, { call, expect }) => {
+        assertBlocked(expect, await call([sub, `--output=${build.absolutePath()}`]));
       },
     );
 
-    it('blocks log --output <path>', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['log', '--output', build.absolutePath()] }));
+    integration('blocks log --output <path>', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['log', '--output', build.absolutePath()]));
     });
 
-    it('blocks diff -o', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['diff', '-o', build.absolutePath()] }));
+    integration('blocks diff -o', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['diff', '-o', build.absolutePath()]));
     });
 
-    it('blocks diff -ofile.txt (no space)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['diff', `-o${build.fileName('txt')}`] }));
+    integration('blocks diff -ofile.txt (no space)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['diff', `-o${build.fileName('txt')}`]));
     });
 
-    it('blocks diff -ao (combined short flags with -o)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['diff', '-ao', build.absolutePath()] }));
+    integration('blocks diff -ao (combined short flags with -o)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['diff', '-ao', build.absolutePath()]));
     });
 
-    it('blocks diff -abo (combined short flags with -o at end)', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['diff', '-abo', build.absolutePath()] }));
+    integration('blocks diff -abo (combined short flags with -o at end)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['diff', '-abo', build.absolutePath()]));
     });
 
-    it('blocks diff --no-index', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['diff', '--no-index', '/etc/passwd', '/dev/null'] }));
+    integration('blocks diff --no-index', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['diff', '--no-index', '/etc/passwd', '/dev/null']));
     });
   });
 
   describe('--no-pager injection', () => {
-    it('does not hang on pager', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['log', '--oneline', '-1'] }));
+    integration('does not hang on pager', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['log', '--oneline', '-1']));
     });
   });
 
   describe('cwd parameter', () => {
-    it('rejects cwd that is not a known worktree', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['status'], cwd: build.absolutePath() }));
+    integration('rejects cwd that is not a known worktree', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['status'], build.absolutePath()));
     });
 
-    it('accepts cwd that is the main worktree', async ({ expect }) => {
-      const topResult = await server.callTool('git', { args: ['rev-parse', '--show-toplevel'] });
+    integration('accepts cwd that is the main worktree', async ({ call, expect }) => {
+      const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
-      assertNotBlocked(expect, await server.callTool('git', { args: ['status'], cwd: toplevel }));
+      assertNotBlocked(expect, await call(['status'], toplevel));
     });
 
-    it('rejects empty string cwd', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: ['status'], cwd: '' }));
+    integration('rejects empty string cwd', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['status'], ''));
     });
 
-    it('rejects path traversal from valid worktree', async ({ expect }) => {
-      const topResult = await server.callTool('git', { args: ['rev-parse', '--show-toplevel'] });
+    integration('rejects path traversal from valid worktree', async ({ call, expect }) => {
+      const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
-      assertBlocked(expect, await server.callTool('git', { args: ['status'], cwd: toplevel + '/../../../tmp' }));
+      assertBlocked(expect, await call(['status'], toplevel + '/../../../tmp'));
     });
 
-    it('accepts cwd with trailing slash', async ({ expect }) => {
-      const topResult = await server.callTool('git', { args: ['rev-parse', '--show-toplevel'] });
+    integration('accepts cwd with trailing slash', async ({ call, expect }) => {
+      const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
-      assertNotBlocked(expect, await server.callTool('git', { args: ['status'], cwd: toplevel + '/' }));
+      assertNotBlocked(expect, await call(['status'], toplevel + '/'));
     });
   });
 
@@ -452,12 +458,12 @@ describe.concurrent('git tool (integration)', () => {
       try { execFileSync('git', ['branch', '-D', branchName], { timeout: 5000 }); } catch {}
     });
 
-    it('accepts linked worktree as cwd', async ({ expect }) => {
-      assertNotBlocked(expect, await server.callTool('git', { args: ['status'], cwd: worktreePath }));
+    integration('accepts linked worktree as cwd', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['status'], worktreePath));
     });
 
-    it('resolves HEAD from linked worktree, not main', async ({ expect }) => {
-      const result = await server.callTool('git', { args: ['rev-parse', '--abbrev-ref', 'HEAD'], cwd: worktreePath });
+    integration('resolves HEAD from linked worktree, not main', async ({ call, expect }) => {
+      const result = await call(['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
       const branch = textOf(result).trim();
 
       expect(branch).toBe(branchName);
@@ -465,8 +471,8 @@ describe.concurrent('git tool (integration)', () => {
   });
 
   describe('edge cases', () => {
-    it('blocks empty args', async ({ expect }) => {
-      assertBlocked(expect, await server.callTool('git', { args: [] }));
+    integration('blocks empty args', async ({ call, expect }) => {
+      assertBlocked(expect, await call([]));
     });
   });
 });

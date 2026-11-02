@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, afterAll, beforeAll, describe, it, vi } from 'vitest';
-import { assertBlocked, assertNotBlocked, connectTool, startServer, textOf } from './helpers.ts';
+import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type Server, assertBlocked, assertNotBlocked, connectTool, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked execShell) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -28,42 +28,42 @@ describe.concurrent('shell tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
+const integration = it.extend<{ server: Server }>({
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
+
 describe.concurrent('shell tool (integration)', () => {
-  let server: ReturnType<typeof startServer>;
-
-  beforeAll(async () => { server = startServer(); await server.initialize(); });
-
-  afterAll(() => server.close());
+  integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked commands', () => {
-    it.for([
+    integration.for([
       'rm', 'mv', 'cp', 'chmod', 'chown', 'mkdir', 'rmdir', 'touch', 'dd',
       'tee', 'sed', 'awk', 'bash', 'sh', 'cmd', 'powershell', 'node',
       'python', 'py', 'printenv', 'rg', 'bat', 'cat', 'delta', 'diff',
       'head', 'tail',
-    ])('blocks %s', async (cmd, { expect }) => {
+    ])('blocks %s', async (cmd, { expect, server }) => {
       assertBlocked(expect, await server.callTool('shell', { command: cmd, args: [] }));
     });
   });
 
   describe('path traversal in command name', () => {
-    it('blocks /bin/rm', async ({ expect }) => {
+    integration('blocks /bin/rm', async ({ expect, server }) => {
       assertBlocked(expect, await server.callTool('shell', { command: '/bin/rm', args: [] }));
     });
 
-    it('blocks ../../bin/rm', async ({ expect }) => {
+    integration('blocks ../../bin/rm', async ({ expect, server }) => {
       assertBlocked(expect, await server.callTool('shell', { command: '../../bin/rm', args: [] }));
     });
   });
 
   describe('empty command', () => {
-    it('blocks empty command', async ({ expect }) => {
+    integration('blocks empty command', async ({ expect, server }) => {
       assertBlocked(expect, await server.callTool('shell', { command: '', args: [] }));
     });
   });
 
   describe('allowed commands', () => {
-    it('allows ls', async ({ expect }) => {
+    integration('allows ls', async ({ expect, server }) => {
       assertNotBlocked(expect, await server.callTool('shell', { command: 'ls', args: ['.'] }));
     });
   });

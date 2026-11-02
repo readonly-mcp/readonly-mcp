@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, afterAll, beforeAll, describe, it, vi } from 'vitest';
-import { assertBlocked, connectTool, startServer, textOf } from './helpers.ts';
+import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type Server, assertBlocked, connectTool, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -41,14 +41,14 @@ describe.concurrent('acli tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
+const integration = it.extend<{ server: Server }>({
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
+
 describe.concurrent('acli tool (integration)', () => {
-  let server: ReturnType<typeof startServer>;
+  integration.beforeAll(({ server }) => server.initialize());
 
-  beforeAll(async () => { server = startServer(); await server.initialize(); });
-
-  afterAll(() => server.close());
-
-  it.for(
+  integration.for(
     [
       ['jira', 'workitem', 'create'],
       ['jira', 'workitem', 'edit'],
@@ -57,7 +57,7 @@ describe.concurrent('acli tool (integration)', () => {
       ['jira', 'workitem', 'transition'],
       ['jira', 'workitem', 'comment', 'create'],
     ].map(args => ({ name: args.join(' '), args })),
-  )('blocks $name', async ({ args }, { expect }) => {
+  )('blocks $name', async ({ args }, { expect, server }) => {
     assertBlocked(expect, await server.callTool('acli', { args }));
   });
 });

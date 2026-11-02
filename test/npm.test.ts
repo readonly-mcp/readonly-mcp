@@ -2,8 +2,8 @@ import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { assertBlocked, assertNotBlocked, connectTool, echoed, textOf } from './helpers.ts';
-import { itWithPackageServer, packageServerTimeout } from './package-fixture.ts';
+import { type Call, type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf } from './helpers.ts';
+import { packageCommandTimeout, packageServerTimeout, usePackageServer } from './package-fixture.ts';
 
 // --- Unit tests (mocked execShell) ---
 vi.mock(import('../lib/exec.ts'), async importOriginal =>
@@ -46,9 +46,14 @@ describe.concurrent('npm tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
-const integration = itWithPackageServer('npm');
+const integration = it.extend<{ call: Call; server: Server }>({
+  call: async ({ server }, use) => use(args => server.callTool('npm', { args })),
+  server: [async ({}, use) => usePackageServer('npm', use), { scope: 'file' }],
+});
 
-describe.concurrent('npm tool (integration)', { timeout: packageServerTimeout }, () => {
+describe.concurrent('npm tool (integration)', { timeout: packageCommandTimeout }, () => {
+  integration.beforeAll(({ server }) => server.initialize(), packageServerTimeout);
+
   describe('blocked subcommands', () => {
     integration.for(
       [
@@ -56,56 +61,56 @@ describe.concurrent('npm tool (integration)', { timeout: packageServerTimeout },
         ['run', 'build'], ['exec', 'tsc'], ['publish'], ['init'],
         ['link'], ['pack'], ['prune'], ['rebuild'], ['dedupe'],
       ].map(args => ({ name: args.join(' '), args })),
-    )('blocks $name', async ({ args }, { expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args }));
+    )('blocks $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
     });
   });
 
   describe('blocked flags', () => {
-    integration('blocks audit --fix', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['audit', '--fix'] }));
+    integration('blocks audit --fix', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['audit', '--fix']));
     });
 
-    integration('blocks --registry', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['view', faker.internet.domainWord(), '--registry', build.httpsUrl()] }));
+    integration('blocks --registry', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['view', faker.internet.domainWord(), '--registry', build.httpsUrl()]));
     });
 
-    integration('blocks --registry=<url>', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['view', faker.internet.domainWord(), `--registry=${build.httpsUrl()}`] }));
+    integration('blocks --registry=<url>', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['view', faker.internet.domainWord(), `--registry=${build.httpsUrl()}`]));
     });
 
-    integration('blocks --no-ignore-scripts (overrides injected --ignore-scripts)', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['audit', '--no-ignore-scripts'] }));
+    integration('blocks --no-ignore-scripts (overrides injected --ignore-scripts)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['audit', '--no-ignore-scripts']));
     });
 
-    integration('blocks abbreviated --reg (npm expands to --registry)', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['view', faker.internet.domainWord(), '--reg', build.httpsUrl()] }));
+    integration('blocks abbreviated --reg (npm expands to --registry)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['view', faker.internet.domainWord(), '--reg', build.httpsUrl()]));
     });
 
-    integration('blocks abbreviated --reg=<url>', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['view', faker.internet.domainWord(), `--reg=${build.httpsUrl()}`] }));
+    integration('blocks abbreviated --reg=<url>', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['view', faker.internet.domainWord(), `--reg=${build.httpsUrl()}`]));
     });
 
-    integration('blocks abbreviated --fi (matches --fix)', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['audit', '--fi'] }));
+    integration('blocks abbreviated --fi (matches --fix)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['audit', '--fi']));
     });
 
-    integration('blocks --ignore-scripts=false (overrides injected --ignore-scripts)', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('npm', { args: ['audit', '--ignore-scripts=false'] }));
+    integration('blocks --ignore-scripts=false (overrides injected --ignore-scripts)', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['audit', '--ignore-scripts=false']));
     });
   });
 
   describe('allowed subcommands', () => {
-    integration('allows ls', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('npm', { args: ['ls'] }));
+    integration('allows ls', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['ls']));
     });
 
-    integration('allows explain', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('npm', { args: ['explain', 'zod'] }));
+    integration('allows explain', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['explain', 'zod']));
     });
 
-    integration('allows view', async ({ expect, server }) => {
-      assertNotBlocked(expect, await server.callTool('npm', { args: ['view', 'zod'] }));
+    integration('allows view', async ({ call, expect }) => {
+      assertNotBlocked(expect, await call(['view', 'zod']));
     });
   });
 });
