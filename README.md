@@ -43,7 +43,7 @@ The goal is to make auto-allow safe for read-only tools. Without enforcement at 
 
 Read-only shell utilities: `basename`, `date`, `dirname`, `eza`, `file`, `jq`, `ls`, `pwd`, `readlink`, `realpath`, `stat`, `wc`, `which`, `whoami`
 
-`jq` blocks file-path arguments, file-reading flags (`--slurpfile`, `--rawfile`, `-f`, `-L`), combined short flags containing file-read characters (e.g., `-rf`, `-nf`), concatenated `-L/path`, and `--flag=val` forms — use stdin piping instead.
+`jq` blocks file-path arguments, file-reading flags (`--slurpfile`, `--rawfile`, `-f`, `-L`), combined short flags containing file-read characters (e.g., `-rf`, `-nf`), concatenated `-L/path`, and `--flag=val` forms — use stdin piping instead. Every arg after `--` counts as a positional. Filters may not use `env`, `$ENV`, `import`, `include` or `modulemeta` (field access such as `.env` is fine). The check matches the word, so a string or object key spelling one, as in `"env"` or `{env: …}`, is rejected too.
 
 **Schema:** `{ command: string, args?: string[] }`
 

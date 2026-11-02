@@ -2,7 +2,9 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import * as build from './builders.ts';
 import { type Canary, useCanary } from './canary.ts';
-import { type Call, type Server, assertBlocked, assertNotBlocked, useServer } from './helpers.ts';
+import {
+  type Call, type Server, assertBlocked, assertNotBlocked, textOf, useServer,
+} from './helpers.ts';
 
 const integration = it.extend<{ call: Call; canary: Canary; server: Server }>({
   call: async ({ server }, use) => use(args => server.callTool('shell', { command: 'jq', args })),
@@ -95,6 +97,37 @@ describe.concurrent('jq file argument blocking', () => {
     integration('blocks --from-file=path (equals form)', async ({ call, expect }) => {
       assertBlocked(expect, await call([`--from-file=${build.fileName('jq')}`]));
     });
+  });
+
+  describe('blocked filters', () => {
+    integration.for([
+      'env', '.a | env', '$ENV', '$ENV.PATH', '{$ENV}', String.raw`"\(env)"`,
+      'import "a" as a; .', 'include "a"; .', '"a" | modulemeta',
+    ])('blocks %s', async (filter, { call, expect }) => {
+      assertBlocked(expect, await call(['-n', filter]));
+    });
+
+    // A deliberate false positive: the check cannot tell a string or key from a call.
+    integration.for(['select(.type == "env")', '{env: .a}'])(
+      'blocks %s, which only names env', async (filter, { call, expect }) => {
+        assertBlocked(expect, await call(['-n', filter]));
+      },
+    );
+
+    // The check skips a name right after a dot, so jq must never read one as a call.
+    integration.for(['..env', '1.env', '1 .env'])(
+      'leaves %s to jq, which errors rather than calling env', async (filter, { call, expect }) => {
+        const result = await call(['-n', filter]);
+
+        expect(textOf(result)).toMatch(/^jq: error/v);
+      },
+    );
+
+    integration.for(['.env', '.a.env', '.ENV', '.environment'])(
+      'allows the field access %s', async (filter, { call, expect }) => {
+        assertNotBlocked(expect, await call(['-n', filter]));
+      },
+    );
   });
 
   describe('combined short flag bypass', () => {

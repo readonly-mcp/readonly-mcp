@@ -22,6 +22,16 @@ const pairFlagValues = 2;
 // Flags that take one following argument
 const jqValueFlags = new Set(['--indent']);
 
+/*
+ * Names a filter must not use: env and $ENV print the server's environment,
+ * and import, include and modulemeta load modules from jq's default search
+ * path, which -L being blocked does not cover. jq cannot build a name at
+ * runtime, so matching the word is enough. `.env` is a field, never the
+ * builtin, so it is skipped. A string holding one of these words is
+ * rejected too, which fails closed.
+ */
+const jqBlockedNames = /(?<!\.)\b(?:env|ENV|import|include|modulemeta)\b/v;
+
 // A character of a file-reading short flag (-f, -L) within a short-flag group
 const jqFileChar = /[fL]/v;
 
@@ -33,6 +43,14 @@ const rejectFileFlag = (arg: string): CallToolResult | undefined => {
     if (fileChar) return fail(`Flag not allowed for jq: -${fileChar}`);
   }
   return undefined;
+};
+
+// The first positional is the filter; any after it is a file path.
+const rejectPositional = (arg: string, hasFilter: boolean): CallToolResult | undefined => {
+  if (hasFilter)
+    return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
+  const name = jqBlockedNames.exec(arg)?.[0];
+  return name ? fail(`Filter may not use ${name} for jq`) : undefined;
 };
 
 /*
@@ -49,8 +67,8 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
     const arg = args[index];
     if (arg === undefined) break;
     if (isPastOptions || !arg.startsWith('-')) {
-      if (hasFilter)
-        return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
+      const rejected = rejectPositional(arg, hasFilter);
+      if (rejected) return rejected;
       hasFilter = true;
     } else if (arg === '--') isPastOptions = true;
     else {
