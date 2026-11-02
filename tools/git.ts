@@ -28,6 +28,26 @@ const branchBlocked = new Set([
   '--set-upstream-to', '--unset-upstream', '--force', '--no-list',
 ]);
 
+// blame flags that read a file outside the repo (-S is matched by blameS):
+// --contents: prints the file as the working-tree version being blamed
+// --ignore-revs-file: reads revisions from the file, echoing bad lines back
+const blameBlocked = new Set(['--contents', '--ignore-revs-file']);
+
+/*
+ * blame -S, which reads revisions from a file like --ignore-revs-file, alone
+ * or in a short-flag group, up to any of -C, -L or -M, which take the rest of
+ * their group as a value (-L1,5, -M20)
+ */
+const blameS = /^-[^\-CLMS]*S/v;
+
+/*
+ * --ignore-rev names a revision, not a file. git matches an exact name before
+ * any abbreviation, so it never resolves to --ignore-revs-file, which it is a
+ * prefix of.
+ */
+const isIgnoreRev = (arg: string): boolean =>
+  arg === '--ignore-rev' || arg.startsWith('--ignore-rev=');
+
 // Only these sub-subcommands (or none) are allowed for `git stash`
 const stashAllowedSubs = new Set(['list', 'show']);
 
@@ -96,6 +116,13 @@ const rejectShortOutput = (args: readonly string[]): Rejection => {
   return shortO ? fail(`Flag not allowed: ${shortO}`) : undefined;
 };
 
+const rejectBlameArgs = (args: readonly string[]): Rejection => {
+  const readsRevs = args.slice(1).find(arg => blameS.test(arg));
+  return readsRevs
+    ? fail(`Flag not allowed: ${readsRevs}`)
+    : rejectBlockedFlags(args.filter(arg => !isIgnoreRev(arg)), blameBlocked);
+};
+
 /**
  * Allows only the listed subcommands under `git <sub>`, and a bare call only
  * when `isBareAllowed`.
@@ -126,6 +153,7 @@ const allowRemoteSubcommands =
 
 // Checks a subcommand runs after the global flags pass.
 const subcommandChecks: Record<string, (args: readonly string[]) => Rejection> = {
+  blame: rejectBlameArgs,
   branch: args => rejectBlockedFlags(args, branchBlocked),
   diff: rejectShortOutput,
   // Bare `git reflog` is safe (equivalent to `git reflog show`)
