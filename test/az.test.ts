@@ -1,7 +1,9 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { type Call, type Server, assertBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
+import {
+  type Call, type Server, assertBlocked, connectTool, echoed, textOf, useServer,
+} from './helpers.ts';
 
 // --- Unit tests (mocked execShell) ---
 // Allowed paths hit the real `az` CLI which is slow (~1-2s per call),
@@ -33,7 +35,8 @@ describe.concurrent('az tool (unit)', () => {
     });
 
     it('allows pipelines build show', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['pipelines', 'build', 'show', '--id', build.resourceId()]));
+      const id = build.resourceId();
+      assertAllowed(expect, await callMocked(['pipelines', 'build', 'show', '--id', id]));
     });
   });
 
@@ -55,7 +58,8 @@ describe.concurrent('az tool (unit)', () => {
     it('allows with extra safe flags', async ({ expect }) => {
       assertAllowed(expect, await callMocked(
         ['devops', 'invoke', '--area', 'build', '--resource', 'builds',
-          '--route-parameters', `buildId=${build.resourceId()}`, '--query-parameters', 'api-version=7.0',
+          '--route-parameters', `buildId=${build.resourceId()}`,
+          '--query-parameters', 'api-version=7.0',
           '--output', 'json'],
       ));
     });
@@ -80,6 +84,12 @@ describe.concurrent('az tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server, blocked paths never reach execShell) ---
+
+/**
+ * `devops invoke` with `flags`, on the build area's builds endpoint.
+ */
+const buildsInvoke = (...flags: string[]): string[] =>
+  ['devops', 'invoke', ...flags, '--area', 'build', '--resource', 'builds'];
 
 const integration = it.extend<{ call: Call; server: Server }>({
   call: async ({ server }, use) => use(args => server.callTool('az', { args })),
@@ -148,7 +158,7 @@ describe.concurrent('az tool (integration)', () => {
         { flags: [`--out-file=${build.fileName('json')}`], name: '--out-file=<file>' },
       ],
     )('blocks devops invoke $name', async ({ flags }, { call, expect }) => {
-      assertBlocked(expect, await call(['devops', 'invoke', ...flags, '--area', 'build', '--resource', 'builds']));
+      assertBlocked(expect, await call(buildsInvoke(...flags)));
     });
   });
 
@@ -176,12 +186,12 @@ describe.concurrent('az tool (integration)', () => {
 
   describe('blocked abbreviated flags', () => {
     integration.for([
-      { name: '--http-m', args: ['devops', 'invoke', '--http-m', 'POST', '--area', 'build', '--resource', 'builds'] },
-      { name: '--http-metho', args: ['devops', 'invoke', '--http-metho', 'PATCH', '--area', 'build', '--resource', 'builds'] },
-      { name: '--in-f', args: ['devops', 'invoke', '--in-f', build.fileName('json'), '--area', 'build', '--resource', 'builds'] },
-      { name: '--out-f', args: ['devops', 'invoke', '--out-f', build.fileName('json'), '--area', 'build', '--resource', 'builds'] },
-      { name: '--out', args: ['devops', 'invoke', '--out', 'json', '--area', 'build', '--resource', 'builds'] },
-      { name: '--o', args: ['devops', 'invoke', '--o', 'json', '--area', 'build', '--resource', 'builds'] },
+      { name: '--http-m', args: buildsInvoke('--http-m', 'POST') },
+      { name: '--http-metho', args: buildsInvoke('--http-metho', 'PATCH') },
+      { name: '--in-f', args: buildsInvoke('--in-f', build.fileName('json')) },
+      { name: '--out-f', args: buildsInvoke('--out-f', build.fileName('json')) },
+      { name: '--out', args: buildsInvoke('--out', 'json') },
+      { name: '--o', args: buildsInvoke('--o', 'json') },
       { name: '--are', args: ['devops', 'invoke', '--are', 'build', '--resource', 'builds'] },
       { name: '--res', args: ['devops', 'invoke', '--area', 'build', '--res', 'builds'] },
     ])('blocks abbreviated flag $name', async ({ args }, { call, expect }) => {
@@ -191,9 +201,9 @@ describe.concurrent('az tool (integration)', () => {
 
   describe('blocked single-dash flags on invoke', () => {
     integration.for([
-      { name: '-X', args: ['devops', 'invoke', '-X', 'POST', '--area', 'build', '--resource', 'builds'] },
-      { name: '-h', args: ['devops', 'invoke', '-h', '--area', 'build', '--resource', 'builds'] },
-      { name: '-o', args: ['devops', 'invoke', '-o', 'json', '--area', 'build', '--resource', 'builds'] },
+      { name: '-X', args: buildsInvoke('-X', 'POST') },
+      { name: '-h', args: buildsInvoke('-h') },
+      { name: '-o', args: buildsInvoke('-o', 'json') },
     ])('blocks single-dash flag $name', async ({ args }, { call, expect }) => {
       assertBlocked(expect, await call(args));
     });
@@ -226,7 +236,10 @@ describe.concurrent('az tool (integration)', () => {
     integration.for(
       [
         ['devops', 'invoke', '--area', 'build', '--resource', 'builds', '--area', 'security'],
-        ['devops', 'invoke', '--area', 'build', '--resource', 'builds', '--resource', 'permissions'],
+        [
+          'devops', 'invoke', '--area', 'build', '--resource', 'builds',
+          '--resource', 'permissions',
+        ],
       ].map(args => ({ name: args.slice(2).join(' '), args })),
     )('blocks duplicate flag $name', async ({ args }, { call, expect }) => {
       assertBlocked(expect, await call(args));

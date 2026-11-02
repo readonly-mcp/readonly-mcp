@@ -41,9 +41,12 @@ describe.concurrent('jq file argument blocking', () => {
       assertNotBlocked(expect, await call(['--jsonargs', '-n', '$ARGS.positional']));
     });
 
-    integration('blocks positional args after filter even with --args (safe false positive)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['-n', '$ARGS.positional', '--args', ...build.words(2)]));
-    });
+    integration(
+      'blocks positional args after filter even with --args (safe false positive)',
+      async ({ call, expect }) => {
+        assertBlocked(expect, await call(['-n', '$ARGS.positional', '--args', ...build.words(2)]));
+      },
+    );
   });
 
   describe('blocked (file args)', () => {

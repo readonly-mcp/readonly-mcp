@@ -93,7 +93,12 @@ export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } =
 
   const callTool = async (name: string, args: unknown): Promise<CallToolResult> => {
     const resp = await send('tools/call', { name, arguments: args });
-    if (resp.error) return remember(args, { isError: true, content: [{ type: 'text', text: resp.error.message }] });
+    if (resp.error) {
+      return remember(args, {
+        content: [{ type: 'text', text: resp.error.message }],
+        isError: true,
+      });
+    }
     return remember(args, CallToolResultSchema.parse(resp.result));
   };
 
@@ -149,7 +154,9 @@ export type Call = (args: readonly string[]) => Promise<CallToolResult>;
  * });
  * ```
  */
-export const useServer = async (use: (server: Server) => Promise<void>, options?: { readonly cwd?: string }) => {
+export const useServer = async (
+  use: (server: Server) => Promise<void>, options?: { readonly cwd?: string },
+) => {
   const server = startServer(options);
   try {
     await use(server);
@@ -171,10 +178,14 @@ export const connectTool = async (register: (server: McpServer) => unknown) => {
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
   const { tools } = await client.listTools();
   const [tool, ...others] = tools;
-  if (tool === undefined || others.length > 0)
-    throw new Error(`Expected one registered tool, got: ${tools.map(listed => listed.name).join(', ')}`);
-  return async (args: Record<string, unknown>): Promise<CallToolResult> =>
-    remember(args, CallToolResultSchema.parse(await client.callTool({ name: tool.name, arguments: args })));
+  if (tool === undefined || others.length > 0) {
+    const names = tools.map(listed => listed.name).join(', ');
+    throw new Error(`Expected one registered tool, got: ${names}`);
+  }
+  return async (args: Record<string, unknown>): Promise<CallToolResult> => {
+    const result = await client.callTool({ arguments: args, name: tool.name });
+    return remember(args, CallToolResultSchema.parse(result));
+  };
 };
 
 const EchoSchema = z.object({ args: z.array(z.string()).readonly(), cmd: z.string() });
@@ -185,9 +196,10 @@ const EchoSchema = z.object({ args: z.array(z.string()).readonly(), cmd: z.strin
  * have run from its own result rather than from a call log that concurrent
  * tests share.
  */
-const echoExec = (cmd: string, args: readonly string[]): Promise<CallToolResult> => Promise.resolve({
-  content: [{ type: 'text', text: JSON.stringify({ args, cmd } satisfies z.input<typeof EchoSchema>) }],
-});
+const echoExec = (cmd: string, args: readonly string[]): Promise<CallToolResult> => {
+  const echo = { args, cmd } satisfies z.input<typeof EchoSchema>;
+  return Promise.resolve({ content: [{ type: 'text', text: JSON.stringify(echo) }] });
+};
 
 /**
  * A `vi.mock` factory for `lib/exec.ts` that keeps the real module but
@@ -224,10 +236,18 @@ export const textOf = (result: CallToolResult | undefined): string => {
   return first.text;
 };
 
-export const assertBlocked = (expect: ExpectStatic, result: CallToolResult, message = `expected blocked, ${describeRequest(result)}`) => {
+export const assertBlocked = (
+  expect: ExpectStatic,
+  result: CallToolResult,
+  message = `expected blocked, ${describeRequest(result)}`,
+) => {
   expect(result.isError || textOf(result).includes('not allowed'), message).toBe(true);
 };
 
-export const assertNotBlocked = (expect: ExpectStatic, result: CallToolResult, message = `expected not blocked, ${describeRequest(result)}`) => {
+export const assertNotBlocked = (
+  expect: ExpectStatic,
+  result: CallToolResult,
+  message = `expected not blocked, ${describeRequest(result)}`,
+) => {
   expect(result.isError, message).toBeFalsy();
 };

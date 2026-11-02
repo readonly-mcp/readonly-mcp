@@ -17,21 +17,29 @@ describe('isAllowedApiPath', () => {
     });
 
     it('matches second pattern', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.repoApiPath()}/commits/${build.commitSha()}/status`, patterns)).toBe(true);
+      const endpoint = `${build.repoApiPath()}/commits/${build.commitSha()}/status`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(true);
     });
   });
 
   describe('trailing ** glob', () => {
     it('matches single trailing segment', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/${build.fileName()}`, patterns)).toBe(true);
+      const endpoint = `${build.repoApiPath()}/contents/${build.fileName()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(true);
     });
 
     it('matches multiple trailing segments', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/${build.relativeFilePath()}`, patterns)).toBe(true);
+      const endpoint = `${build.repoApiPath()}/contents/${build.relativeFilePath()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(true);
     });
 
     it('matches deeply nested path', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/${build.words(4).join('/')}`, patterns)).toBe(true);
+      const endpoint = `${build.repoApiPath()}/contents/${build.words(4).join('/')}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(true);
     });
 
     it('rejects when no trailing segment exists', ({ expect }) => {
@@ -45,7 +53,9 @@ describe('isAllowedApiPath', () => {
     });
 
     it('strips query parameters', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.prCommentsPath()}${build.queryString()}`, patterns)).toBe(true);
+      const endpoint = `${build.prCommentsPath()}${build.queryString()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(true);
     });
 
     it('strips trailing slash', ({ expect }) => {
@@ -53,27 +63,37 @@ describe('isAllowedApiPath', () => {
     });
 
     it('strips leading slash, trailing slash, and query string together', ({ expect }) => {
-      expect(isAllowedApiPath(`/${build.prCommentsPath()}/${build.queryString()}`, patterns)).toBe(true);
+      const endpoint = `/${build.prCommentsPath()}/${build.queryString()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(true);
     });
   });
 
   describe('rejection', () => {
     it('rejects full https URL', ({ expect }) => {
-      expect(isAllowedApiPath(`https://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
+      const endpoint = `https://api.github.com/${build.prCommentsPath()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(false);
     });
 
     it('rejects full http URL', ({ expect }) => {
       /* eslint-disable-next-line unicorn/prefer-https --
          The plain http scheme is the input under test */
-      expect(isAllowedApiPath(`http://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
+      const endpoint = `http://api.github.com/${build.prCommentsPath()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(false);
     });
 
     it('rejects too few segments', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.repoApiPath()}/pulls/${build.resourceId()}`, patterns)).toBe(false);
+      const endpoint = `${build.repoApiPath()}/pulls/${build.resourceId()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(false);
     });
 
     it('rejects too many segments (non-** pattern)', ({ expect }) => {
-      expect(isAllowedApiPath(`${build.prCommentsPath()}/${faker.lorem.word()}`, patterns)).toBe(false);
+      const endpoint = `${build.prCommentsPath()}/${faker.lorem.word()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(false);
     });
 
     it('rejects unmatched path', ({ expect }) => {

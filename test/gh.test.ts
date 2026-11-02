@@ -64,7 +64,8 @@ describe.concurrent('gh tool (unit)', () => {
     );
 
     it('allows subcommand with flags', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['pr', 'list', '--state', 'open', '--json', 'number']));
+      const args = ['pr', 'list', '--state', 'open', '--json', 'number'];
+      assertAllowed(expect, await callMocked(args));
     });
   });
 

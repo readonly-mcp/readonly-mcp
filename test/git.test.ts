@@ -1,7 +1,9 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { type Call, type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
+import {
+  type Call, type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer,
+} from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
@@ -37,7 +39,10 @@ describe.concurrent('git tool (unit)', () => {
   });
 
   describe('allowed subcommands', () => {
-    it.for(['blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree', 'merge-base', 'rev-parse', 'shortlog', 'show', 'status'])(
+    it.for([
+      'blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree', 'merge-base',
+      'rev-parse', 'shortlog', 'show', 'status',
+    ])(
       'allows %s', async (sub, { expect }) => {
         assertAllowed(expect, await callMocked([sub]));
       },
@@ -75,7 +80,10 @@ describe.concurrent('git tool (integration)', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked subcommands', () => {
-    integration.for(['push', 'pull', 'fetch', 'checkout', 'reset', 'rebase', 'merge', 'commit', 'add', 'rm', 'clean'])(
+    integration.for([
+      'push', 'pull', 'fetch', 'checkout', 'reset', 'rebase',
+      'merge', 'commit', 'add', 'rm', 'clean',
+    ])(
       'blocks %s', async (sub, { call, expect }) => {
         assertBlocked(expect, await call([sub]));
       },
@@ -168,7 +176,10 @@ describe.concurrent('git tool (integration)', () => {
   });
 
   describe('blocked branch mutation flags', () => {
-    integration.for(['-D', '-d', '-m', '-M', '-c', '-C', '--delete', '--move', '--copy', '--force', '--set-upstream-to', '--unset-upstream', '--edit-description'])(
+    integration.for([
+      '-D', '-d', '-m', '-M', '-c', '-C', '--delete', '--move', '--copy', '--force',
+      '--set-upstream-to', '--unset-upstream', '--edit-description',
+    ])(
       'blocks branch %s', async (flag, { call, expect }) => {
         assertBlocked(expect, await call(['branch', flag, 'test']));
       },
@@ -319,9 +330,12 @@ describe.concurrent('git tool (integration)', () => {
       assertBlocked(expect, await call(['diff', '-ao', build.absolutePath()]));
     });
 
-    integration('blocks diff -abo (combined short flags with -o at end)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['diff', '-abo', build.absolutePath()]));
-    });
+    integration(
+      'blocks diff -abo (combined short flags with -o at end)',
+      async ({ call, expect }) => {
+        assertBlocked(expect, await call(['diff', '-abo', build.absolutePath()]));
+      },
+    );
 
     integration('blocks diff --no-index', async ({ call, expect }) => {
       assertBlocked(expect, await call(['diff', '--no-index', '/etc/passwd', '/dev/null']));

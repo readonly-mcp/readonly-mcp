@@ -6,7 +6,9 @@ import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
+import {
+  type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer,
+} from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
@@ -171,11 +173,14 @@ describe.concurrent('git tool cwd (integration)', () => {
       assertNotBlocked(expect, await call(['status'], worktree.path));
     });
 
-    integration('resolves HEAD from linked worktree, not main', async ({ call, expect, worktree }) => {
-      const result = await call(['rev-parse', '--abbrev-ref', 'HEAD'], worktree.path);
-      const branch = textOf(result).trim();
+    integration(
+      'resolves HEAD from linked worktree, not main',
+      async ({ call, expect, worktree }) => {
+        const result = await call(['rev-parse', '--abbrev-ref', 'HEAD'], worktree.path);
+        const branch = textOf(result).trim();
 
-      expect(branch).toBe(worktree.branch);
-    });
+        expect(branch).toBe(worktree.branch);
+      },
+    );
   });
 });

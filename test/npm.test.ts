@@ -2,8 +2,12 @@ import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
-import { type Call, type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf } from './helpers.ts';
-import { packageCommandTimeout, packageServerTimeout, usePackageServer } from './package-fixture.ts';
+import {
+  type Call, type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf,
+} from './helpers.ts';
+import {
+  packageCommandTimeout, packageServerTimeout, usePackageServer,
+} from './package-fixture.ts';
 
 // --- Unit tests (mocked execShell) ---
 vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
@@ -74,32 +78,45 @@ describe.concurrent('npm tool (integration)', { timeout: packageCommandTimeout }
     });
 
     integration('blocks --registry', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['view', faker.internet.domainWord(), '--registry', build.httpsUrl()]));
+      const name = faker.internet.domainWord();
+      assertBlocked(expect, await call(['view', name, '--registry', build.httpsUrl()]));
     });
 
     integration('blocks --registry=<url>', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['view', faker.internet.domainWord(), `--registry=${build.httpsUrl()}`]));
+      const name = faker.internet.domainWord();
+      assertBlocked(expect, await call(['view', name, `--registry=${build.httpsUrl()}`]));
     });
 
-    integration('blocks --no-ignore-scripts (overrides injected --ignore-scripts)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['audit', '--no-ignore-scripts']));
-    });
+    integration(
+      'blocks --no-ignore-scripts (overrides injected --ignore-scripts)',
+      async ({ call, expect }) => {
+        assertBlocked(expect, await call(['audit', '--no-ignore-scripts']));
+      },
+    );
 
-    integration('blocks abbreviated --reg (npm expands to --registry)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['view', faker.internet.domainWord(), '--reg', build.httpsUrl()]));
-    });
+    integration(
+      'blocks abbreviated --reg (npm expands to --registry)',
+      async ({ call, expect }) => {
+        const name = faker.internet.domainWord();
+        assertBlocked(expect, await call(['view', name, '--reg', build.httpsUrl()]));
+      },
+    );
 
     integration('blocks abbreviated --reg=<url>', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['view', faker.internet.domainWord(), `--reg=${build.httpsUrl()}`]));
+      const name = faker.internet.domainWord();
+      assertBlocked(expect, await call(['view', name, `--reg=${build.httpsUrl()}`]));
     });
 
     integration('blocks abbreviated --fi (matches --fix)', async ({ call, expect }) => {
       assertBlocked(expect, await call(['audit', '--fi']));
     });
 
-    integration('blocks --ignore-scripts=false (overrides injected --ignore-scripts)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['audit', '--ignore-scripts=false']));
-    });
+    integration(
+      'blocks --ignore-scripts=false (overrides injected --ignore-scripts)',
+      async ({ call, expect }) => {
+        assertBlocked(expect, await call(['audit', '--ignore-scripts=false']));
+      },
+    );
   });
 
   describe('allowed subcommands', () => {

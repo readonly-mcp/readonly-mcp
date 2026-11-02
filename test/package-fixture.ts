@@ -44,7 +44,9 @@ const installArgs = {
  * that would concatenate the arguments.
  */
 const shimmed = (cmd: string, args: readonly string[]): [string, string[]] =>
-  process.platform === 'win32' ? ['bash', ['-c', 'exec "$@"', '--', cmd, ...args]] : [cmd, [...args]];
+  process.platform === 'win32'
+    ? ['bash', ['-c', 'exec "$@"', '--', cmd, ...args]]
+    : [cmd, [...args]];
 
 export type PackageManager = keyof typeof installArgs;
 
@@ -90,7 +92,9 @@ export const packageCommandTimeout = 30_000;
  * The body of a `server` fixture running in a {@link PackageFixture}
  * installed by `manager`, as {@link useServer} is for the repository.
  */
-export const usePackageServer = async (manager: PackageManager, use: (server: Server) => Promise<void>) => {
+export const usePackageServer = async (
+  manager: PackageManager, use: (server: Server) => Promise<void>,
+) => {
   await using project = await createPackageFixture(manager);
   await useServer(use, { cwd: project.dir });
 };

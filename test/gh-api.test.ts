@@ -16,6 +16,26 @@ const callTool = await connectTool(register);
 
 const callMocked = (args: readonly string[]) => callTool({ args });
 
+/**
+ * `api` on a pull request comments endpoint, then `flags`.
+ */
+const apiArgs = (...flags: string[]): string[] => ['api', build.prCommentsPath(), ...flags];
+
+/**
+ * A generated `key=value` pair, as -f and --field take.
+ */
+const field = (): string => `${faker.lorem.word()}=${faker.lorem.word()}`;
+
+/**
+ * A generated `key=@file` pair, which -F reads the file into.
+ */
+const fileField = (): string => `${faker.lorem.word()}=@${build.fileName()}`;
+
+/**
+ * A generated custom header, as -H and --header take.
+ */
+const header = (): string => `X-${faker.lorem.word()}: ${faker.lorem.word()}`;
+
 const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
   expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
 };
@@ -107,72 +127,72 @@ describe.concurrent('gh api (unit)', () => {
   });
 
   it('blocks --method flag', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--method', 'POST']);
+    const result = await callMocked(apiArgs('--method', 'POST'));
     assertBlocked(expect, result);
   });
 
   it('blocks -X flag', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-X', 'POST']);
+    const result = await callMocked(apiArgs('-X', 'POST'));
     assertBlocked(expect, result);
   });
 
   it('blocks -XPOST (concatenated short flag)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-XPOST']);
+    const result = await callMocked(apiArgs('-XPOST'));
     assertBlocked(expect, result);
   });
 
   it('blocks --input flag', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--input', build.fileName('json')]);
+    const result = await callMocked(apiArgs('--input', build.fileName('json')));
     assertBlocked(expect, result);
   });
 
   it('blocks --hostname flag (SSRF)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--hostname', faker.internet.domainName()]);
+    const result = await callMocked(apiArgs('--hostname', faker.internet.domainName()));
     assertBlocked(expect, result);
   });
 
   it('blocks -f flag (body field)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-f', `${faker.lorem.word()}=${faker.lorem.word()}`]);
+    const result = await callMocked(apiArgs('-f', field()));
     assertBlocked(expect, result);
   });
 
   it('blocks -F flag (@file read)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-F', `${faker.lorem.word()}=@${build.fileName('txt')}`]);
+    const result = await callMocked(apiArgs('-F', fileField()));
     assertBlocked(expect, result);
   });
 
   it('blocks -Fbody=@file (concatenated -F)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-Fbody=@/etc/passwd']);
+    const result = await callMocked(apiArgs('-Fbody=@/etc/passwd'));
     assertBlocked(expect, result);
   });
 
   it('blocks --field flag', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--field', `${faker.lorem.word()}=${faker.lorem.word()}`]);
+    const result = await callMocked(apiArgs('--field', field()));
     assertBlocked(expect, result);
   });
 
   it('blocks --raw-field flag', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--raw-field', `${faker.lorem.word()}=${faker.lorem.word()}`]);
+    const result = await callMocked(apiArgs('--raw-field', field()));
     assertBlocked(expect, result);
   });
 
   it('blocks --verbose flag (token leak)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--verbose']);
+    const result = await callMocked(apiArgs('--verbose'));
     assertBlocked(expect, result);
   });
 
   it('blocks -H flag (header injection)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-H', 'Accept: text/plain']);
+    const result = await callMocked(apiArgs('-H', 'Accept: text/plain'));
     assertBlocked(expect, result);
   });
 
   it('blocks --header flag', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '--header', `X-${faker.lorem.word()}: ${faker.lorem.word()}`]);
+    const result = await callMocked(apiArgs('--header', header()));
     assertBlocked(expect, result);
   });
 
   it('blocks -HAccept:text/plain (concatenated -H)', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath(), '-HAccept:text/plain']);
+    const result = await callMocked(apiArgs('-HAccept:text/plain'));
     assertBlocked(expect, result);
   });
 
@@ -186,7 +206,8 @@ describe.concurrent('gh api (unit)', () => {
   });
 
   it('allows contents with trailing slash (directory listing)', async ({ expect }) => {
-    assertAllowed(expect, await callMocked(['api', build.template('repos/:owner/:repo/contents/')]));
+    const endpoint = build.template('repos/:owner/:repo/contents/');
+    assertAllowed(expect, await callMocked(['api', endpoint]));
   });
 
   it('injects raw Accept header for contents endpoint', async ({ expect }) => {
@@ -208,7 +229,7 @@ describe.concurrent('gh api (unit)', () => {
   });
 
   it('does not inject Accept header for non-contents endpoint', async ({ expect }) => {
-    const result = await callMocked(['api', build.prCommentsPath()]);
+    const result = await callMocked(apiArgs());
     const { args } = echoed(result);
 
     expect(args.indexOf('-H')).toBe(-1);
@@ -239,26 +260,29 @@ describe.concurrent('gh api (integration)', () => {
 
   describe('blocked api flags', () => {
     integration.for([
-      { name: '--method POST', args: ['api', build.prCommentsPath(), '--method', 'POST'] },
-      { name: '--method=DELETE', args: ['api', build.prCommentsPath(), '--method=DELETE'] },
-      { name: '-X POST', args: ['api', build.prCommentsPath(), '-X', 'POST'] },
-      { name: '-XPOST (concatenated)', args: ['api', build.prCommentsPath(), '-XPOST'] },
-      { name: '-XDELETE (concatenated)', args: ['api', build.prCommentsPath(), '-XDELETE'] },
-      { name: '--input', args: ['api', build.prCommentsPath(), '--input', build.fileName('json')] },
-      { name: '--input=file', args: ['api', build.prCommentsPath(), `--input=${build.fileName('json')}`] },
-      { name: '--meth (abbreviated)', args: ['api', build.prCommentsPath(), '--meth', 'POST'] },
-      { name: '--hostname (SSRF)', args: ['api', build.prCommentsPath(), '--hostname', faker.internet.domainName()] },
-      { name: '--hostname=evil (SSRF)', args: ['api', build.prCommentsPath(), `--hostname=${faker.internet.domainName()}`] },
-      { name: '-f (body field)', args: ['api', build.prCommentsPath(), '-f', `${faker.lorem.word()}=${faker.lorem.word()}`] },
-      { name: '-fkey=val (concatenated)', args: ['api', build.prCommentsPath(), `-f${faker.lorem.word()}=${faker.lorem.word()}`] },
-      { name: '-F (@file read)', args: ['api', build.prCommentsPath(), '-F', `${faker.lorem.word()}=@${build.fileName()}`] },
-      { name: '-Fx=@file (concatenated)', args: ['api', build.prCommentsPath(), '-Fx=@/etc/passwd'] },
-      { name: '--field', args: ['api', build.prCommentsPath(), '--field', `${faker.lorem.word()}=${faker.lorem.word()}`] },
-      { name: '--raw-field', args: ['api', build.prCommentsPath(), '--raw-field', `${faker.lorem.word()}=${faker.lorem.word()}`] },
-      { name: '--verbose (token leak)', args: ['api', build.prCommentsPath(), '--verbose'] },
-      { name: '-H (header injection)', args: ['api', build.prCommentsPath(), '-H', 'Accept: text/plain'] },
-      { name: '--header', args: ['api', build.prCommentsPath(), '--header', `X-${faker.lorem.word()}: ${faker.lorem.word()}`] },
-      { name: '-HAccept:... (concatenated)', args: ['api', build.prCommentsPath(), '-HAccept:text/plain'] },
+      { name: '--method POST', args: apiArgs('--method', 'POST') },
+      { name: '--method=DELETE', args: apiArgs('--method=DELETE') },
+      { name: '-X POST', args: apiArgs('-X', 'POST') },
+      { name: '-XPOST (concatenated)', args: apiArgs('-XPOST') },
+      { name: '-XDELETE (concatenated)', args: apiArgs('-XDELETE') },
+      { name: '--input', args: apiArgs('--input', build.fileName('json')) },
+      { name: '--input=file', args: apiArgs(`--input=${build.fileName('json')}`) },
+      { name: '--meth (abbreviated)', args: apiArgs('--meth', 'POST') },
+      { name: '--hostname (SSRF)', args: apiArgs('--hostname', faker.internet.domainName()) },
+      {
+        name: '--hostname=evil (SSRF)',
+        args: apiArgs(`--hostname=${faker.internet.domainName()}`),
+      },
+      { name: '-f (body field)', args: apiArgs('-f', field()) },
+      { name: '-fkey=val (concatenated)', args: apiArgs(`-f${field()}`) },
+      { name: '-F (@file read)', args: apiArgs('-F', fileField()) },
+      { name: '-Fx=@file (concatenated)', args: apiArgs('-Fx=@/etc/passwd') },
+      { name: '--field', args: apiArgs('--field', field()) },
+      { name: '--raw-field', args: apiArgs('--raw-field', field()) },
+      { name: '--verbose (token leak)', args: apiArgs('--verbose') },
+      { name: '-H (header injection)', args: apiArgs('-H', 'Accept: text/plain') },
+      { name: '--header', args: apiArgs('--header', header()) },
+      { name: '-HAccept:... (concatenated)', args: apiArgs('-HAccept:text/plain') },
     ])('blocks api $name', async ({ args }, { expect, server }) => {
       assertBlocked(expect, await server.callTool('gh', { args }));
     });

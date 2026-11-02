@@ -27,11 +27,15 @@ describe('ArgsSchema coercion', () => {
   });
 
   it('rejects a plain string that is not valid JSON array', ({ expect }) => {
-    expect(() => schema.parse({ args: `${faker.lorem.word()} ${build.longFlag()}` })).toThrow(z.ZodError);
+    const args = `${faker.lorem.word()} ${build.longFlag()}`;
+
+    expect(() => schema.parse({ args })).toThrow(z.ZodError);
   });
 
   it('rejects a JSON-stringified object', ({ expect }) => {
-    expect(() => schema.parse({ args: JSON.stringify({ [faker.lorem.word()]: faker.lorem.word() }) })).toThrow(z.ZodError);
+    const args = JSON.stringify({ [faker.lorem.word()]: faker.lorem.word() });
+
+    expect(() => schema.parse({ args })).toThrow(z.ZodError);
   });
 
   it('rejects a JSON-stringified number', ({ expect }) => {
@@ -173,6 +177,11 @@ describe('rejectSubcommand', () => {
   });
 });
 
+/**
+ * Args for rejectBlockedFlags: a generated subcommand, which it skips, then `flags`.
+ */
+const withSubcommand = (...flags: string[]): string[] => [faker.lorem.word(), ...flags];
+
 describe('rejectBlockedFlags', () => {
   /*
    * The flag names stay literal: each test pins a specific prefix relation
@@ -183,19 +192,21 @@ describe('rejectBlockedFlags', () => {
 
   describe('exact matches', () => {
     it('blocks exact flag', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), '--fix'], blocked);
+      const result = rejectBlockedFlags(withSubcommand('--fix'), blocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('blocks flag=value form', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), `--registry=${build.httpsUrl()}`], blocked);
+      const result = rejectBlockedFlags(withSubcommand(`--registry=${build.httpsUrl()}`), blocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('returns undefined when no blocked flags present', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), build.longFlag()], blocked)).toBeUndefined();
+      const result = rejectBlockedFlags(withSubcommand(build.longFlag()), blocked);
+
+      expect(result).toBeUndefined();
     });
   });
 
@@ -208,43 +219,40 @@ describe('rejectBlockedFlags', () => {
 
   describe('prefix matching (abbreviation defense)', () => {
     it('blocks abbreviated --reg (matches --registry)', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), '--reg', build.httpsUrl()], blocked);
+      const result = rejectBlockedFlags(withSubcommand('--reg', build.httpsUrl()), blocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('blocks abbreviated --registr', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), '--registr', build.httpsUrl()], blocked);
+      const result = rejectBlockedFlags(withSubcommand('--registr', build.httpsUrl()), blocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('blocks abbreviated --fi (matches --fix)', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), '--fi'], blocked);
+      const result = rejectBlockedFlags(withSubcommand('--fi'), blocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('blocks abbreviated --reg=value form', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), `--reg=${build.httpsUrl()}`], blocked);
+      const result = rejectBlockedFlags(withSubcommand(`--reg=${build.httpsUrl()}`), blocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('does not block unrelated flag with similar prefix', ({ expect }) => {
       // "--format" does not start any blocked flag, and no blocked flag starts with "--format"
-      expect(rejectBlockedFlags([faker.lorem.word(), '--format', faker.lorem.word()], blocked)).toBeUndefined();
+      const result = rejectBlockedFlags(withSubcommand('--format', faker.lorem.word()), blocked);
+
+      expect(result).toBeUndefined();
     });
 
     it('does not block longer flag that starts with blocked flag', ({ expect }) => {
-      // "--fix-missing-peers" starts with "--fix" but "--fix".startsWith("--fix-missing-peers") is false
-      // and "--fix-missing-peers".startsWith("--fix=") is false
-      // but "--fix".startsWith("--fix-missing-peers".split("=")[0]) checks "--fix".startsWith("--fix-missing-peers")
-      // which is false. However, the check is [...blockedFlags].some(f => ... f.startsWith(a.split("=")[0]))
-      // So we check if "--fix".startsWith("--fix-missing-peers") → false
-      // and if "--registry".startsWith("--fix-missing-peers") → false
-      // So this should pass through
-      expect(rejectBlockedFlags([faker.lorem.word(), '--fix-missing-peers'], blocked)).toBeUndefined();
+      // "--fix-missing-peers" is neither "--fix" nor "--fix=…", and no blocked
+      // flag is a prefix of it reversed: neither starts with "--fix-missing-peers".
+      expect(rejectBlockedFlags(withSubcommand('--fix-missing-peers'), blocked)).toBeUndefined();
     });
   });
 
@@ -252,14 +260,14 @@ describe('rejectBlockedFlags', () => {
     const shortBlocked = new Set(['-X', '-f']);
 
     it('blocks -XPOST (value concatenated to short flag)', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), faker.lorem.word(), '-XPOST'], shortBlocked);
+      const result = rejectBlockedFlags(withSubcommand(faker.lorem.word(), '-XPOST'), shortBlocked);
 
       expect(result?.isError).toBe(true);
     });
 
     it('blocks -fkey=val (value concatenated to short flag)', ({ expect }) => {
       const arg = `-f${faker.lorem.word()}=${faker.lorem.word()}`;
-      const result = rejectBlockedFlags([faker.lorem.word(), faker.lorem.word(), arg], shortBlocked);
+      const result = rejectBlockedFlags(withSubcommand(faker.lorem.word(), arg), shortBlocked);
 
       expect(result?.isError).toBe(true);
     });
@@ -268,29 +276,30 @@ describe('rejectBlockedFlags', () => {
       // -Xtra is not a concatenated -X if -X is not in the blocked set for this test
       const unrelated = new Set(['--registry']);
 
-      expect(rejectBlockedFlags([faker.lorem.word(), '-Xtra'], unrelated)).toBeUndefined();
+      expect(rejectBlockedFlags(withSubcommand('-Xtra'), unrelated)).toBeUndefined();
     });
 
     it('does not apply short-flag rule to long flags', ({ expect }) => {
       // --method is 8 chars, not a 2-char short flag
       const longOnly = new Set(['--method']);
 
-      // "--methodical" should NOT be caught by the short-flag rule (only by prefix)
-      // prefix check: "--method".startsWith("--methodical") → false
-      // long flag rule doesn't apply (--method.length !== 2)
-      // but a.startsWith(f + "=") → "--methodical".startsWith("--method=") → false
-      // and f.startsWith(a.split("=")[0]) → "--method".startsWith("--methodical") → false
-      expect(rejectBlockedFlags([faker.lorem.word(), '--methodical'], longOnly)).toBeUndefined();
+      // "--methodical" is neither "--method" nor "--method=…", "--method" does not
+      // start with it, and the short-flag rule covers only two-character flags.
+      expect(rejectBlockedFlags(withSubcommand('--methodical'), longOnly)).toBeUndefined();
     });
   });
 
   describe('end-of-options marker', () => {
     it('does not false-positive on bare --', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), '--', faker.lorem.word()], blocked)).toBeUndefined();
+      const result = rejectBlockedFlags(withSubcommand('--', faker.lorem.word()), blocked);
+
+      expect(result).toBeUndefined();
     });
 
     it('does not false-positive on bare -', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), '-', faker.lorem.word()], blocked)).toBeUndefined();
+      const result = rejectBlockedFlags(withSubcommand('-', faker.lorem.word()), blocked);
+
+      expect(result).toBeUndefined();
     });
   });
 
@@ -300,11 +309,13 @@ describe('rejectBlockedFlags', () => {
     });
 
     it('returns undefined for empty blocked set', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), build.longFlag()], new Set())).toBeUndefined();
+      const result = rejectBlockedFlags(withSubcommand(build.longFlag()), new Set());
+
+      expect(result).toBeUndefined();
     });
 
     it('reports the first blocked flag found', ({ expect }) => {
-      const result = rejectBlockedFlags([faker.lorem.word(), '--fix', '--registry'], blocked);
+      const result = rejectBlockedFlags(withSubcommand('--fix', '--registry'), blocked);
 
       expect(textOf(result)).toBe('Flag not allowed: --fix');
     });

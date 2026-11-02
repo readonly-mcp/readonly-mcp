@@ -43,7 +43,8 @@ describe.concurrent('tea api (unit)', () => {
 
   it('allows api endpoint with flags', async ({ expect }) => {
     assertAllowed(expect, await callMocked(([
-      'api', 'repos/:owner/:repo/pulls/:number/reviews', '-i', '-l', ':word', '--repo', ':owner/:repo',
+      'api', 'repos/:owner/:repo/pulls/:number/reviews',
+      '-i', '-l', ':word', '--repo', ':owner/:repo',
     ] as const).map(build.template)));
   });
 
@@ -81,7 +82,10 @@ describe.concurrent('tea api (unit)', () => {
     // wildcard segment would send the request to a truncated endpoint.
     ['api', 'repos/admin#/x/contents/y'],
     ['api', 'repos/:owner/:repo/contents/:file#L1'],
-  ] as const).map(args => ({ name: args.slice(1).join(' ') || '(bare)', args: args.map(build.template) })))(
+  ] as const).map(args => ({
+    name: args.slice(1).join(' ') || '(bare)',
+    args: args.map(build.template),
+  })))(
     'blocks api $name', async ({ args }, { expect }) => {
       assertBlocked(expect, await callMocked(args));
     },
@@ -114,7 +118,8 @@ describe.concurrent('tea api (unit)', () => {
     ['--repo', '../other/repo'],
   ] as const).map(flags => ({ name: flags.join(' '), flags: flags.map(build.template) })))(
     'blocks api flag $name', async ({ flags }, { expect }) => {
-      assertBlocked(expect, await callMocked(['api', build.template('repos/:owner/:repo/pulls/:number/reviews'), ...flags]));
+      const endpoint = build.template('repos/:owner/:repo/pulls/:number/reviews');
+      assertBlocked(expect, await callMocked(['api', endpoint, ...flags]));
     },
   );
 });

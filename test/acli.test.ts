@@ -37,7 +37,8 @@ describe.concurrent('acli tool (unit)', () => {
     );
 
     it('allows subcommand with flags', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['jira', 'workitem', 'list', '--project', faker.string.alpha({ casing: 'upper', length: 3 })]));
+      const project = faker.string.alpha({ casing: 'upper', length: 3 });
+      assertAllowed(expect, await callMocked(['jira', 'workitem', 'list', '--project', project]));
     });
   });
 });

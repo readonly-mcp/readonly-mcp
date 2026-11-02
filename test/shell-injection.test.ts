@@ -47,10 +47,10 @@ describe.concurrent('shell injection', () => {
         { command: 'ls', args: ['\nrm {f}'] },
         { command: 'ls', args: ['\r\nrm {f}'] },
         { command: 'ls', args: ['\0rm {f}'] },
-      ].map(attack => ({
-        label: `${attack.command} ${attack.args.map(arg => JSON.stringify(arg.replace('{f}', 'CANARY'))).join(' ')}`,
-        template: attack,
-      })),
+      ].map((attack) => {
+        const shown = attack.args.map(arg => JSON.stringify(arg.replace('{f}', 'CANARY')));
+        return { label: `${attack.command} ${shown.join(' ')}`, template: attack };
+      }),
     )('prevents: $label', async ({ label, template }, { canary, expect, server }) => {
       const call = {
         command: template.command,

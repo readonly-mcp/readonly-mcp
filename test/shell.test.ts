@@ -1,6 +1,8 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
-import { type Server, assertBlocked, assertNotBlocked, connectTool, textOf, useServer } from './helpers.ts';
+import {
+  type Server, assertBlocked, assertNotBlocked, connectTool, textOf, useServer,
+} from './helpers.ts';
 
 // --- Unit tests (mocked execShell) ---
 vi.mock(import('../lib/exec.ts'), async (importOriginal) => {

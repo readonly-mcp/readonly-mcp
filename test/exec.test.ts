@@ -99,17 +99,25 @@ describe(errorResult, () => {
     const err = timeoutKill(`${partial}\n`);
     const result = errorResult(err, cmd, args);
 
-    expect(textOf(result)).toBe(`Command timed out after 30s: ${cmd} ${args.join(' ')}\n${partial}`);
+    expect(textOf(result))
+      .toBe(`Command timed out after 30s: ${cmd} ${args.join(' ')}\n${partial}`);
   });
 
   it('surfaces a maxBuffer overflow', ({ expect }) => {
     const cmd = faker.lorem.word();
     const args = build.words(2);
-    const err = { killed: true, code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER', message: faker.lorem.sentence(), stdout: '', stderr: '' };
+    const err = {
+      code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+      killed: true,
+      message: faker.lorem.sentence(),
+      stderr: '',
+      stdout: '',
+    };
     const result = errorResult(err, cmd, args);
 
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe(`Command output exceeded ${String(maxBuffer)} bytes: ${cmd} ${args.join(' ')}`);
+    expect(textOf(result))
+      .toBe(`Command output exceeded ${String(maxBuffer)} bytes: ${cmd} ${args.join(' ')}`);
   });
 
   it('returns ordinary failure output without isError', ({ expect }) => {
