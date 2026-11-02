@@ -40,7 +40,9 @@ const remember = (args: unknown, result: CallToolResult): CallToolResult => {
 const describeRequest = (result: CallToolResult): string =>
   `arguments: ${JSON.stringify(requests.get(result))}`;
 
-/** Spawns the server in `cwd`, the directory its tools run commands in. */
+/**
+ * Spawns the server in `cwd`, the directory its tools run commands in.
+ */
 export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } = {}) => {
   const proc = spawn('node', [serverPath], {
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -201,10 +203,14 @@ export const withEchoExec = async (importOriginal: () => Promise<typeof ExecModu
   execShell: echoExec,
 });
 
-/** The command an `echoExec` result says the tool would have run. */
+/**
+ * The command an `echoExec` result says the tool would have run.
+ */
 export const echoed = (result: CallToolResult) => EchoSchema.parse(JSON.parse(textOf(result)));
 
-/** The text of a result's first content item, which must be text. */
+/**
+ * The text of a result's first content item, which must be text.
+ */
 export const textOf = (result: CallToolResult | undefined): string => {
   const first = result?.content[0];
   if (first?.type !== 'text')

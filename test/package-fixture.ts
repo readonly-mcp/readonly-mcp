@@ -52,7 +52,9 @@ export interface PackageFixture extends AsyncDisposable {
   readonly dir: string;
 }
 
-/** Creates a project depending on zod and installs it with `manager`. */
+/**
+ * Creates a project depending on zod and installs it with `manager`.
+ */
 export const createPackageFixture = async (manager: PackageManager): Promise<PackageFixture> => {
   const dir = await mkdtemp(join(tmpdir(), `readonly-mcp-${manager}-`));
   const fixture: PackageFixture = {

@@ -39,7 +39,9 @@ const remoteAllowedFlags = new Set(['-v', '--verbose', '--push', '--all', '-n'])
 
 const isWindows = process.platform === 'win32';
 
-/** Return resolved paths for every worktree known to this repo. */
+/**
+ * Return resolved paths for every worktree known to this repo.
+ */
 const getWorktreePaths = (): string[] => {
   try {
     const out = execFileSync('git', ['worktree', 'list', '--porcelain'], {

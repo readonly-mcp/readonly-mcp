@@ -107,11 +107,15 @@ const placeholders = {
 type Letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm'
   | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
 
-/** The run of lowercase letters `S` starts with, which the filler reads as a key. */
+/**
+ * The run of lowercase letters `S` starts with, which the filler reads as a key.
+ */
 type LeadingKey<S extends string, Key extends string = ''> =
   S extends `${infer C extends Letter}${infer Rest}` ? LeadingKey<Rest, `${Key}${C}`> : Key;
 
-/** Every key the filler would read out of `S`; `""` where a colon starts none. */
+/**
+ * Every key the filler would read out of `S`; `""` where a colon starts none.
+ */
 type KeysIn<S extends string> =
   S extends `${string}:${infer After}` ? LeadingKey<After> | KeysIn<After> : never;
 
