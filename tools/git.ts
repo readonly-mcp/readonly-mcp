@@ -2,7 +2,9 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ArgsSchema, rejectBlockedFlags, rejectSubcommand } from '../lib/allowlist.ts';
+import {
+  ArgsSchema, type Rejection, rejectBlockedFlags, rejectSubcommand,
+} from '../lib/allowlist.ts';
 import { exec, fail } from '../lib/exec.ts';
 
 const subcommands = new Set([
@@ -72,6 +74,62 @@ const firstPositional = (args: readonly string[]): string | undefined => {
   return args.slice(0, end === -1 ? undefined : end).find(arg => !arg.startsWith('-'));
 };
 
+const rejectCwd = (cwd: string | undefined): Rejection =>
+  cwd === undefined || isKnownWorktree(cwd)
+    ? undefined
+    : fail('cwd rejected: not a known git worktree');
+
+// Block -o short flag on diff only: standalone (-o), concatenated (-ofile),
+// or combined with other short flags (-ao, -abo/tmp/evil.txt).
+// Only diff has --output; other commands use -o for unrelated flags
+// (e.g., ls-files -o = --others).
+const rejectShortOutput = (args: readonly string[]): Rejection => {
+  const shortO = args.slice(1).find(arg =>
+    arg.startsWith('-') && !arg.startsWith('--') && arg !== '-' &&
+    (arg.slice(1).split('=', 1)[0] ?? arg.slice(1)).includes('o'),
+  );
+  return shortO ? fail(`Flag not allowed: ${shortO}`) : undefined;
+};
+
+/**
+ * Allows only the listed subcommands under `git <sub>`, and a bare call only
+ * when `isBareAllowed`.
+ */
+const allowSubcommands = (
+  sub: string, allowedSubs: ReadonlySet<string>, { isBareAllowed = false } = {},
+) => (args: readonly string[]): Rejection => {
+  const subSub = firstPositional(args.slice(1));
+  if (subSub ? allowedSubs.has(subSub) : isBareAllowed) return undefined;
+  const allowed = [...isBareAllowed ? ['(none)'] : [], ...allowedSubs].join(', ');
+  return fail(`Subcommand not allowed for git ${sub}: ${subSub ?? '(none)'}. ` +
+    `Allowed: ${allowed}`);
+};
+
+const rejectRemoteFlags = (args: readonly string[]): Rejection => {
+  const remoteArgs = args.slice(1);
+  // `remote show` requires `-n` to prevent network I/O (SSRF risk)
+  if (firstPositional(remoteArgs) === 'show' && !remoteArgs.includes('-n'))
+    return fail('git remote show requires -n (no network I/O)');
+  const blockedFlag = remoteArgs
+    .filter(arg => arg.startsWith('-'))
+    .find(arg => !remoteAllowedFlags.has(arg));
+  return blockedFlag ? fail(`Flag not allowed for git remote: ${blockedFlag}`) : undefined;
+};
+
+const allowRemoteSubcommands =
+  allowSubcommands('remote', remoteAllowedSubs, { isBareAllowed: true });
+
+// Checks a subcommand runs after the global flags pass.
+const subcommandChecks: Record<string, (args: readonly string[]) => Rejection> = {
+  branch: args => rejectBlockedFlags(args, branchBlocked),
+  diff: rejectShortOutput,
+  // Bare `git reflog` is safe (equivalent to `git reflog show`)
+  reflog: allowSubcommands('reflog', reflogAllowedSubs, { isBareAllowed: true }),
+  remote: args => allowRemoteSubcommands(args) ?? rejectRemoteFlags(args),
+  stash: allowSubcommands('stash', stashAllowedSubs),
+  worktree: allowSubcommands('worktree', worktreeAllowedSubs),
+};
+
 const GitSchema = {
   ...ArgsSchema,
   cwd: z.string().min(1).optional()
@@ -91,65 +149,15 @@ export const register = (server: McpServer): RegisteredTool =>
     async ({ args, cwd }) => {
       const sub = args[0];
       if (sub === undefined || !subcommands.has(sub)) return rejectSubcommand(args, subcommands);
-      // Block -o short flag on diff only: standalone (-o), concatenated (-ofile),
-      // or combined with other short flags (-ao, -abo/tmp/evil.txt).
-      // Only diff has --output; other commands use -o for unrelated flags
-      // (e.g., ls-files -o = --others).
-      if (sub === 'diff') {
-        const shortO = args.slice(1).find(arg =>
-          arg.startsWith('-') && !arg.startsWith('--') && arg !== '-' &&
-          (arg.slice(1).split('=', 1)[0] ?? arg.slice(1)).includes('o'),
-        );
-        if (shortO) return fail(`Flag not allowed: ${shortO}`);
-      }
-      // Block --output and --no-index with prefix matching (defeats abbreviation)
-      const globalRejected = rejectBlockedFlags(args, blockedFlags);
-      if (globalRejected) return globalRejected;
-      if (sub === 'branch') {
-        const rejected = rejectBlockedFlags(args, branchBlocked);
-        if (rejected) return rejected;
-      }
-      if (sub === 'stash') {
-        const stashSub = firstPositional(args.slice(1));
-        if (!stashSub || !stashAllowedSubs.has(stashSub))
-          return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. ` +
-            `Allowed: ${[...stashAllowedSubs].join(', ')}`);
-      }
-      if (sub === 'worktree') {
-        const wSub = firstPositional(args.slice(1));
-        if (!wSub || !worktreeAllowedSubs.has(wSub))
-          return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. ` +
-            `Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
-      }
-      if (sub === 'reflog') {
-        const rSub = firstPositional(args.slice(1));
-        // Bare `git reflog` is safe (equivalent to `git reflog show`)
-        if (rSub && !reflogAllowedSubs.has(rSub))
-          return fail(`Subcommand not allowed for git reflog: ${rSub}. ` +
-            `Allowed: (none), ${[...reflogAllowedSubs].join(', ')}`);
-      }
-      if (sub === 'remote') {
-        const remoteArgs = args.slice(1);
-        const remoteSub = remoteArgs.find(arg => !arg.startsWith('-'));
-        if (remoteSub && !remoteAllowedSubs.has(remoteSub))
-          return fail(`Subcommand not allowed for git remote: ${remoteSub}. ` +
-            `Allowed: (none), ${[...remoteAllowedSubs].join(', ')}`);
-        // `remote show` requires `-n` to prevent network I/O (SSRF risk)
-        if (remoteSub === 'show' && !remoteArgs.includes('-n'))
-          return fail('git remote show requires -n (no network I/O)');
-        const blockedFlag = remoteArgs
-          .filter(arg => arg.startsWith('-'))
-          .find(arg => !remoteAllowedFlags.has(arg));
-        if (blockedFlag) return fail(`Flag not allowed for git remote: ${blockedFlag}`);
-      }
+      const rejected =
+        // Block --output and --no-index with prefix matching (defeats abbreviation)
+        rejectBlockedFlags(args, blockedFlags) ??
+        subcommandChecks[sub]?.(args) ??
+        rejectCwd(cwd);
+      if (rejected) return rejected;
       // Inject --no-pager to prevent interactive pager from blocking the process.
       // If a valid worktree cwd was given, inject -C <dir> to target that worktree.
-      const gitArgs = ['--no-pager'];
-      if (cwd) {
-        if (!isKnownWorktree(cwd)) return fail('cwd rejected: not a known git worktree');
-        gitArgs.push('-C', cwd);
-      }
-      gitArgs.push(...args);
-      return exec('git', gitArgs);
+      const target = cwd ? ['-C', cwd] : [];
+      return exec('git', ['--no-pager', ...target, ...args]);
     },
   );
