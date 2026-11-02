@@ -1,8 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ArgsSchema, isAllowedApiPath, isAllowlisted,
-  normalizeApiPath, rejectApiEndpoint, rejectBlockedFlags,
-  rejectSubcommand,
+  rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '../lib/allowlist.ts';
 import { exec } from '../lib/exec.ts';
 
@@ -29,6 +28,9 @@ const subcommands = new Set([
   'variable list',
   'workflow list', 'workflow view',
 ]);
+
+// Endpoints that serve file content, with or without a path below the repo.
+const contentsPaths = ['repos/*/*/contents', 'repos/*/*/contents/**'];
 
 const apiPaths = [
   // PR review comments (primary motivator — gh pr view --json comments misses
@@ -101,8 +103,7 @@ export const register = (server: McpServer): RegisteredTool =>
         // responses return plain text instead of base64-encoded JSON.
         // Directory listings are unaffected — GitHub ignores the media type
         // for directory responses and still returns JSON.
-        const [top,,, kind] = normalizeApiPath(endpoint).split('/', 4);
-        const rawAccept = top === 'repos' && kind === 'contents'
+        const rawAccept = isAllowedApiPath(endpoint, contentsPaths)
           ? ['-H', 'Accept: application/vnd.github.raw+json']
           : [];
         // Inject --method GET immediately after the endpoint, before any
