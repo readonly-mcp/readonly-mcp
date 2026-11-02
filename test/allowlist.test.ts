@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { z } from 'zod';
 import {
-  ArgsSchema, matchesAllowlist, matchesApiPath, rejectApiEndpoint,
+  ArgsSchema, isAllowedApiPath, isAllowlisted, rejectApiEndpoint,
   rejectBlockedFlags, rejectSubcommand,
 } from '../lib/allowlist.ts';
 import * as build from './builders.ts';
@@ -40,22 +40,22 @@ describe('ArgsSchema coercion', () => {
   });
 });
 
-describe('matchesAllowlist', () => {
+describe('isAllowlisted', () => {
   describe('single-word allowlist', () => {
     const word = build.distinctWords();
     const command = word();
     const single = new Set([command, word(), word()]);
 
     it('matches exact command', ({ expect }) => {
-      expect(matchesAllowlist([command], single)).toBe(true);
+      expect(isAllowlisted([command], single)).toBe(true);
     });
 
     it('matches with trailing args', ({ expect }) => {
-      expect(matchesAllowlist([command, build.longFlag()], single)).toBe(true);
+      expect(isAllowlisted([command, build.longFlag()], single)).toBe(true);
     });
 
     it('rejects unknown command', ({ expect }) => {
-      expect(matchesAllowlist([word()], single)).toBe(false);
+      expect(isAllowlisted([word()], single)).toBe(false);
     });
   });
 
@@ -66,19 +66,19 @@ describe('matchesAllowlist', () => {
     const multi = new Set([`${group} ${sub}`, `${group} ${word()}`, `${word()} ${word()}`]);
 
     it('matches two-word subcommand', ({ expect }) => {
-      expect(matchesAllowlist([group, sub], multi)).toBe(true);
+      expect(isAllowlisted([group, sub], multi)).toBe(true);
     });
 
     it('matches with trailing args', ({ expect }) => {
-      expect(matchesAllowlist([group, sub, build.longFlag()], multi)).toBe(true);
+      expect(isAllowlisted([group, sub, build.longFlag()], multi)).toBe(true);
     });
 
     it('rejects partial match (first word only)', ({ expect }) => {
-      expect(matchesAllowlist([group], multi)).toBe(false);
+      expect(isAllowlisted([group], multi)).toBe(false);
     });
 
     it('rejects unknown second word', ({ expect }) => {
-      expect(matchesAllowlist([group, word()], multi)).toBe(false);
+      expect(isAllowlisted([group, word()], multi)).toBe(false);
     });
   });
 
@@ -90,15 +90,15 @@ describe('matchesAllowlist', () => {
     const mixed = new Set([top, `${group} ${sub}`, `${word()} ${word()}`]);
 
     it('matches single-word entry', ({ expect }) => {
-      expect(matchesAllowlist([top, build.longFlag()], mixed)).toBe(true);
+      expect(isAllowlisted([top, build.longFlag()], mixed)).toBe(true);
     });
 
     it('matches two-word entry', ({ expect }) => {
-      expect(matchesAllowlist([group, sub], mixed)).toBe(true);
+      expect(isAllowlisted([group, sub], mixed)).toBe(true);
     });
 
     it('rejects partial match of two-word entry', ({ expect }) => {
-      expect(matchesAllowlist([group], mixed)).toBe(false);
+      expect(isAllowlisted([group], mixed)).toBe(false);
     });
   });
 
@@ -108,21 +108,21 @@ describe('matchesAllowlist', () => {
     const deep = new Set([path.join(' '), `${path[0]} ${word()} ${word()}`]);
 
     it('matches three-word subcommand', ({ expect }) => {
-      expect(matchesAllowlist(path, deep)).toBe(true);
+      expect(isAllowlisted(path, deep)).toBe(true);
     });
 
     it('matches with trailing args', ({ expect }) => {
-      expect(matchesAllowlist([...path, build.longFlag()], deep)).toBe(true);
+      expect(isAllowlisted([...path, build.longFlag()], deep)).toBe(true);
     });
 
     it('rejects partial match', ({ expect }) => {
-      expect(matchesAllowlist(path.slice(0, 2), deep)).toBe(false);
+      expect(isAllowlisted(path.slice(0, 2), deep)).toBe(false);
     });
   });
 
   describe('edge cases', () => {
     it('returns false for empty args', ({ expect }) => {
-      expect(matchesAllowlist([], new Set(build.words(3)))).toBe(false);
+      expect(isAllowlisted([], new Set(build.words(3)))).toBe(false);
     });
 
     it('does not match single arg containing space against multi-word entry', ({ expect }) => {
@@ -131,11 +131,11 @@ describe('matchesAllowlist', () => {
       // which the target CLI would reject
       const entry = build.words(2).join(' ');
 
-      expect(matchesAllowlist([entry], new Set([entry]))).toBe(true);
+      expect(isAllowlisted([entry], new Set([entry]))).toBe(true);
     });
 
     it('handles empty Set', ({ expect }) => {
-      expect(matchesAllowlist([faker.lorem.word()], new Set())).toBe(false);
+      expect(isAllowlisted([faker.lorem.word()], new Set())).toBe(false);
     });
   });
 });
@@ -309,7 +309,7 @@ describe('rejectBlockedFlags', () => {
   });
 });
 
-describe('matchesApiPath', () => {
+describe('isAllowedApiPath', () => {
   const patterns = [
     'repos/*/*/pulls/*/comments',
     'repos/*/*/commits/*/status',
@@ -318,93 +318,93 @@ describe('matchesApiPath', () => {
 
   describe('matching', () => {
     it('matches exact pattern with wildcards', ({ expect }) => {
-      expect(matchesApiPath(build.prCommentsPath(), patterns)).toBe(true);
+      expect(isAllowedApiPath(build.prCommentsPath(), patterns)).toBe(true);
     });
 
     it('matches second pattern', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/commits/${build.commitSha()}/status`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/commits/${build.commitSha()}/status`, patterns)).toBe(true);
     });
   });
 
   describe('trailing ** glob', () => {
     it('matches single trailing segment', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/contents/${build.fileName()}`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/${build.fileName()}`, patterns)).toBe(true);
     });
 
     it('matches multiple trailing segments', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/contents/${build.relativeFilePath()}`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/${build.relativeFilePath()}`, patterns)).toBe(true);
     });
 
     it('matches deeply nested path', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/contents/${build.words(4).join('/')}`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/${build.words(4).join('/')}`, patterns)).toBe(true);
     });
 
     it('rejects when no trailing segment exists', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/contents`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/contents`, patterns)).toBe(false);
     });
   });
 
   describe('normalization', () => {
     it('strips leading slash', ({ expect }) => {
-      expect(matchesApiPath(`/${build.prCommentsPath()}`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`/${build.prCommentsPath()}`, patterns)).toBe(true);
     });
 
     it('strips query parameters', ({ expect }) => {
-      expect(matchesApiPath(`${build.prCommentsPath()}${build.queryString()}`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.prCommentsPath()}${build.queryString()}`, patterns)).toBe(true);
     });
 
     it('strips trailing slash', ({ expect }) => {
-      expect(matchesApiPath(`${build.prCommentsPath()}/`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.prCommentsPath()}/`, patterns)).toBe(true);
     });
 
     it('strips leading slash, trailing slash, and query string together', ({ expect }) => {
-      expect(matchesApiPath(`/${build.prCommentsPath()}/${build.queryString()}`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`/${build.prCommentsPath()}/${build.queryString()}`, patterns)).toBe(true);
     });
   });
 
   describe('rejection', () => {
     it('rejects full https URL', ({ expect }) => {
-      expect(matchesApiPath(`https://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`https://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
     });
 
     it('rejects full http URL', ({ expect }) => {
-      expect(matchesApiPath(`http://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`http://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
     });
 
     it('rejects too few segments', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/pulls/${build.resourceId()}`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/pulls/${build.resourceId()}`, patterns)).toBe(false);
     });
 
     it('rejects too many segments (non-** pattern)', ({ expect }) => {
-      expect(matchesApiPath(`${build.prCommentsPath()}/${faker.lorem.word()}`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`${build.prCommentsPath()}/${faker.lorem.word()}`, patterns)).toBe(false);
     });
 
     it('rejects unmatched path', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/git/refs`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/git/refs`, patterns)).toBe(false);
     });
 
     it('rejects empty endpoint', ({ expect }) => {
-      expect(matchesApiPath('', patterns)).toBe(false);
+      expect(isAllowedApiPath('', patterns)).toBe(false);
     });
 
     it('rejects bare slash', ({ expect }) => {
-      expect(matchesApiPath('/', patterns)).toBe(false);
+      expect(isAllowedApiPath('/', patterns)).toBe(false);
     });
   });
 
   describe('edge cases', () => {
     it('returns false for empty patterns array', ({ expect }) => {
-      expect(matchesApiPath(build.prCommentsPath(), [])).toBe(false);
+      expect(isAllowedApiPath(build.prCommentsPath(), [])).toBe(false);
     });
 
     it('** requires at least one trailing segment', ({ expect }) => {
-      expect(matchesApiPath(`${build.repoApiPath()}/contents`, patterns)).toBe(false);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/contents`, patterns)).toBe(false);
     });
 
     it('contents/. matches (dot is a valid trailing segment)', ({ expect }) => {
       // By design — `.` is a valid directory entry; GitHub's API interprets it
       // as the repo root. The `**` glob accepts any content after the prefix.
-      expect(matchesApiPath(`${build.repoApiPath()}/contents/.`, patterns)).toBe(true);
+      expect(isAllowedApiPath(`${build.repoApiPath()}/contents/.`, patterns)).toBe(true);
     });
   });
 });

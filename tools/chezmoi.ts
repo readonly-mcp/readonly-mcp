@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ArgsSchema, matchesAllowlist, rejectSubcommand } from '../lib/allowlist.ts';
+import { ArgsSchema, isAllowlisted, rejectSubcommand } from '../lib/allowlist.ts';
 import { exec } from '../lib/exec.ts';
 
 const subcommands = new Set([
@@ -15,7 +15,7 @@ export const register = (server: McpServer) =>
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
-      if (!matchesAllowlist(args, subcommands))
+      if (!isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
       return exec('chezmoi', args);
     },

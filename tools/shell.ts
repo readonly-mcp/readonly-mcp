@@ -28,8 +28,8 @@ const rejectFileFlag = (arg: string): CallToolResult | null => {
   const base = arg.split('=', 1)[0] ?? arg;
   if (jqFileFlags.has(base)) return fail(`Flag not allowed for jq: ${base}`);
   if (arg.startsWith('-') && !arg.startsWith('--')) {
-    const ch = [...arg.slice(1)].find(c => jqFileChars.includes(c));
-    if (ch) return fail(`Flag not allowed for jq: -${ch}`);
+    const fileChar = [...arg.slice(1)].find(char => jqFileChars.includes(char));
+    if (fileChar) return fail(`Flag not allowed for jq: -${fileChar}`);
   }
   return null;
 };
@@ -40,22 +40,22 @@ const rejectFileFlag = (arg: string): CallToolResult | null => {
 const validateJqArgs = (args: readonly string[]): CallToolResult | null => {
   // The index skips flag values, so these stay counted loops. Each binds its
   // element once; the undefined check never fires within the length bound.
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
     if (arg === undefined) break;
     const blocked = rejectFileFlag(arg);
     if (blocked) return blocked;
-    if (jqPairFlags.has(arg)) { i += 2; continue; }
-    if (jqValueFlags.has(arg)) { i++; continue; }
+    if (jqPairFlags.has(arg)) { index += 2; continue; }
+    if (jqValueFlags.has(arg)) { index++; continue; }
     if (arg.startsWith('-')) continue;
     // First non-flag arg is the filter expression; rest are file paths
-    for (let j = i + 1; j < args.length; j++) {
-      const rest = args[j];
+    for (let restIndex = index + 1; restIndex < args.length; restIndex++) {
+      const rest = args[restIndex];
       if (rest === undefined) break;
       const jblocked = rejectFileFlag(rest);
       if (jblocked) return jblocked;
-      if (jqPairFlags.has(rest)) { j += 2; continue; }
-      if (jqValueFlags.has(rest)) { j++; continue; }
+      if (jqPairFlags.has(rest)) { restIndex += 2; continue; }
+      if (jqValueFlags.has(rest)) { restIndex++; continue; }
       if (rest.startsWith('-')) continue;
       return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${rest}`);
     }

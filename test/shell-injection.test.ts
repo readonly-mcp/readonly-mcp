@@ -19,12 +19,12 @@ describe.concurrent('shell injection', () => {
         ['status', '|', 'rm'],
         ['status', '$(rm {f})'],
         ['status', '`rm {f}`'],
-      ].map(t => ({
-        label: t.map(a => a.replace('{f}', 'CANARY')).join(' '),
-        template: t,
+      ].map(argv => ({
+        label: argv.map(arg => arg.replace('{f}', 'CANARY')).join(' '),
+        template: argv,
       })),
     )('prevents: git $label', async ({ label, template }, { canary, expect, server }) => {
-      const realArgs = template.map(a => a.replace('{f}', canary.file));
+      const realArgs = template.map(arg => arg.replace('{f}', canary.file));
       await server.callTool('git', { args: realArgs });
       await assertCanaryIntact(expect, canary, `git ${label}`);
     });
@@ -47,14 +47,14 @@ describe.concurrent('shell injection', () => {
         { command: 'ls', args: ['\nrm {f}'] },
         { command: 'ls', args: ['\r\nrm {f}'] },
         { command: 'ls', args: ['\0rm {f}'] },
-      ].map(t => ({
-        label: `${t.command} ${t.args.map(a => JSON.stringify(a.replace('{f}', 'CANARY'))).join(' ')}`,
-        template: t,
+      ].map(attack => ({
+        label: `${attack.command} ${attack.args.map(arg => JSON.stringify(arg.replace('{f}', 'CANARY'))).join(' ')}`,
+        template: attack,
       })),
     )('prevents: $label', async ({ label, template }, { canary, expect, server }) => {
       const call = {
         command: template.command,
-        args: template.args.map(a => a.replace('{f}', canary.file)),
+        args: template.args.map(arg => arg.replace('{f}', canary.file)),
       };
       await server.callTool('shell', call);
       await assertCanaryIntact(expect, canary, label);

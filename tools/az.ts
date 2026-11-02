@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { ArgsSchema, matchesAllowlist, rejectSubcommand } from '../lib/allowlist.ts';
+import { ArgsSchema, isAllowlisted, rejectSubcommand } from '../lib/allowlist.ts';
 import { execShell, fail } from '../lib/exec.ts';
 
 const subcommands = new Set([
@@ -47,13 +47,13 @@ const invokeAllowedEndpoints = new Set([
 
 const flagValues = (args: readonly string[], flag: string): string[] => {
   const values: string[] = [];
-  for (const a of args) {
-    if (a.startsWith(flag + '=')) values.push(a.slice(flag.length + 1));
+  for (const arg of args) {
+    if (arg.startsWith(flag + '=')) values.push(arg.slice(flag.length + 1));
   }
-  for (let i = 0; i < args.length; i++) {
-    // A following argument exists exactly when i + 1 is within the length.
-    const next = args[i + 1];
-    if (args[i] === flag && next !== undefined) values.push(next);
+  for (let index = 0; index < args.length; index++) {
+    // A following argument exists exactly when index + 1 is within the length.
+    const next = args[index + 1];
+    if (args[index] === flag && next !== undefined) values.push(next);
   }
   return values;
 };
@@ -83,14 +83,14 @@ export const register = (server: McpServer) =>
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
-      if (!matchesAllowlist(args, subcommands))
+      if (!isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
       if (args[0] === 'devops' && args[1] === 'invoke') {
         // Reject any flag (single or double dash) not in the allowlist. This
         // blocks unknown short flags (e.g., `-X`) that could bypass the `--`-only
         // check. Flag values for known flags (e.g., `--area build`) are not
         // checked here because they don't start with `-` in normal usage.
-        const unknownFlag = args.slice(2).find(a => a.startsWith('-') && !invokeAllowedFlags.has(a.split('=', 1)[0] ?? a));
+        const unknownFlag = args.slice(2).find(arg => arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
         if (unknownFlag) return fail(`Flag not allowed: ${unknownFlag}`);
         const endpointRejection = rejectInvokeEndpoint(args);
         if (endpointRejection) return endpointRejection;

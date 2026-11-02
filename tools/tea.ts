@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, matchesApiPath, normalizeApiPath,
+  ArgsSchema, isAllowedApiPath, normalizeApiPath,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '../lib/allowlist.ts';
 import { exec, fail } from '../lib/exec.ts';
@@ -124,10 +124,10 @@ const isRepoSlug = (value: string): boolean =>
   /^[\w.-]+\/[\w.-]+$/.test(value) &&
   value.split('/').every(segment => !/^\.+$/.test(segment));
 
-const repoValues = (args: readonly string[]): string[] => args.flatMap((arg, i) => {
+const repoValues = (args: readonly string[]): string[] => args.flatMap((arg, index) => {
   if (!isFlag(arg) || !['r', 'repo'].includes(flagName(arg))) return [];
   const eq = arg.indexOf('=');
-  return [eq === -1 ? args[i + 1] ?? '' : arg.slice(eq + 1)];
+  return [eq === -1 ? args[index + 1] ?? '' : arg.slice(eq + 1)];
 });
 
 const rejectRepoPath = (args: readonly string[]): CallToolResult | null => {
@@ -139,21 +139,21 @@ const rejectRepoPath = (args: readonly string[]): CallToolResult | null => {
 // Unknown flags are rejected because their arity, and so whether the next arg
 // is a value or a positional, cannot be known.
 const rejectBareArgs = (args: readonly string[], { booleans, positional, values }: BarePolicy): CallToolResult | null => {
-  const step = (i: number, positionals: readonly string[], endOfOptions: boolean): CallToolResult | null => {
+  const step = (index: number, positionals: readonly string[], isPastOptions: boolean): CallToolResult | null => {
     // Past the end, whether by one or by a skipped flag value.
-    const arg = args[i];
+    const arg = args[index];
     if (arg === undefined) {
       if (positionals.length > 1)
         return fail(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
-      const invalid = positionals.find(p => !positional(p));
+      const invalid = positionals.find(candidate => !positional(candidate));
       return invalid === undefined ? null : fail(`Positional argument not allowed: ${invalid}`);
     }
-    if (endOfOptions || !arg.startsWith('-') || arg === '-')
-      return step(i + 1, [...positionals, arg], endOfOptions);
-    if (arg === '--') return step(i + 1, positionals, true);
+    if (isPastOptions || !arg.startsWith('-') || arg === '-')
+      return step(index + 1, [...positionals, arg], isPastOptions);
+    if (arg === '--') return step(index + 1, positionals, true);
     const name = flagName(arg);
-    if (booleans.has(name)) return step(i + 1, positionals, false);
-    if (values.has(name)) return step(i + (arg.includes('=') ? 1 : 2), positionals, false);
+    if (booleans.has(name)) return step(index + 1, positionals, false);
+    if (values.has(name)) return step(index + (arg.includes('=') ? 1 : 2), positionals, false);
     return fail(`Flag not allowed: ${arg}`);
   };
   return step(0, [], false);
@@ -222,7 +222,7 @@ const isPlainSegment = (segment: string): boolean => {
 // allowlist never named.
 const isAllowedEndpoint = (endpoint: string): boolean =>
   !endpoint.includes('#') &&
-  matchesApiPath(endpoint, apiPaths) &&
+  isAllowedApiPath(endpoint, apiPaths) &&
   normalizeApiPath(endpoint).split('/').every(isPlainSegment);
 
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {

@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, matchesAllowlist, matchesApiPath,
+  ArgsSchema, isAllowedApiPath, isAllowlisted,
   normalizeApiPath, rejectApiEndpoint, rejectBlockedFlags,
   rejectSubcommand,
 } from '../lib/allowlist.ts';
@@ -95,7 +95,7 @@ export const register = (server: McpServer) =>
           return rejectApiEndpoint(endpoint, apiPaths);
         const rejected = rejectBlockedFlags(args, apiBlockedFlags);
         if (rejected) return rejected;
-        if (!matchesApiPath(endpoint, apiPaths))
+        if (!isAllowedApiPath(endpoint, apiPaths))
           return rejectApiEndpoint(endpoint, apiPaths);
         // Auto-inject raw Accept header for contents endpoints so file
         // responses return plain text instead of base64-encoded JSON.
@@ -112,7 +112,7 @@ export const register = (server: McpServer) =>
         return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...args.slice(2)]);
       }
 
-      if (!matchesAllowlist(args, subcommands))
+      if (!isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
       return exec('gh', args);
     },

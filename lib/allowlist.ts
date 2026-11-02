@@ -24,13 +24,13 @@ export const ArgsSchema = {
 
 const maxDepthOf = (allowlist: ReadonlySet<string>): number => {
   const entries = [...allowlist];
-  return entries.length === 0 ? 1 : Math.max(...entries.map(s => s.split(' ').length));
+  return entries.length === 0 ? 1 : Math.max(...entries.map(entry => entry.split(' ').length));
 };
 
-export const matchesAllowlist = (args: readonly string[], allowlist: ReadonlySet<string>): boolean =>
+export const isAllowlisted = (args: readonly string[], allowlist: ReadonlySet<string>): boolean =>
   args
     .slice(0, maxDepthOf(allowlist))
-    .some((_, i) => allowlist.has(args.slice(0, i + 1).join(' ')));
+    .some((_arg, index) => allowlist.has(args.slice(0, index + 1).join(' ')));
 
 export const rejectSubcommand = (args: readonly string[], allowlist: ReadonlySet<string>): CallToolResult => {
   const depth = maxDepthOf(allowlist);
@@ -52,7 +52,7 @@ export const normalizeApiPath = (endpoint: string | undefined): string =>
 // `*` matches exactly one segment; trailing `**` matches one or more remaining
 // segments (for variable-depth paths like repos/*/*/contents/**).
 // Rejects full URLs (http:// / https://) to prevent targeting arbitrary hosts.
-export const matchesApiPath = (endpoint: string | undefined, patterns: readonly string[]): boolean => {
+export const isAllowedApiPath = (endpoint: string | undefined, patterns: readonly string[]): boolean => {
   if (/^https?:\/\//.test(endpoint ?? '')) return false;
   const normalized = normalizeApiPath(endpoint);
   if (!normalized) return false;
@@ -63,10 +63,10 @@ export const matchesApiPath = (endpoint: string | undefined, patterns: readonly 
     if (last === '**') {
       const prefix = pSegments.slice(0, -1);
       return segments.length > prefix.length &&
-        prefix.every((p, i) => p === '*' || p === segments[i]);
+        prefix.every((part, index) => part === '*' || part === segments[index]);
     }
     return pSegments.length === segments.length &&
-      pSegments.every((p, i) => p === '*' || p === segments[i]);
+      pSegments.every((part, index) => part === '*' || part === segments[index]);
   });
 };
 
@@ -76,13 +76,13 @@ export const rejectApiEndpoint = (endpoint: string | undefined, patterns: readon
 };
 
 export const rejectBlockedFlags = (args: readonly string[], blockedFlags: ReadonlySet<string>): CallToolResult | null => {
-  const flag = args.slice(1).find(a =>
-    a !== '--' && a !== '-' &&
-    [...blockedFlags].some(f =>
-      a === f || a.startsWith(f + '=') || f.startsWith(a.split('=', 1)[0] ?? a) ||
+  const flag = args.slice(1).find(arg =>
+    arg !== '--' && arg !== '-' &&
+    [...blockedFlags].some(blocked =>
+      arg === blocked || arg.startsWith(blocked + '=') || blocked.startsWith(arg.split('=', 1)[0] ?? arg) ||
       // Short flags (-X) accept concatenated values (-XPOST) in most CLIs
       // (pflag/cobra, getopt). Match any arg starting with a 2-char short flag.
-      (f.length === 2 && f.startsWith('-') && f[1] !== '-' && a.startsWith(f)),
+      (blocked.length === 2 && blocked.startsWith('-') && blocked[1] !== '-' && arg.startsWith(blocked)),
     ),
   );
   return flag ? fail(`Flag not allowed: ${flag}`) : null;

@@ -47,8 +47,8 @@ const getWorktreePaths = () => {
     }).toString();
     return out
       .split('\n')
-      .filter(l => l.startsWith('worktree '))
-      .map(l => resolve(l.slice('worktree '.length).trim()));
+      .filter(line => line.startsWith('worktree '))
+      .map(line => resolve(line.slice('worktree '.length).trim()));
   } catch {
     return [];
   }
@@ -82,9 +82,9 @@ export const register = (server: McpServer) =>
       // Only diff has --output; other commands use -o for unrelated flags
       // (e.g., ls-files -o = --others).
       if (sub === 'diff') {
-        const shortO = args.slice(1).find(a =>
-          a.startsWith('-') && !a.startsWith('--') && a !== '-' &&
-          [...(a.slice(1).split('=', 1)[0] ?? a.slice(1))].includes('o'),
+        const shortO = args.slice(1).find(arg =>
+          arg.startsWith('-') && !arg.startsWith('--') && arg !== '-' &&
+          [...(arg.slice(1).split('=', 1)[0] ?? arg.slice(1))].includes('o'),
         );
         if (shortO) return fail(`Flag not allowed: ${shortO}`);
       }
@@ -97,27 +97,27 @@ export const register = (server: McpServer) =>
       }
       if (sub === 'stash') {
         let stashSub = null;
-        for (const a of args.slice(1)) {
-          if (a === '--') break;
-          if (!a.startsWith('-')) { stashSub = a; break; }
+        for (const arg of args.slice(1)) {
+          if (arg === '--') break;
+          if (!arg.startsWith('-')) { stashSub = arg; break; }
         }
         if (!stashSub || !stashAllowedSubs.has(stashSub))
           return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. Allowed: ${[...stashAllowedSubs].join(', ')}`);
       }
       if (sub === 'worktree') {
         let wSub = null;
-        for (const a of args.slice(1)) {
-          if (a === '--') break;
-          if (!a.startsWith('-')) { wSub = a; break; }
+        for (const arg of args.slice(1)) {
+          if (arg === '--') break;
+          if (!arg.startsWith('-')) { wSub = arg; break; }
         }
         if (!wSub || !worktreeAllowedSubs.has(wSub))
           return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
       }
       if (sub === 'reflog') {
         let rSub = null;
-        for (const a of args.slice(1)) {
-          if (a === '--') break;
-          if (!a.startsWith('-')) { rSub = a; break; }
+        for (const arg of args.slice(1)) {
+          if (arg === '--') break;
+          if (!arg.startsWith('-')) { rSub = arg; break; }
         }
         // Bare `git reflog` is safe (equivalent to `git reflog show`)
         if (rSub && !reflogAllowedSubs.has(rSub))
@@ -125,13 +125,13 @@ export const register = (server: McpServer) =>
       }
       if (sub === 'remote') {
         const remoteArgs = args.slice(1);
-        const remoteSub = remoteArgs.find(a => !a.startsWith('-'));
+        const remoteSub = remoteArgs.find(arg => !arg.startsWith('-'));
         if (remoteSub && !remoteAllowedSubs.has(remoteSub))
           return fail(`Subcommand not allowed for git remote: ${remoteSub}. Allowed: (none), ${[...remoteAllowedSubs].join(', ')}`);
         // `remote show` requires `-n` to prevent network I/O (SSRF risk)
         if (remoteSub === 'show' && !remoteArgs.includes('-n'))
           return fail('git remote show requires -n (no network I/O)');
-        const blockedFlag = remoteArgs.filter(a => a.startsWith('-')).find(a => !remoteAllowedFlags.has(a));
+        const blockedFlag = remoteArgs.filter(arg => arg.startsWith('-')).find(arg => !remoteAllowedFlags.has(arg));
         if (blockedFlag) return fail(`Flag not allowed for git remote: ${blockedFlag}`);
       }
       // Inject --no-pager to prevent interactive pager from blocking the process.
