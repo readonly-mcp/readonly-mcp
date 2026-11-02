@@ -113,7 +113,10 @@ const blockedFlags = new Set(['--debug', '--vvv']);
 // labels --save / -s: writes the label set to a file.
 const nounBlockedFlags: Record<string, ReadonlySet<string>> = { labels: new Set(['--save', '-s']) };
 
-const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): CallToolResult | undefined =>
+// What a reject helper returns: the failure, or undefined when nothing is rejected.
+type Rejection = CallToolResult | undefined;
+
+const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): Rejection =>
   rejectBlockedFlags(args, blocked) ??
   rejectBlockedFlags(args.map(toLongForm), blocked);
 
@@ -130,9 +133,11 @@ const repoValues = (args: readonly string[]): string[] => args.flatMap((arg, ind
   return [eq === -1 ? args[index + 1] ?? '' : arg.slice(eq + 1)];
 });
 
-const rejectRepoPath = (args: readonly string[]): CallToolResult | undefined => {
+const rejectRepoPath = (args: readonly string[]): Rejection => {
   const path = repoValues(args).find(value => !isRepoSlug(value));
-  return path === undefined ? undefined : fail(`--repo must be an owner/name slug, not a path: ${path}`);
+  return path === undefined
+    ? undefined
+    : fail(`--repo must be an owner/name slug, not a path: ${path}`);
 };
 
 // A value flag spans one arg as --name=value, two as --name value.
@@ -141,22 +146,31 @@ const flagAndValueArgs = 2;
 // Walks the args after a bare command, consuming each flag's value by arity.
 // Unknown flags are rejected because their arity, and so whether the next arg
 // is a value or a positional, cannot be known.
-const rejectBareArgs = (args: readonly string[], { booleans, positional, values }: BarePolicy): CallToolResult | undefined => {
-  const step = (index: number, positionals: readonly string[], isPastOptions: boolean): CallToolResult | undefined => {
+const rejectBareArgs = (
+  args: readonly string[], { booleans, positional, values }: BarePolicy,
+): Rejection => {
+  const step = (
+    index: number, positionals: readonly string[], isPastOptions: boolean,
+  ): Rejection => {
     // Past the end, whether by one or by a skipped flag value.
     const arg = args[index];
     if (arg === undefined) {
       if (positionals.length > 1)
         return fail(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
       const invalid = positionals.find(candidate => !positional(candidate));
-      return invalid === undefined ? undefined : fail(`Positional argument not allowed: ${invalid}`);
+      return invalid === undefined
+        ? undefined
+        : fail(`Positional argument not allowed: ${invalid}`);
     }
     if (isPastOptions || arg === '-' || !arg.startsWith('-'))
       return step(index + 1, [...positionals, arg], isPastOptions);
     if (arg === '--') return step(index + 1, positionals, true);
     const name = flagName(arg);
     if (booleans.has(name)) return step(index + 1, positionals, false);
-    if (values.has(name)) return step(index + (arg.includes('=') ? 1 : flagAndValueArgs), positionals, false);
+    if (values.has(name)) {
+      const width = arg.includes('=') ? 1 : flagAndValueArgs;
+      return step(index + width, positionals, false);
+    }
     return fail(`Flag not allowed: ${arg}`);
   };
   return step(0, [], false);
@@ -257,7 +271,10 @@ export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'tea',
     {
-      description: 'Run read-only Gitea/Forgejo CLI commands (--version, --help, branches list, comments list, issues [index]/list, labels list, logins list, milestones issues/list, pulls [index]/list/review-comments, releases list, repos list/search, whoami, api GET: pulls/reviews, commits/status+statuses, contents, raw, user)',
+      description: 'Run read-only Gitea/Forgejo CLI commands (--version, --help, branches list, ' +
+        'comments list, issues [index]/list, labels list, logins list, milestones issues/list, ' +
+        'pulls [index]/list/review-comments, releases list, repos list/search, whoami, api GET: ' +
+        'pulls/reviews, commits/status+statuses, contents, raw, user)',
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {

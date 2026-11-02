@@ -17,7 +17,8 @@ export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'acli',
     {
-      description: 'Run read-only Atlassian CLI commands (jira board/filter/project/sprint/workitem list/search/view/comment list)',
+      description: 'Run read-only Atlassian CLI commands (jira ' +
+        'board/filter/project/sprint/workitem list/search/view/comment list)',
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {

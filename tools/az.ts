@@ -72,14 +72,20 @@ const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | undefin
   const endpoint = `${area}/${resource}`;
   return invokeAllowedEndpoints.has(endpoint)
     ? undefined
-    : fail(`Endpoint not allowed for devops invoke: --area ${area} --resource ${resource}. Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
+    : fail(`Endpoint not allowed for devops invoke: --area ${area} --resource ${resource}. ` +
+      `Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'az',
     {
-      description: 'Run read-only Azure DevOps CLI commands (devops invoke for GET-only REST API limited to build-debugging endpoints, devops project/team/extension/service-endpoint/wiki, pipelines list/show/build/release/runs/pool/agent). Prefer dedicated subcommands when available; use devops invoke only for endpoints without a CLI equivalent (e.g., build logs/timeline).',
+      description: 'Run read-only Azure DevOps CLI commands (devops invoke for GET-only REST API ' +
+        'limited to build-debugging endpoints, devops ' +
+        'project/team/extension/service-endpoint/wiki, pipelines ' +
+        'list/show/build/release/runs/pool/agent). Prefer dedicated subcommands when available; ' +
+        'use devops invoke only for endpoints without a CLI equivalent (e.g., build ' +
+        'logs/timeline).',
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
@@ -91,7 +97,8 @@ export const register = (server: McpServer): RegisteredTool =>
         // blocks unknown short flags (e.g., `-X`) that could bypass the `--`-only
         // check. Flag values for known flags (e.g., `--area build`) are not
         // checked here because they don't start with `-` in normal usage.
-        const unknownFlag = invokeArgs.find(arg => arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
+        const unknownFlag = invokeArgs.find(arg =>
+          arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
         if (unknownFlag) return fail(`Flag not allowed: ${unknownFlag}`);
         const endpointRejection = rejectInvokeEndpoint(args);
         if (endpointRejection) return endpointRejection;

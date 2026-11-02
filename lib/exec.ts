@@ -16,6 +16,7 @@ const millisecondsPerSecond = 1000;
 const mebibyte = 1_048_576;
 
 const timeoutMs = 30_000;
+const timeoutSeconds = timeoutMs / millisecondsPerSecond;
 const maxBufferMebibytes = 2;
 export const maxBuffer = maxBufferMebibytes * mebibyte;
 
@@ -32,7 +33,8 @@ export const fail = (msg: string): CallToolResult => ({
   isError: true,
 });
 
-const append = (note: string, output: string): string => (output.trim() ? `${note}\n${output.trimEnd()}` : note);
+const append = (note: string, output: string): string =>
+  (output.trim() ? `${note}\n${output.trimEnd()}` : note);
 
 /*
  * The fields execFile decorates its rejection with. A catch clause sees the
@@ -61,10 +63,11 @@ export const errorResult = (err: unknown, cmd: string, args: readonly string[]):
   if (!parsed.success) return fail(String(err));
   const { code, killed, message, stderr = '', stdout = '' } = parsed.data;
   const partial = stdout + stderr;
+  const command = `${cmd} ${args.join(' ')}`;
   if (code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER')
-    return fail(append(`Command output exceeded ${String(maxBuffer)} bytes: ${cmd} ${args.join(' ')}`, partial));
+    return fail(append(`Command output exceeded ${String(maxBuffer)} bytes: ${command}`, partial));
   if (killed)
-    return fail(append(`Command timed out after ${String(timeoutMs / millisecondsPerSecond)}s: ${cmd} ${args.join(' ')}`, partial));
+    return fail(append(`Command timed out after ${String(timeoutSeconds)}s: ${command}`, partial));
   if (partial) return text(stdout, stderr);
   return fail(message);
 };

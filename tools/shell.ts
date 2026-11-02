@@ -81,7 +81,8 @@ export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'shell',
     {
-      description: 'Run read-only shell utilities (basename, date, dirname, eza, file, jq, ls, pwd, readlink, realpath, stat, wc, which, whoami)',
+      description: 'Run read-only shell utilities (basename, date, dirname, eza, file, jq, ls, ' +
+        'pwd, readlink, realpath, stat, wc, which, whoami)',
       inputSchema: {
         command: z.string().describe('Command name from the allowlist'),
         ...ArgsSchema,

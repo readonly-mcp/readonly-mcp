@@ -66,14 +66,17 @@ const isKnownWorktree = (dir: string): boolean => {
 const GitSchema = {
   ...ArgsSchema,
   cwd: z.string().min(1).optional()
-    .describe('Working directory (must be a git worktree of this repo). Pass when operating from a linked worktree.'),
+    .describe('Working directory (must be a git worktree of this repo). Pass when operating from ' +
+      'a linked worktree.'),
 };
 
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'git',
     {
-      description: 'Run read-only git commands (blame, branch, describe, diff, log, ls-files, ls-tree, merge-base, reflog, remote, rev-parse, shortlog, show, stash, status, worktree). Pass cwd when operating from a linked worktree.',
+      description: 'Run read-only git commands (blame, branch, describe, diff, log, ls-files, ' +
+        'ls-tree, merge-base, reflog, remote, rev-parse, shortlog, show, stash, status, ' +
+        'worktree). Pass cwd when operating from a linked worktree.',
       inputSchema: GitSchema,
     },
     async ({ args, cwd }) => {
@@ -107,7 +110,8 @@ export const register = (server: McpServer): RegisteredTool =>
           }
         }
         if (!stashSub || !stashAllowedSubs.has(stashSub))
-          return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. Allowed: ${[...stashAllowedSubs].join(', ')}`);
+          return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. ` +
+            `Allowed: ${[...stashAllowedSubs].join(', ')}`);
       }
       if (sub === 'worktree') {
         let wSub: string | undefined;
@@ -119,7 +123,8 @@ export const register = (server: McpServer): RegisteredTool =>
           }
         }
         if (!wSub || !worktreeAllowedSubs.has(wSub))
-          return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
+          return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. ` +
+            `Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
       }
       if (sub === 'reflog') {
         let rSub: string | undefined;
@@ -132,17 +137,21 @@ export const register = (server: McpServer): RegisteredTool =>
         }
         // Bare `git reflog` is safe (equivalent to `git reflog show`)
         if (rSub && !reflogAllowedSubs.has(rSub))
-          return fail(`Subcommand not allowed for git reflog: ${rSub}. Allowed: (none), ${[...reflogAllowedSubs].join(', ')}`);
+          return fail(`Subcommand not allowed for git reflog: ${rSub}. ` +
+            `Allowed: (none), ${[...reflogAllowedSubs].join(', ')}`);
       }
       if (sub === 'remote') {
         const remoteArgs = args.slice(1);
         const remoteSub = remoteArgs.find(arg => !arg.startsWith('-'));
         if (remoteSub && !remoteAllowedSubs.has(remoteSub))
-          return fail(`Subcommand not allowed for git remote: ${remoteSub}. Allowed: (none), ${[...remoteAllowedSubs].join(', ')}`);
+          return fail(`Subcommand not allowed for git remote: ${remoteSub}. ` +
+            `Allowed: (none), ${[...remoteAllowedSubs].join(', ')}`);
         // `remote show` requires `-n` to prevent network I/O (SSRF risk)
         if (remoteSub === 'show' && !remoteArgs.includes('-n'))
           return fail('git remote show requires -n (no network I/O)');
-        const blockedFlag = remoteArgs.filter(arg => arg.startsWith('-')).find(arg => !remoteAllowedFlags.has(arg));
+        const blockedFlag = remoteArgs
+          .filter(arg => arg.startsWith('-'))
+          .find(arg => !remoteAllowedFlags.has(arg));
         if (blockedFlag) return fail(`Flag not allowed for git remote: ${blockedFlag}`);
       }
       // Inject --no-pager to prevent interactive pager from blocking the process.

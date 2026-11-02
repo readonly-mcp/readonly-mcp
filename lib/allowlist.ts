@@ -32,7 +32,9 @@ export const isAllowlisted = (args: readonly string[], allowlist: ReadonlySet<st
     .slice(0, maxDepthOf(allowlist))
     .some((_arg, index) => allowlist.has(args.slice(0, index + 1).join(' ')));
 
-export const rejectSubcommand = (args: readonly string[], allowlist: ReadonlySet<string>): CallToolResult => {
+export const rejectSubcommand = (
+  args: readonly string[], allowlist: ReadonlySet<string>,
+): CallToolResult => {
   const depth = maxDepthOf(allowlist);
   const sub = args.slice(0, depth).join(' ') || '(none)';
   return fail(`Subcommand not allowed: ${sub}. Allowed: ${[...allowlist].join(', ')}`);
@@ -45,7 +47,9 @@ export const normalizeApiPath = (endpoint: string | undefined): string =>
 // `*` matches exactly one segment; trailing `**` matches one or more remaining
 // segments (for variable-depth paths like repos/*/*/contents/**).
 // Rejects full URLs (http:// / https://) to prevent targeting arbitrary hosts.
-export const isAllowedApiPath = (endpoint: string | undefined, patterns: readonly string[]): boolean => {
+export const isAllowedApiPath = (
+  endpoint: string | undefined, patterns: readonly string[],
+): boolean => {
   if (/^https?:\/\//v.test(endpoint ?? '')) return false;
   const normalized = normalizeApiPath(endpoint);
   if (!normalized) return false;
@@ -63,7 +67,9 @@ export const isAllowedApiPath = (endpoint: string | undefined, patterns: readonl
   });
 };
 
-export const rejectApiEndpoint = (endpoint: string | undefined, patterns: readonly string[]): CallToolResult => {
+export const rejectApiEndpoint = (
+  endpoint: string | undefined, patterns: readonly string[],
+): CallToolResult => {
   const normalized = normalizeApiPath(endpoint) || '(none)';
   return fail(`API endpoint not allowed: ${normalized}. Allowed patterns: ${patterns.join(', ')}`);
 };
@@ -75,11 +81,14 @@ export const rejectApiEndpoint = (endpoint: string | undefined, patterns: readon
 // with `--fix` (e.g., a hypothetical `--fixup`). This errs on the side of
 // safety: false positives (blocking a legitimate flag) are preferable to false
 // negatives (allowing a dangerous abbreviated flag through).
-export const rejectBlockedFlags = (args: readonly string[], blockedFlags: ReadonlySet<string>): CallToolResult | undefined => {
+export const rejectBlockedFlags = (
+  args: readonly string[], blockedFlags: ReadonlySet<string>,
+): CallToolResult | undefined => {
   const flag = args.slice(1).find(arg =>
     arg !== '--' && arg !== '-' &&
     [...blockedFlags].some(blocked =>
-      arg === blocked || arg.startsWith(blocked + '=') || blocked.startsWith(arg.split('=', 1)[0] ?? arg) ||
+      arg === blocked || arg.startsWith(blocked + '=') ||
+      blocked.startsWith(arg.split('=', 1)[0] ?? arg) ||
       // Short flags (-X) accept concatenated values (-XPOST) in most CLIs
       // (pflag/cobra, getopt). Match any arg starting with a 2-char short flag.
       (/^-[^\-]$/v.test(blocked) && arg.startsWith(blocked)),

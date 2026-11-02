@@ -11,7 +11,8 @@ export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'chezmoi',
     {
-      description: 'Run read-only chezmoi commands (diff, doctor, managed, source-path, status, target-path, verify)',
+      description: 'Run read-only chezmoi commands (diff, doctor, managed, source-path, status, ' +
+        'target-path, verify)',
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
