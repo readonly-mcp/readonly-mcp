@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import path from 'node:path';
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ArgsSchema, rejectBlockedFlags, rejectSubcommand } from '../lib/allowlist.ts';
@@ -50,14 +50,14 @@ const getWorktreePaths = (): string[] => {
     return out
       .split('\n')
       .filter(line => line.startsWith('worktree '))
-      .map(line => resolve(line.slice('worktree '.length).trim()));
+      .map(line => path.resolve(line.slice('worktree '.length).trim()));
   } catch {
     return [];
   }
 };
 
 const isKnownWorktree = (dir: string): boolean => {
-  const target = resolve(dir);
+  const target = path.resolve(dir);
   return getWorktreePaths().some(wt =>
     isWindows ? wt.toLowerCase() === target.toLowerCase() : wt === target,
   );

@@ -177,7 +177,7 @@ pnpm test
 
 ## Project structure
 
-```
+```text
 index.ts            Server entry point
 lib/
   allowlist.ts      Allowlist matching and validation

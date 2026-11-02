@@ -5,7 +5,7 @@ See `README.md` for the full security model and tool reference.
 
 ## Architecture
 
-```
+```text
 index.ts            Server entry point (security rationale in header comment)
 lib/
   allowlist.ts      Allowlist matching, flag blocking, JSON array coercion

@@ -12,7 +12,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import { z } from 'zod';
 import { type Server, useServer } from './helpers.ts';
@@ -56,14 +56,14 @@ export interface PackageFixture extends AsyncDisposable {
  * Creates a project depending on zod and installs it with `manager`.
  */
 export const createPackageFixture = async (manager: PackageManager): Promise<PackageFixture> => {
-  const dir = await mkdtemp(join(tmpdir(), `readonly-mcp-${manager}-`));
+  const dir = await mkdtemp(path.join(tmpdir(), `readonly-mcp-${manager}-`));
   const fixture: PackageFixture = {
     dir,
     [Symbol.asyncDispose]: () => rm(dir, { force: true, maxRetries: 3, recursive: true }),
   };
   try {
     const manifest = { name: 'fixture', private: true, dependencies: { [dependency]: version } };
-    await writeFile(join(dir, 'package.json'), JSON.stringify(manifest));
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify(manifest));
     await run(...shimmed(manager, installArgs[manager]), { cwd: dir });
     return fixture;
   } catch (error) {

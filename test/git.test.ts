@@ -1,6 +1,6 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -159,13 +159,13 @@ interface LinkedWorktree extends AsyncDisposable {
  */
 const addLinkedWorktree = async (): Promise<LinkedWorktree> => {
   const branch = `readonly-mcp-test-${faker.string.alphanumeric({ casing: 'lower', length: 8 })}`;
-  const path = join(tmpdir(), branch);
-  await run('git', ['worktree', 'add', '-b', branch, path]);
+  const worktreePath = path.join(tmpdir(), branch);
+  await run('git', ['worktree', 'add', '-b', branch, worktreePath]);
   return {
     branch,
-    path,
+    path: worktreePath,
     [Symbol.asyncDispose]: async () => {
-      await run('git', ['worktree', 'remove', '--force', path]);
+      await run('git', ['worktree', 'remove', '--force', worktreePath]);
       await run('git', ['branch', '-D', branch]);
     },
   };
