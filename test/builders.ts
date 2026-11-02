@@ -71,6 +71,11 @@ export const resourceId = (): string => String(faker.number.int({ max: 99_999, m
 export const commitSha = (): string => faker.git.commitSha();
 
 /**
+ * Arbitrary git branch name.
+ */
+export const branchName = (): string => faker.git.branch();
+
+/**
  * Arbitrary file name with the given extension, e.g. `foo-bar.json`.
  */
 export const fileName = (extension = faker.system.commonFileExt()): string =>

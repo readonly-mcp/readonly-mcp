@@ -17,10 +17,15 @@ const subcommands = new Set([
 // --output / -o: writes command output to a file (checked via startsWith below)
 const blockedFlags = new Set(['--no-index', '--output']);
 
+/*
+ * A second layer: withListMode is what keeps branch from writing, since git
+ * refuses these modes alongside --list. --no-list is the entry it relies on,
+ * because it would undo the injected --list.
+ */
 const branchBlocked = new Set([
   '-D', '-d', '-m', '-M', '-c', '-C',
   '--delete', '--move', '--copy', '--edit-description',
-  '--set-upstream-to', '--unset-upstream', '--force',
+  '--set-upstream-to', '--unset-upstream', '--force', '--no-list',
 ]);
 
 // Only these sub-subcommands (or none) are allowed for `git stash`
@@ -130,6 +135,20 @@ const subcommandChecks: Record<string, (args: readonly string[]) => Rejection> =
   worktree: allowSubcommands('worktree', worktreeAllowedSubs),
 };
 
+/**
+ * Puts `git branch` in list mode, injected before the caller's args. git
+ * then refuses every mode that writes (delete, move, copy, set-upstream)
+ * and reads positionals as patterns, not names to create, so a short-flag
+ * group or flag the denylist misses still cannot change a ref. Only a lone
+ * --show-current, a read-only mode git will not combine with --list, runs
+ * as given.
+ */
+const withListMode = (args: readonly string[]): readonly string[] => {
+  const [sub, ...rest] = args;
+  const isShowCurrent = rest.length === 1 && rest[0] === '--show-current';
+  return sub === 'branch' && !isShowCurrent ? [sub, '--list', ...rest] : args;
+};
+
 const GitSchema = {
   ...ArgsSchema,
   cwd: z.string().min(1).optional()
@@ -158,6 +177,6 @@ export const register = (server: McpServer): RegisteredTool =>
       // Inject --no-pager to prevent interactive pager from blocking the process.
       // If a valid worktree cwd was given, inject -C <dir> to target that worktree.
       const target = cwd ? ['-C', cwd] : [];
-      return exec('git', ['--no-pager', ...target, ...args]);
+      return exec('git', ['--no-pager', ...target, ...withListMode(args)]);
     },
   );

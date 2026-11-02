@@ -56,7 +56,7 @@ Additional restrictions:
 - `--output` blocked globally (prefix matching defeats abbreviation)
 - `-o` short flag blocked on `diff` only (other commands use `-o` for unrelated flags, e.g., `ls-files -o` = `--others`)
 - `--no-index` blocked globally (prefix matching)
-- `branch`: destructive flags blocked (`-D`, `-d`, `-m`, `--delete`, `--force`, etc.)
+- `branch`: always runs with `--list` injected, so git rejects every writing mode and reads positionals as patterns; `--no-list` and destructive flags (`-D`, `-d`, `-m`, `--delete`, `--force`, etc.) are also blocked. A lone `--show-current` runs as given.
 - `stash`: only `list` and `show` sub-subcommands (`--` treated as terminator)
 - `worktree`: only `list` (mutating: `add`, `remove`, `move`, `prune`, etc.)
 - `reflog`: only `show`, `exists`, and bare invocation (destructive: `delete`, `expire`)
