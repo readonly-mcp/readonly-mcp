@@ -268,6 +268,23 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   return exec('tea', ['api', endpoint, '--method', 'GET', ...rest]);
 };
 
+const runCommand = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
+  const resolved = resolve(args);
+  if (!resolved || !allowed.has(resolved.key))
+    return rejectSubcommand(args, allowed);
+  const { command, key, noun, rest } = resolved;
+
+  const rejected =
+    rejectFlags(args, blockedFlags) ??
+    (nounBlockedFlags[noun] && rejectFlags(args, nounBlockedFlags[noun])) ??
+    rejectRepoPath(rest) ??
+    (barePolicies[key] && rejectBareArgs(rest, barePolicies[key]));
+  if (rejected) return rejected;
+
+  // Run under canonical names so what executes is what was validated.
+  return exec('tea', [...command, ...rest]);
+};
+
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'tea',
@@ -282,21 +299,6 @@ export const register = (server: McpServer): RegisteredTool =>
       const [only, ...others] = args;
       const isGlobal = only !== undefined && others.length === 0 && globalFlags.has(only);
       if (isGlobal) return exec('tea', args);
-      if (args[0] === 'api') return runApi(args);
-
-      const resolved = resolve(args);
-      if (!resolved || !allowed.has(resolved.key))
-        return rejectSubcommand(args, allowed);
-      const { command, key, noun, rest } = resolved;
-
-      const rejected =
-        rejectFlags(args, blockedFlags) ??
-        (nounBlockedFlags[noun] && rejectFlags(args, nounBlockedFlags[noun])) ??
-        rejectRepoPath(rest) ??
-        (barePolicies[key] && rejectBareArgs(rest, barePolicies[key]));
-      if (rejected) return rejected;
-
-      // Run under canonical names so what executes is what was validated.
-      return exec('tea', [...command, ...rest]);
+      return args[0] === 'api' ? runApi(args) : runCommand(args);
     },
   );
