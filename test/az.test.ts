@@ -201,21 +201,21 @@ describe.concurrent('az tool (integration)', () => {
     integration('reports missing --area', async ({ call, expect }) => {
       const result = await call(['devops', 'invoke', '--resource', 'builds']);
 
-      expect(result?.isError).toBe(true);
+      expect(result.isError).toBe(true);
       expect(textOf(result)).toContain('Missing required flag: --area');
     });
 
     integration('reports missing --resource', async ({ call, expect }) => {
       const result = await call(['devops', 'invoke', '--area', 'build']);
 
-      expect(result?.isError).toBe(true);
+      expect(result.isError).toBe(true);
       expect(textOf(result)).toContain('Missing required flag: --resource');
     });
 
     integration('reports missing --area when both absent', async ({ call, expect }) => {
       const result = await call(['devops', 'invoke']);
 
-      expect(result?.isError).toBe(true);
+      expect(result.isError).toBe(true);
       expect(textOf(result)).toContain('Missing required flag');
     });
   });

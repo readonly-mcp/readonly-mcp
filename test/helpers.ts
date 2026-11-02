@@ -185,7 +185,7 @@ const EchoSchema = z.object({ args: z.array(z.string()).readonly(), cmd: z.strin
  * have run from its own result rather than from a call log that concurrent
  * tests share.
  */
-const echoExec = async (cmd: string, args: readonly string[]): Promise<CallToolResult> => ({
+const echoExec = (cmd: string, args: readonly string[]): Promise<CallToolResult> => Promise.resolve({
   content: [{ type: 'text', text: JSON.stringify({ args, cmd } satisfies z.input<typeof EchoSchema>) }],
 });
 

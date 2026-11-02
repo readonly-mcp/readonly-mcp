@@ -23,7 +23,8 @@ describe.concurrent('jq file argument blocking', () => {
     });
 
     integration('allows --argjson with filter only', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['--argjson', 'k', String(faker.number.int()), '-n', '$k']));
+      const value = String(faker.number.int());
+      assertNotBlocked(expect, await call(['--argjson', 'k', value, '-n', '$k']));
     });
 
     integration('allows -r -n with filter only', async ({ call, expect }) => {

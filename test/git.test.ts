@@ -75,7 +75,7 @@ describe.concurrent('git tool (unit)', () => {
     it('rejects cwd that is not a known worktree', async ({ expect }) => {
       const result = await callMocked(['status'], build.absolutePath());
 
-      expect(result?.isError).toBe(true);
+      expect(result.isError).toBe(true);
       expect(textOf(result)).toContain('cwd rejected');
     });
 
@@ -99,7 +99,7 @@ describe.concurrent('git tool (unit)', () => {
     it('rejects path traversal from valid worktree', async ({ expect }) => {
       const result = await callMocked(['status'], toplevel + '/../../../tmp');
 
-      expect(result?.isError).toBe(true);
+      expect(result.isError).toBe(true);
       expect(textOf(result)).toContain('cwd rejected');
     });
 
@@ -239,7 +239,7 @@ describe.concurrent('git tool (integration)', () => {
       // May fail if no tags exist, but should not be blocked
       const result = await call(['describe', '--tags']);
 
-      expect(result?.isError).not.toBe(true);
+      expect(result.isError).not.toBe(true);
     });
 
     integration('allows merge-base HEAD HEAD', async ({ call, expect }) => {

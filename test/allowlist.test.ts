@@ -123,7 +123,9 @@ describe('isAllowlisted', () => {
 
   describe('edge cases', () => {
     it('returns false for empty args', ({ expect }) => {
-      expect(isAllowlisted([], new Set(build.words(3)))).toBe(false);
+      const allowlist = new Set(build.words(3));
+
+      expect(isAllowlisted([], allowlist)).toBe(false);
     });
 
     it('does not match single arg containing space against multi-word entry', ({ expect }) => {
