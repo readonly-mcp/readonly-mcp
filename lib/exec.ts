@@ -12,8 +12,11 @@ const run = promisify(execFile);
  * timeout is a runaway-command guard, not a latency target, so the bound is
  * generous while still terminating genuinely stuck processes.
  */
+const millisecondsPerSecond = 1000;
+const kibibyte = 1024;
+
 const timeoutMs = 30_000;
-export const maxBuffer = 2 * 1024 * 1024;
+export const maxBuffer = 2 * kibibyte * kibibyte;
 
 const execOptions = { maxBuffer, timeout: timeoutMs };
 
@@ -60,7 +63,7 @@ export const errorResult = (err: unknown, cmd: string, args: readonly string[]):
   if (code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER')
     return fail(append(`Command output exceeded ${maxBuffer} bytes: ${cmd} ${args.join(' ')}`, partial));
   if (killed)
-    return fail(append(`Command timed out after ${timeoutMs / 1000}s: ${cmd} ${args.join(' ')}`, partial));
+    return fail(append(`Command timed out after ${timeoutMs / millisecondsPerSecond}s: ${cmd} ${args.join(' ')}`, partial));
   if (partial) return text(stdout, stderr);
   return fail(message);
 };
