@@ -85,12 +85,13 @@ export const register = (server: McpServer): RegisteredTool =>
     async ({ args }) => {
       if (!isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
-      if (args[0] === 'devops' && args[1] === 'invoke') {
+      const [group, command, ...invokeArgs] = args;
+      if (group === 'devops' && command === 'invoke') {
         // Reject any flag (single or double dash) not in the allowlist. This
         // blocks unknown short flags (e.g., `-X`) that could bypass the `--`-only
         // check. Flag values for known flags (e.g., `--area build`) are not
         // checked here because they don't start with `-` in normal usage.
-        const unknownFlag = args.slice(2).find(arg => arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
+        const unknownFlag = invokeArgs.find(arg => arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
         if (unknownFlag) return fail(`Flag not allowed: ${unknownFlag}`);
         const endpointRejection = rejectInvokeEndpoint(args);
         if (endpointRejection) return endpointRejection;

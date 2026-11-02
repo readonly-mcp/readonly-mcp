@@ -13,10 +13,11 @@ const run = promisify(execFile);
  * generous while still terminating genuinely stuck processes.
  */
 const millisecondsPerSecond = 1000;
-const kibibyte = 1024;
+const mebibyte = 1_048_576;
 
 const timeoutMs = 30_000;
-export const maxBuffer = 2 * kibibyte * kibibyte;
+const maxBufferMebibytes = 2;
+export const maxBuffer = maxBufferMebibytes * mebibyte;
 
 const execOptions = { maxBuffer, timeout: timeoutMs };
 

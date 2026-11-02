@@ -92,7 +92,7 @@ export const register = (server: McpServer): RegisteredTool =>
       if (isGlobal) return exec('gh', args);
 
       if (args[0] === 'api') {
-        const endpoint = args[1];
+        const [, endpoint, ...apiArgs] = args;
         if (!endpoint || endpoint.startsWith('-'))
           return rejectApiEndpoint(endpoint, apiPaths);
         const rejected = rejectBlockedFlags(args, apiBlockedFlags);
@@ -110,7 +110,7 @@ export const register = (server: McpServer): RegisteredTool =>
         // user-supplied flags. Appending it at the end would be defeated by
         // a `--` (end-of-options marker) in user args, since everything after
         // `--` is treated as positional, making the injected flag a no-op.
-        return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...args.slice(2)]);
+        return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
       }
 
       if (!isAllowlisted(args, subcommands))

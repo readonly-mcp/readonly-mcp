@@ -135,6 +135,9 @@ const rejectRepoPath = (args: readonly string[]): CallToolResult | undefined => 
   return path === undefined ? undefined : fail(`--repo must be an owner/name slug, not a path: ${path}`);
 };
 
+// A value flag spans one arg as --name=value, two as --name value.
+const flagAndValueArgs = 2;
+
 // Walks the args after a bare command, consuming each flag's value by arity.
 // Unknown flags are rejected because their arity, and so whether the next arg
 // is a value or a positional, cannot be known.
@@ -153,7 +156,7 @@ const rejectBareArgs = (args: readonly string[], { booleans, positional, values 
     if (arg === '--') return step(index + 1, positionals, true);
     const name = flagName(arg);
     if (booleans.has(name)) return step(index + 1, positionals, false);
-    if (values.has(name)) return step(index + (arg.includes('=') ? 1 : 2), positionals, false);
+    if (values.has(name)) return step(index + (arg.includes('=') ? 1 : flagAndValueArgs), positionals, false);
     return fail(`Flag not allowed: ${arg}`);
   };
   return step(0, [], false);
@@ -176,9 +179,8 @@ const resolve = (args: readonly string[]): Resolved | undefined => {
   const noun = first === undefined ? undefined : nouns.get(first);
   if (!noun) return;
   const verb = second === undefined ? undefined : verbs[noun]?.get(second);
-  return verb
-    ? { command: [noun, verb], key: `${noun} ${verb}`, noun, rest: args.slice(2) }
-    : { command: [noun], key: noun, noun, rest: args.slice(1) };
+  const command = verb ? [noun, verb] : [noun];
+  return { command, key: command.join(' '), noun, rest: args.slice(command.length) };
 };
 
 const allowed = new Set([...leaves, ...Object.keys(barePolicies)]);
@@ -238,10 +240,9 @@ const isAllowedEndpoint = (endpoint: string): boolean =>
   normalizeApiPath(endpoint).split('/').every(isPlainSegment);
 
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
-  const endpoint = args[1];
+  const [, endpoint, ...rest] = args;
   if (!endpoint || endpoint.startsWith('-') || !isAllowedEndpoint(endpoint))
     return rejectApiEndpoint(endpoint, apiPaths);
-  const rest = args.slice(2);
   const rejected =
     rejectFlags(args, blockedFlags) ??
     rejectFlags(args, apiBlockedFlags) ??

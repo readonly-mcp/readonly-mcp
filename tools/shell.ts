@@ -18,6 +18,7 @@ const jqFileFlags = new Set([
 ]);
 // Flags that take two following arguments (name + value)
 const jqPairFlags = new Set(['--arg', '--argjson']);
+const pairFlagValues = 2;
 // Flags that take one following argument
 const jqValueFlags = new Set(['--indent']);
 
@@ -45,7 +46,7 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
     if (arg === undefined) break;
     const blocked = rejectFileFlag(arg);
     if (blocked) return blocked;
-    if (jqPairFlags.has(arg)) { index += 2; continue; }
+    if (jqPairFlags.has(arg)) { index += pairFlagValues; continue; }
     if (jqValueFlags.has(arg)) { index++; continue; }
     if (arg.startsWith('-')) continue;
     // First non-flag arg is the filter expression; rest are file paths
@@ -54,7 +55,7 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
       if (rest === undefined) break;
       const jblocked = rejectFileFlag(rest);
       if (jblocked) return jblocked;
-      if (jqPairFlags.has(rest)) { restIndex += 2; continue; }
+      if (jqPairFlags.has(rest)) { restIndex += pairFlagValues; continue; }
       if (jqValueFlags.has(rest)) { restIndex++; continue; }
       if (rest.startsWith('-')) continue;
       return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${rest}`);
