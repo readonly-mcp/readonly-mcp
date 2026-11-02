@@ -368,6 +368,8 @@ describe('isAllowedApiPath', () => {
     });
 
     it('rejects full http URL', ({ expect }) => {
+      /* eslint-disable-next-line unicorn/prefer-https --
+         The plain http scheme is the input under test */
       expect(isAllowedApiPath(`http://api.github.com/${build.prCommentsPath()}`, patterns)).toBe(false);
     });
 

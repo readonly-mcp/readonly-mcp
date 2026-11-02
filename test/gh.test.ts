@@ -364,6 +364,8 @@ describe.concurrent('gh tool (integration)', () => {
 
     integration('blocks http:// URL', async ({ expect, server }) => {
       assertBlocked(expect, await server.callTool('gh', {
+        /* eslint-disable-next-line unicorn/prefer-https --
+           The plain http scheme is the input under test */
         args: ['api', `http://api.github.com/${build.prCommentsPath()}`],
       }));
     });
