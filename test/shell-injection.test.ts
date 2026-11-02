@@ -24,7 +24,7 @@ describe.concurrent('shell injection', () => {
         template: argv,
       })),
     )('prevents: git $label', async ({ label, template }, { canary, expect, server }) => {
-      const realArgs = template.map(arg => arg.replace('{f}', canary.file));
+      const realArgs = template.map(arg => arg.replace('{f}', () => canary.file));
       await server.callTool('git', { args: realArgs });
       await assertCanaryIntact(expect, canary, `git ${label}`);
     });
@@ -54,7 +54,7 @@ describe.concurrent('shell injection', () => {
     )('prevents: $label', async ({ label, template }, { canary, expect, server }) => {
       const call = {
         command: template.command,
-        args: template.args.map(arg => arg.replace('{f}', canary.file)),
+        args: template.args.map(arg => arg.replace('{f}', () => canary.file)),
       };
       await server.callTool('shell', call);
       await assertCanaryIntact(expect, canary, label);

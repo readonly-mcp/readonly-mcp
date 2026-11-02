@@ -156,7 +156,7 @@ export const templateFiller = (): Filler => {
     values.set(key, value);
     return value;
   };
-  return template => template.replaceAll(/:(?<key>[a-z]+)/gv, valueOf);
+  return template => template.replaceAll(/:(?<key>[a-z]+)/gv, (placeholder: string, key: string) => valueOf(placeholder, key));
 };
 
 /**
