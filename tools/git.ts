@@ -101,7 +101,10 @@ export const register = (server: McpServer): RegisteredTool =>
         let stashSub: string | undefined;
         for (const arg of args.slice(1)) {
           if (arg === '--') break;
-          if (!arg.startsWith('-')) { stashSub = arg; break; }
+          if (!arg.startsWith('-')) {
+            stashSub = arg;
+            break;
+          }
         }
         if (!stashSub || !stashAllowedSubs.has(stashSub))
           return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. Allowed: ${[...stashAllowedSubs].join(', ')}`);
@@ -110,7 +113,10 @@ export const register = (server: McpServer): RegisteredTool =>
         let wSub: string | undefined;
         for (const arg of args.slice(1)) {
           if (arg === '--') break;
-          if (!arg.startsWith('-')) { wSub = arg; break; }
+          if (!arg.startsWith('-')) {
+            wSub = arg;
+            break;
+          }
         }
         if (!wSub || !worktreeAllowedSubs.has(wSub))
           return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
@@ -119,7 +125,10 @@ export const register = (server: McpServer): RegisteredTool =>
         let rSub: string | undefined;
         for (const arg of args.slice(1)) {
           if (arg === '--') break;
-          if (!arg.startsWith('-')) { rSub = arg; break; }
+          if (!arg.startsWith('-')) {
+            rSub = arg;
+            break;
+          }
         }
         // Bare `git reflog` is safe (equivalent to `git reflog show`)
         if (rSub && !reflogAllowedSubs.has(rSub))

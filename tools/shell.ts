@@ -46,8 +46,14 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
     if (arg === undefined) break;
     const blocked = rejectFileFlag(arg);
     if (blocked) return blocked;
-    if (jqPairFlags.has(arg)) { index += pairFlagValues; continue; }
-    if (jqValueFlags.has(arg)) { index++; continue; }
+    if (jqPairFlags.has(arg)) {
+      index += pairFlagValues;
+      continue;
+    }
+    if (jqValueFlags.has(arg)) {
+      index++;
+      continue;
+    }
     if (arg.startsWith('-')) continue;
     // First non-flag arg is the filter expression; rest are file paths
     for (let restIndex = index + 1; restIndex < args.length; restIndex++) {
@@ -55,8 +61,14 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
       if (rest === undefined) break;
       const jblocked = rejectFileFlag(rest);
       if (jblocked) return jblocked;
-      if (jqPairFlags.has(rest)) { restIndex += pairFlagValues; continue; }
-      if (jqValueFlags.has(rest)) { restIndex++; continue; }
+      if (jqPairFlags.has(rest)) {
+        restIndex += pairFlagValues;
+        continue;
+      }
+      if (jqValueFlags.has(rest)) {
+        restIndex++;
+        continue;
+      }
       if (rest.startsWith('-')) continue;
       return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${rest}`);
     }
