@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 // Uses execShell instead of exec for Windows compatibility: pnpm installed via
 // npm or corepack ships as a .cmd wrapper that execFile cannot invoke directly.
 // execShell is a no-op on non-Windows and wraps with bash on Windows.
@@ -15,7 +15,7 @@ const subcommands = new Set([
 // --registry: prevents SSRF / data exfiltration via attacker-controlled registries
 const blockedFlags = new Set(['--fix', '--registry']);
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'pnpm',
     {

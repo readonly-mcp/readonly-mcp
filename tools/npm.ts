@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand } from '../lib/allowlist.ts';
 import { execShell } from '../lib/exec.ts';
 
@@ -11,7 +11,7 @@ const subcommands = new Set([
 // --no-ignore-scripts: overrides the injected --ignore-scripts (npm uses last-wins)
 const blockedFlags = new Set(['--fix', '--registry', '--no-ignore-scripts', '--ignore-scripts']);
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'npm',
     {

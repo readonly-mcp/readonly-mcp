@@ -28,7 +28,7 @@ export const fail = (msg: string): CallToolResult => ({
   isError: true,
 });
 
-const append = (note: string, output: string) => (output.trim() ? `${note}\n${output.trimEnd()}` : note);
+const append = (note: string, output: string): string => (output.trim() ? `${note}\n${output.trimEnd()}` : note);
 
 /*
  * The fields execFile decorates its rejection with. A catch clause sees the

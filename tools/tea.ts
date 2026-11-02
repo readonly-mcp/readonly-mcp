@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
   ArgsSchema, isAllowedApiPath, normalizeApiPath,
@@ -159,7 +159,19 @@ const rejectBareArgs = (args: readonly string[], { booleans, positional, values 
   return step(0, [], false);
 };
 
-const resolve = (args: readonly string[]) => {
+/**
+ * A tea command resolved from its aliases: `command` is the canonical noun,
+ * and verb when given, that tea runs; `key` joins them for looking up the
+ * allowlist and bare policy; `rest` is every argument after the command.
+ */
+interface Resolved {
+  readonly command: readonly string[];
+  readonly key: string;
+  readonly noun: string;
+  readonly rest: readonly string[];
+}
+
+const resolve = (args: readonly string[]): Resolved | undefined => {
   const [first, second] = args;
   const noun = first === undefined ? undefined : nouns.get(first);
   if (!noun) return;
@@ -240,7 +252,7 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   return exec('tea', ['api', endpoint, '--method', 'GET', ...rest]);
 };
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'tea',
     {

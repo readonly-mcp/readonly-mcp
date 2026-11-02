@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ArgsSchema, rejectBlockedFlags, rejectSubcommand } from '../lib/allowlist.ts';
 import { exec, fail } from '../lib/exec.ts';
@@ -40,7 +40,7 @@ const remoteAllowedFlags = new Set(['-v', '--verbose', '--push', '--all', '-n'])
 const isWindows = process.platform === 'win32';
 
 /** Return resolved paths for every worktree known to this repo. */
-const getWorktreePaths = () => {
+const getWorktreePaths = (): string[] => {
   try {
     const out = execFileSync('git', ['worktree', 'list', '--porcelain'], {
       timeout: 5000,
@@ -67,7 +67,7 @@ const GitSchema = {
     .describe('Working directory (must be a git worktree of this repo). Pass when operating from a linked worktree.'),
 };
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'git',
     {

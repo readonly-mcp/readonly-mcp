@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, isAllowlisted, rejectSubcommand } from '../lib/allowlist.ts';
 import { exec } from '../lib/exec.ts';
 
@@ -7,7 +7,7 @@ const subcommands = new Set([
   'source-path', 'status', 'target-path', 'verify',
 ]);
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'chezmoi',
     {

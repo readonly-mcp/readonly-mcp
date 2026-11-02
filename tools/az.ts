@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ArgsSchema, isAllowlisted, rejectSubcommand } from '../lib/allowlist.ts';
 import { execShell, fail } from '../lib/exec.ts';
@@ -75,7 +75,7 @@ const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | undefin
     : fail(`Endpoint not allowed for devops invoke: --area ${areas[0]} --resource ${resources[0]}. Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
 };
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'az',
     {

@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ArgsSchema, isAllowedApiPath, isAllowlisted,
   normalizeApiPath, rejectApiEndpoint, rejectBlockedFlags,
@@ -77,7 +77,7 @@ const apiBlockedFlags = new Set([
   '-H', '--header',
 ]);
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'gh',
     {

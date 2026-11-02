@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { ArgsSchema } from '../lib/allowlist.ts';
@@ -64,7 +64,7 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
   return undefined;
 };
 
-export const register = (server: McpServer) =>
+export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'shell',
     {
