@@ -3,8 +3,10 @@ import { type ExpectStatic, describe, it, vi } from 'vitest';
 import { type Server, assertBlocked, assertNotBlocked, connectTool, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked execShell) ---
-vi.mock(import('../lib/exec.ts'), async importOriginal =>
-  (await import('./helpers.ts')).withEchoExec(importOriginal));
+vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
+  const { withEchoExec } = await import('./helpers.ts');
+  return withEchoExec(importOriginal);
+});
 
 const { register } = await import('../tools/shell.ts');
 

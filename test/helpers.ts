@@ -195,8 +195,10 @@ const echoExec = (cmd: string, args: readonly string[]): Promise<CallToolResult>
  * spawns nothing:
  *
  * ```ts
- * vi.mock(import('../lib/exec.ts'), async importOriginal =>
- *   (await import('./helpers.ts')).withEchoExec(importOriginal));
+ * vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
+ *   const { withEchoExec } = await import('./helpers.ts');
+ *   return withEchoExec(importOriginal);
+ * });
  * ```
  *
  * The factory is hoisted above the file's imports, hence the dynamic import.

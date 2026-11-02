@@ -6,8 +6,10 @@ import { type Call, type Server, assertBlocked, assertNotBlocked, connectTool, e
 import { packageCommandTimeout, packageServerTimeout, usePackageServer } from './package-fixture.ts';
 
 // --- Unit tests (mocked execShell) ---
-vi.mock(import('../lib/exec.ts'), async importOriginal =>
-  (await import('./helpers.ts')).withEchoExec(importOriginal));
+vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
+  const { withEchoExec } = await import('./helpers.ts');
+  return withEchoExec(importOriginal);
+});
 
 const { register } = await import('../tools/npm.ts');
 

@@ -7,8 +7,10 @@ import { type Call, type Server, assertBlocked, connectTool, echoed, textOf, use
 // Allowed paths hit the real `az` CLI which is slow (~1-2s per call),
 // so we mock execShell to keep these fast.
 
-vi.mock(import('../lib/exec.ts'), async importOriginal =>
-  (await import('./helpers.ts')).withEchoExec(importOriginal));
+vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
+  const { withEchoExec } = await import('./helpers.ts');
+  return withEchoExec(importOriginal);
+});
 
 const { register } = await import('../tools/az.ts');
 

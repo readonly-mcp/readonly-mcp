@@ -9,8 +9,10 @@ import * as build from './builders.ts';
 import { type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
 
 // --- Unit tests (mocked exec) ---
-vi.mock(import('../lib/exec.ts'), async importOriginal =>
-  (await import('./helpers.ts')).withEchoExec(importOriginal));
+vi.mock(import('../lib/exec.ts'), async (importOriginal) => {
+  const { withEchoExec } = await import('./helpers.ts');
+  return withEchoExec(importOriginal);
+});
 
 const { register } = await import('../tools/git.ts');
 
