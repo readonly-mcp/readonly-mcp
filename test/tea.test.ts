@@ -169,7 +169,7 @@ describe.concurrent('tea tool (unit)', () => {
       const endpoint = build.template('repos/:owner/:repo/pulls/:number/reviews');
       const { args } = echoed(await callMocked(['api', endpoint, '--', '-i']));
 
-      expect(args.slice(0, 4)).toEqual(['api', endpoint, '--method', 'GET']);
+      expect(args.slice(0, 4)).toStrictEqual(['api', endpoint, '--method', 'GET']);
     });
 
     it.for(([

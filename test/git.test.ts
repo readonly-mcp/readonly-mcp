@@ -37,7 +37,7 @@ describe.concurrent('git tool (unit)', () => {
       const result = await callMocked(['status']);
       const { args } = echoed(result);
 
-      expect(args).toEqual(['--no-pager', 'status']);
+      expect(args).toStrictEqual(['--no-pager', 'status']);
     });
   });
 
@@ -95,7 +95,7 @@ describe.concurrent('git tool (unit)', () => {
       const result = await callMocked(['status']);
       const { args } = echoed(result);
 
-      expect(args).toEqual(['--no-pager', 'status']);
+      expect(args).toStrictEqual(['--no-pager', 'status']);
     });
 
     it('rejects path traversal from valid worktree', async ({ expect }) => {

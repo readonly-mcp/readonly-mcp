@@ -42,7 +42,7 @@ describe.concurrent('npm tool (unit)', () => {
       const result = await callMocked(['view', 'zod']);
       const { args } = echoed(result);
 
-      expect(args).toEqual(['--ignore-scripts', 'view', 'zod']);
+      expect(args).toStrictEqual(['--ignore-scripts', 'view', 'zod']);
     });
   });
 });

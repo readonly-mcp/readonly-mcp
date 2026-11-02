@@ -14,29 +14,29 @@ describe('ArgsSchema coercion', () => {
   it('accepts a normal array', ({ expect }) => {
     const args = [faker.lorem.word(), build.longFlag()];
 
-    expect(schema.parse({ args }).args).toEqual(args);
+    expect(schema.parse({ args }).args).toStrictEqual(args);
   });
 
   it('coerces a JSON-stringified array to an array', ({ expect }) => {
     const args = [faker.lorem.word(), build.longFlag()];
 
-    expect(schema.parse({ args: JSON.stringify(args) }).args).toEqual(args);
+    expect(schema.parse({ args: JSON.stringify(args) }).args).toStrictEqual(args);
   });
 
   it('uses default when args is omitted', ({ expect }) => {
-    expect(schema.parse({}).args).toEqual([]);
+    expect(schema.parse({}).args).toStrictEqual([]);
   });
 
   it('rejects a plain string that is not valid JSON array', ({ expect }) => {
-    expect(() => schema.parse({ args: `${faker.lorem.word()} ${build.longFlag()}` })).toThrow();
+    expect(() => schema.parse({ args: `${faker.lorem.word()} ${build.longFlag()}` })).toThrow(z.ZodError);
   });
 
   it('rejects a JSON-stringified object', ({ expect }) => {
-    expect(() => schema.parse({ args: JSON.stringify({ [faker.lorem.word()]: faker.lorem.word() }) })).toThrow();
+    expect(() => schema.parse({ args: JSON.stringify({ [faker.lorem.word()]: faker.lorem.word() }) })).toThrow(z.ZodError);
   });
 
   it('rejects a JSON-stringified number', ({ expect }) => {
-    expect(() => schema.parse({ args: String(faker.number.int()) })).toThrow();
+    expect(() => schema.parse({ args: String(faker.number.int()) })).toThrow(z.ZodError);
   });
 });
 
