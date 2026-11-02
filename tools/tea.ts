@@ -151,7 +151,7 @@ const rejectBareArgs = (args: readonly string[], { booleans, positional, values 
       const invalid = positionals.find(candidate => !positional(candidate));
       return invalid === undefined ? undefined : fail(`Positional argument not allowed: ${invalid}`);
     }
-    if (isPastOptions || !arg.startsWith('-') || arg === '-')
+    if (isPastOptions || arg === '-' || !arg.startsWith('-'))
       return step(index + 1, [...positionals, arg], isPastOptions);
     if (arg === '--') return step(index + 1, positionals, true);
     const name = flagName(arg);

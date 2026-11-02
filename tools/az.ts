@@ -53,7 +53,7 @@ const flagValues = (args: readonly string[], flag: string): string[] => {
   for (let index = 0; index < args.length; index++) {
     // A following argument exists exactly when index + 1 is within the length.
     const next = args[index + 1];
-    if (args[index] === flag && next !== undefined) values.push(next);
+    if (next !== undefined && args[index] === flag) values.push(next);
   }
   return values;
 };
