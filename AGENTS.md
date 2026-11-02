@@ -1,9 +1,12 @@
 # @readonly-mcp/server — Agent Guide
 
 Security-hardened MCP server providing read-only CLI access for AI agents.
-See `README.md` for the full security model and tool reference.
+See `packages/server/README.md` for the full security model and tool reference.
 
 ## Architecture
+
+The repository is a pnpm workspace. The server is its one package, in
+`packages/server`, and the paths below are relative to it.
 
 ```text
 src/

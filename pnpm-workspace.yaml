@@ -24,4 +24,7 @@ minimumReleaseAgeExclude:
   - '@gtbuchanan/*'
   - '@readonly-mcp/*'
 
+packages:
+  - 'packages/*'
+
 strictPeerDependencies: true

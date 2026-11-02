@@ -17,7 +17,7 @@ const jsonIndent = 2;
 const outDir = 'dist/source';
 
 const {
-  devDependencies, packageManager, scripts,
+  devDependencies, scripts,
   publishConfig: { bin, imports, ...publishConfig },
   ...manifest
 } = packageJson;
@@ -26,4 +26,6 @@ writeFileSync(
   `${outDir}/package.json`,
   `${JSON.stringify({ ...manifest, bin, imports, publishConfig }, undefined, jsonIndent)}\n`,
 );
-for (const file of ['README.md', 'LICENSE']) copyFileSync(file, `${outDir}/${file}`);
+// The README is the package's own; the LICENSE covers the whole repository.
+copyFileSync('README.md', `${outDir}/README.md`);
+copyFileSync('../../LICENSE', `${outDir}/LICENSE`);

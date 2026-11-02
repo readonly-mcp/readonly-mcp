@@ -1,7 +1,6 @@
 {
-  "name": "@readonly-mcp/server",
-  "version": "1.0.0",
-  "description": "Security-hardened MCP server providing read-only CLI access for AI agents",
+  "name": "@readonly-mcp/root",
+  "private": true,
   "homepage": "https://github.com/readonly-mcp/readonly-mcp",
   "bugs": "https://github.com/readonly-mcp/readonly-mcp/issues",
   "repository": {
@@ -10,49 +9,23 @@
   },
   "license": "MIT",
   "type": "module",
-  "imports": {
-    "#src/*.js": "./src/*.ts",
-    "#test/*.js": "./test/*.ts"
-  },
-  "bin": {
-    "readonly-mcp": "./dist/source/src/index.js"
-  },
-  "files": [
-    "src/"
-  ],
   "scripts": {
-    "build": "pnpm run compile:ts && node scripts/stage-package.ts",
-    "compile:ts": "tsc -p tsconfig.build.json",
-    "lint:eslint": "eslint --max-warnings=0",
-    "test": "vitest run",
-    "typecheck:ts": "tsc"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "catalog:",
-    "zod": "catalog:"
+    "build": "pnpm -r run build",
+    "lint:eslint": "eslint --max-warnings=0 . --ignore-pattern \"packages/*/**\" && pnpm -r run lint:eslint",
+    "test": "pnpm -r test",
+    "typecheck:ts": "tsc && pnpm -r run typecheck:ts"
   },
   "devDependencies": {
-    "@faker-js/faker": "catalog:",
     "@gtbuchanan/eslint-config": "catalog:",
     "@gtbuchanan/tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "jiti": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   },
   "packageManager": "pnpm@11.3.0",
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=10.16.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "bin": {
-      "readonly-mcp": "./src/index.js"
-    },
-    "imports": {
-      "#src/*.js": "./src/*.js"
-    }
   }
 }
