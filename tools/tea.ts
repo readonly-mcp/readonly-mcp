@@ -1,7 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, isAllowedApiPath, normalizeApiPath,
+  ArgsSchema, type Rejection, isAllowedApiPath, normalizeApiPath,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '../lib/allowlist.ts';
 import { exec, fail } from '../lib/exec.ts';
@@ -112,9 +112,6 @@ const blockedFlags = new Set(['--debug', '--vvv']);
 
 // labels --save / -s: writes the label set to a file.
 const nounBlockedFlags: Record<string, ReadonlySet<string>> = { labels: new Set(['--save', '-s']) };
-
-// What a reject helper returns: the failure, or undefined when nothing is rejected.
-type Rejection = CallToolResult | undefined;
 
 const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): Rejection =>
   rejectBlockedFlags(args, blocked) ??

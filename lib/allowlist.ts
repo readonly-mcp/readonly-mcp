@@ -2,6 +2,9 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { fail } from './exec.ts';
 
+// What a reject helper returns: the failure, or undefined when nothing is rejected.
+export type Rejection = CallToolResult | undefined;
+
 // LLMs frequently serialize array parameters as JSON strings instead of native
 // arrays (e.g., '["status", "-sb"]' instead of ["status", "-sb"]). The MCP
 // Python SDK calls this out explicitly; the TypeScript SDK does not handle it.
@@ -83,7 +86,7 @@ export const rejectApiEndpoint = (
 // negatives (allowing a dangerous abbreviated flag through).
 export const rejectBlockedFlags = (
   args: readonly string[], blockedFlags: ReadonlySet<string>,
-): CallToolResult | undefined => {
+): Rejection => {
   const flag = args.slice(1).find(arg =>
     arg !== '--' && arg !== '-' &&
     [...blockedFlags].some(blocked =>
