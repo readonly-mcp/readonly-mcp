@@ -3,7 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ArgsSchema, matchesAllowlist, rejectSubcommand } from '../lib/allowlist.ts';
 import { execShell, fail } from '../lib/exec.ts';
 
-const SUBCOMMANDS = new Set([
+const subcommands = new Set([
   // devops
   'devops invoke',
   'devops project list', 'devops project show',
@@ -32,14 +32,14 @@ const SUBCOMMANDS = new Set([
 // devops invoke: GET-only, no file I/O, restricted to build-debugging endpoints
 // Uses an allowlist (not rejectBlockedFlags) so any unknown --flag is rejected,
 // which is strictly safer than blocklisting and also blocks abbreviation bypass.
-const INVOKE_ALLOWED_FLAGS = new Set([
+const invokeAllowedFlags = new Set([
   '--area', '--resource', '--route-parameters', '--query-parameters',
   '--api-version', '--org', '--organization', '--project', '--detect',
   '--output', '--query', '--verbose', '--debug', '--only-show-errors',
   '--help', '--subscription',
 ]);
 
-const INVOKE_ALLOWED_ENDPOINTS = new Set([
+const invokeAllowedEndpoints = new Set([
   'build/builds', 'build/timeline', 'build/logs',
   'build/changes', 'build/artifacts', 'build/leases',
   'test/runs',
@@ -70,9 +70,9 @@ const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | null =>
   if (resources.length > 1)
     return fail('Flag not allowed: duplicate --resource');
   const endpoint = `${areas[0]}/${resources[0]}`;
-  return INVOKE_ALLOWED_ENDPOINTS.has(endpoint)
+  return invokeAllowedEndpoints.has(endpoint)
     ? null
-    : fail(`Endpoint not allowed for devops invoke: --area ${areas[0]} --resource ${resources[0]}. Allowed: ${[...INVOKE_ALLOWED_ENDPOINTS].join(', ')}`);
+    : fail(`Endpoint not allowed for devops invoke: --area ${areas[0]} --resource ${resources[0]}. Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
 };
 
 export const register = (server: McpServer) =>
@@ -83,14 +83,14 @@ export const register = (server: McpServer) =>
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
-      if (!matchesAllowlist(args, SUBCOMMANDS))
-        return rejectSubcommand(args, SUBCOMMANDS);
+      if (!matchesAllowlist(args, subcommands))
+        return rejectSubcommand(args, subcommands);
       if (args[0] === 'devops' && args[1] === 'invoke') {
         // Reject any flag (single or double dash) not in the allowlist. This
         // blocks unknown short flags (e.g., `-X`) that could bypass the `--`-only
         // check. Flag values for known flags (e.g., `--area build`) are not
         // checked here because they don't start with `-` in normal usage.
-        const unknownFlag = args.slice(2).find(a => a.startsWith('-') && !INVOKE_ALLOWED_FLAGS.has(a.split('=', 1)[0] ?? a));
+        const unknownFlag = args.slice(2).find(a => a.startsWith('-') && !invokeAllowedFlags.has(a.split('=', 1)[0] ?? a));
         if (unknownFlag) return fail(`Flag not allowed: ${unknownFlag}`);
         const endpointRejection = rejectInvokeEndpoint(args);
         if (endpointRejection) return endpointRejection;

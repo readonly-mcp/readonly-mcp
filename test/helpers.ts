@@ -5,7 +5,6 @@
  */
 
 import { spawn } from 'node:child_process';
-import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -16,8 +15,7 @@ import type { ExpectStatic } from 'vitest';
 import { z } from 'zod';
 import type * as ExecModule from '../lib/exec.ts';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SERVER_PATH = join(__dirname, '..', 'index.ts');
+const serverPath = fileURLToPath(new URL('../index.ts', import.meta.url));
 
 const ResponseSchema = z.object({
   error: z.object({ message: z.string() }).optional(),
@@ -44,7 +42,7 @@ const describeRequest = (result: CallToolResult): string =>
 
 /** Spawns the server in `cwd`, the directory its tools run commands in. */
 export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } = {}) => {
-  const proc = spawn('node', [SERVER_PATH], {
+  const proc = spawn('node', [serverPath], {
     stdio: ['pipe', 'pipe', 'pipe'],
     cwd,
   });

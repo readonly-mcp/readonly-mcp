@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ArgsSchema } from '../lib/allowlist.ts';
 import { execShell, fail } from '../lib/exec.ts';
 
-const COMMANDS = new Set([
+const commands = new Set([
   'basename', 'date', 'dirname', 'eza', 'file', 'jq', 'ls', 'pwd',
   'readlink', 'realpath', 'stat', 'wc', 'which', 'whoami',
 ]);
@@ -13,22 +13,22 @@ const COMMANDS = new Set([
 // Allow only flags (-r, -e, -S, --arg, etc.) and filter expressions.
 // Flags that read files — block entirely (data exfiltration via --slurpfile/--rawfile,
 // arbitrary filter loading via --from-file/-f, library path probing via -L)
-const JQ_FILE_FLAGS = new Set([
+const jqFileFlags = new Set([
   '--slurpfile', '--rawfile', '--from-file', '-f', '-L', '--library-path',
 ]);
 // Flags that take two following arguments (name + value)
-const JQ_PAIR_FLAGS = new Set(['--arg', '--argjson']);
+const jqPairFlags = new Set(['--arg', '--argjson']);
 // Flags that take one following argument
-const JQ_VALUE_FLAGS = new Set(['--indent']);
+const jqValueFlags = new Set(['--indent']);
 
 // Single characters corresponding to file-reading short flags (-f, -L)
-const JQ_FILE_CHARS = 'fL';
+const jqFileChars = 'fL';
 
 const rejectFileFlag = (arg: string): CallToolResult | null => {
   const base = arg.split('=', 1)[0] ?? arg;
-  if (JQ_FILE_FLAGS.has(base)) return fail(`Flag not allowed for jq: ${base}`);
+  if (jqFileFlags.has(base)) return fail(`Flag not allowed for jq: ${base}`);
   if (arg.startsWith('-') && !arg.startsWith('--')) {
-    const ch = [...arg.slice(1)].find(c => JQ_FILE_CHARS.includes(c));
+    const ch = [...arg.slice(1)].find(c => jqFileChars.includes(c));
     if (ch) return fail(`Flag not allowed for jq: -${ch}`);
   }
   return null;
@@ -45,8 +45,8 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | null => {
     if (arg === undefined) break;
     const blocked = rejectFileFlag(arg);
     if (blocked) return blocked;
-    if (JQ_PAIR_FLAGS.has(arg)) { i += 2; continue; }
-    if (JQ_VALUE_FLAGS.has(arg)) { i++; continue; }
+    if (jqPairFlags.has(arg)) { i += 2; continue; }
+    if (jqValueFlags.has(arg)) { i++; continue; }
     if (arg.startsWith('-')) continue;
     // First non-flag arg is the filter expression; rest are file paths
     for (let j = i + 1; j < args.length; j++) {
@@ -54,8 +54,8 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | null => {
       if (rest === undefined) break;
       const jblocked = rejectFileFlag(rest);
       if (jblocked) return jblocked;
-      if (JQ_PAIR_FLAGS.has(rest)) { j += 2; continue; }
-      if (JQ_VALUE_FLAGS.has(rest)) { j++; continue; }
+      if (jqPairFlags.has(rest)) { j += 2; continue; }
+      if (jqValueFlags.has(rest)) { j++; continue; }
       if (rest.startsWith('-')) continue;
       return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${rest}`);
     }
@@ -75,8 +75,8 @@ export const register = (server: McpServer) =>
       },
     },
     async ({ command, args }) => {
-      if (!COMMANDS.has(command))
-        return fail(`Command not allowed: ${command}. Allowed: ${[...COMMANDS].join(', ')}`);
+      if (!commands.has(command))
+        return fail(`Command not allowed: ${command}. Allowed: ${[...commands].join(', ')}`);
       if (command === 'jq') {
         const rejection = validateJqArgs(args);
         if (rejection) return rejection;

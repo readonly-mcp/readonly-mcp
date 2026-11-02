@@ -6,12 +6,12 @@ import {
 } from '../lib/allowlist.ts';
 import { exec, fail } from '../lib/exec.ts';
 
-const GLOBAL_FLAGS = new Set(['--help', '--version', '-h', '-v']);
+const globalFlags = new Set(['--help', '--version', '-h', '-v']);
 
 // Aliases from `tea <noun> --help` (tea 0.16.0). Only nouns and verbs with an
 // allowed command are listed: anything else stays unresolved and is rejected,
 // so a missing alias fails closed.
-const NOUN_ALIASES: Record<string, readonly string[]> = {
+const nounAliases: Record<string, readonly string[]> = {
   branches: ['b', 'branch'],
   comments: ['c', 'comment'],
   issues: ['i', 'issue'],
@@ -24,7 +24,7 @@ const NOUN_ALIASES: Record<string, readonly string[]> = {
   whoami: [],
 };
 
-const VERB_ALIASES: Record<string, Record<string, readonly string[]>> = {
+const verbAliases: Record<string, Record<string, readonly string[]>> = {
   branches: { list: ['ls'] },
   comments: { list: ['ls'] },
   issues: { list: ['ls'] },
@@ -42,13 +42,13 @@ const resolverOf = (aliases: Record<string, readonly string[]>): Map<string, str
     [name, ...alts].map((alias): [string, string] => [alias, name])),
 );
 
-const NOUNS = resolverOf(NOUN_ALIASES);
-const VERBS = Object.fromEntries(
-  Object.entries(VERB_ALIASES).map(([noun, verbs]) => [noun, resolverOf(verbs)]),
+const nouns = resolverOf(nounAliases);
+const verbs = Object.fromEntries(
+  Object.entries(verbAliases).map(([noun, aliases]) => [noun, resolverOf(aliases)]),
 );
 
 // Commands whose children are all excluded, so the remaining args are free.
-const LEAVES = new Set([
+const leaves = new Set([
   'branches list',
   'comments list',
   'issues list',
@@ -65,7 +65,7 @@ const LEAVES = new Set([
 // views, `tea pulls merge 2` merges). tea dispatches to the first positional
 // naming a child, even after flags, so these accept only flags whose arity is
 // known and check every positional. Flags from `tea <command> --help`.
-const SHARED_VALUE_FLAGS = [
+const sharedValueFlags = [
   'f', 'fields', 'l', 'limit', 'lm', 'login', 'o', 'output', 'p', 'page',
   'R', 'r', 'remote', 'repo', 'state',
 ];
@@ -76,12 +76,12 @@ interface BarePolicy {
   values: ReadonlySet<string>;
 }
 
-const BARE: Record<string, BarePolicy> = {
+const barePolicies: Record<string, BarePolicy> = {
   'issues': {
     booleans: new Set(['comments', 'h', 'help']),
     positional: arg => /^\d+$/.test(arg),
     values: new Set([
-      ...SHARED_VALUE_FLAGS,
+      ...sharedValueFlags,
       'A', 'a', 'assignee', 'author', 'F', 'from', 'K', 'k', 'keyword', 'kind',
       'L', 'labels', 'M', 'm', 'mentions', 'milestones', 'org', 'owner', 'u', 'until',
     ]),
@@ -89,12 +89,12 @@ const BARE: Record<string, BarePolicy> = {
   'milestones issues': {
     booleans: new Set(['h', 'help']),
     positional: arg => !['a', 'add', 'r', 'remove'].includes(arg),
-    values: new Set([...SHARED_VALUE_FLAGS, 'kind']),
+    values: new Set([...sharedValueFlags, 'kind']),
   },
   'pulls': {
     booleans: new Set(['comments', 'h', 'help']),
     positional: arg => /^\d+$/.test(arg),
-    values: new Set(SHARED_VALUE_FLAGS),
+    values: new Set(sharedValueFlags),
   },
 };
 
@@ -108,10 +108,10 @@ const flagName = (arg: string): string => arg.replace(/^--?/, '').split('=', 1)[
 const isFlag = (arg: string): boolean => arg.startsWith('-') && arg !== '-' && arg !== '--';
 
 // --debug / --vvv: may print the Authorization header, like gh --verbose.
-const BLOCKED_FLAGS = new Set(['--debug', '--vvv']);
+const blockedFlags = new Set(['--debug', '--vvv']);
 
 // labels --save / -s: writes the label set to a file.
-const NOUN_BLOCKED_FLAGS: Record<string, ReadonlySet<string>> = { labels: new Set(['--save', '-s']) };
+const nounBlockedFlags: Record<string, ReadonlySet<string>> = { labels: new Set(['--save', '-s']) };
 
 const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): CallToolResult | null =>
   rejectBlockedFlags(args, blocked) ??
@@ -161,19 +161,19 @@ const rejectBareArgs = (args: readonly string[], { booleans, positional, values 
 
 const resolve = (args: readonly string[]) => {
   const [first, second] = args;
-  const noun = first === undefined ? undefined : NOUNS.get(first);
+  const noun = first === undefined ? undefined : nouns.get(first);
   if (!noun) return null;
-  const verb = second === undefined ? undefined : VERBS[noun]?.get(second);
+  const verb = second === undefined ? undefined : verbs[noun]?.get(second);
   return verb
     ? { command: [noun, verb], key: `${noun} ${verb}`, noun, rest: args.slice(2) }
     : { command: [noun], key: noun, noun, rest: args.slice(1) };
 };
 
-const ALLOWED = new Set([...LEAVES, ...Object.keys(BARE)]);
+const allowed = new Set([...leaves, ...Object.keys(barePolicies)]);
 
 // tea substitutes {owner} and {repo} from the repository context; `*` already
 // matches them as literal segments.
-const API_PATHS = [
+const apiPaths = [
   'repos/*/*/commits/*/status',
   'repos/*/*/commits/*/statuses',
   // Bare = directory listing, ** = file or nested path. Files come back as
@@ -194,7 +194,7 @@ const API_PATHS = [
 //   method to POST; -F and -d also read @file
 // --header / -H: arbitrary HTTP header injection
 // --output / -o: writes the response body to a path
-const API_BLOCKED_FLAGS = new Set([
+const apiBlockedFlags = new Set([
   '--data', '-d',
   '--Field', '-F', '--field', '-f',
   '--header', '-H',
@@ -222,17 +222,17 @@ const isPlainSegment = (segment: string): boolean => {
 // allowlist never named.
 const isAllowedEndpoint = (endpoint: string): boolean =>
   !endpoint.includes('#') &&
-  matchesApiPath(endpoint, API_PATHS) &&
+  matchesApiPath(endpoint, apiPaths) &&
   normalizeApiPath(endpoint).split('/').every(isPlainSegment);
 
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const endpoint = args[1];
   if (!endpoint || endpoint.startsWith('-') || !isAllowedEndpoint(endpoint))
-    return rejectApiEndpoint(endpoint, API_PATHS);
+    return rejectApiEndpoint(endpoint, apiPaths);
   const rest = args.slice(2);
   const rejected =
-    rejectFlags(args, BLOCKED_FLAGS) ??
-    rejectFlags(args, API_BLOCKED_FLAGS) ??
+    rejectFlags(args, blockedFlags) ??
+    rejectFlags(args, apiBlockedFlags) ??
     rejectRepoPath(rest);
   if (rejected) return rejected;
   // Inject --method GET immediately after the endpoint, before any
@@ -249,20 +249,20 @@ export const register = (server: McpServer) =>
     },
     async ({ args }) => {
       const [only, ...others] = args;
-      const isGlobal = only !== undefined && others.length === 0 && GLOBAL_FLAGS.has(only);
+      const isGlobal = only !== undefined && others.length === 0 && globalFlags.has(only);
       if (isGlobal) return exec('tea', args);
       if (args[0] === 'api') return runApi(args);
 
       const resolved = resolve(args);
-      if (!resolved || !ALLOWED.has(resolved.key))
-        return rejectSubcommand(args, ALLOWED);
+      if (!resolved || !allowed.has(resolved.key))
+        return rejectSubcommand(args, allowed);
       const { command, key, noun, rest } = resolved;
 
       const rejected =
-        rejectFlags(args, BLOCKED_FLAGS) ??
-        (NOUN_BLOCKED_FLAGS[noun] && rejectFlags(args, NOUN_BLOCKED_FLAGS[noun])) ??
+        rejectFlags(args, blockedFlags) ??
+        (nounBlockedFlags[noun] && rejectFlags(args, nounBlockedFlags[noun])) ??
         rejectRepoPath(rest) ??
-        (BARE[key] && rejectBareArgs(rest, BARE[key]));
+        (barePolicies[key] && rejectBareArgs(rest, barePolicies[key]));
       if (rejected) return rejected;
 
       // Run under canonical names so what executes is what was validated.

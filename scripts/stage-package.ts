@@ -11,7 +11,7 @@
 import { copyFileSync, writeFileSync } from 'node:fs';
 import packageJson from '../package.json' with { type: 'json' };
 
-const OUT_DIR = 'dist/source';
+const outDir = 'dist/source';
 
 const {
   devDependencies, packageManager, scripts,
@@ -20,7 +20,7 @@ const {
 } = packageJson;
 
 writeFileSync(
-  `${OUT_DIR}/package.json`,
+  `${outDir}/package.json`,
   `${JSON.stringify({ ...manifest, bin, publishConfig }, null, 2)}\n`,
 );
-for (const file of ['README.md', 'LICENSE']) copyFileSync(file, `${OUT_DIR}/${file}`);
+for (const file of ['README.md', 'LICENSE']) copyFileSync(file, `${outDir}/${file}`);

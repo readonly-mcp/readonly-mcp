@@ -6,9 +6,9 @@ import {
 } from '../lib/allowlist.ts';
 import { exec } from '../lib/exec.ts';
 
-const GLOBAL_FLAGS = new Set(['--version', '--help', '-h']);
+const globalFlags = new Set(['--version', '--help', '-h']);
 
-const SUBCOMMANDS = new Set([
+const subcommands = new Set([
   'attestation verify',
   'cache list',
   'gist list', 'gist view',
@@ -30,7 +30,7 @@ const SUBCOMMANDS = new Set([
   'workflow list', 'workflow view',
 ]);
 
-const API_PATHS = [
+const apiPaths = [
   // PR review comments (primary motivator — gh pr view --json comments misses
   // inline review comments; only returns issue/conversation comments)
   'repos/*/*/pulls/*/comments',
@@ -70,7 +70,7 @@ const API_PATHS = [
 // --hostname: SSRF — redirects request (with auth token) to arbitrary host
 // --verbose: dumps full request/response including Authorization header (token leak)
 // -H / --header: arbitrary HTTP header injection (Accept override, API versioning, etc.)
-const API_BLOCKED_FLAGS = new Set([
+const apiBlockedFlags = new Set([
   '--method', '-X', '--input',
   '-f', '--field', '-F', '--raw-field',
   '--hostname', '--verbose',
@@ -86,17 +86,17 @@ export const register = (server: McpServer) =>
     },
     async ({ args }) => {
       const [only, ...rest] = args;
-      const isGlobal = only !== undefined && rest.length === 0 && GLOBAL_FLAGS.has(only);
+      const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
       if (isGlobal) return exec('gh', args);
 
       if (args[0] === 'api') {
         const endpoint = args[1];
         if (!endpoint || endpoint.startsWith('-'))
-          return rejectApiEndpoint(endpoint, API_PATHS);
-        const rejected = rejectBlockedFlags(args, API_BLOCKED_FLAGS);
+          return rejectApiEndpoint(endpoint, apiPaths);
+        const rejected = rejectBlockedFlags(args, apiBlockedFlags);
         if (rejected) return rejected;
-        if (!matchesApiPath(endpoint, API_PATHS))
-          return rejectApiEndpoint(endpoint, API_PATHS);
+        if (!matchesApiPath(endpoint, apiPaths))
+          return rejectApiEndpoint(endpoint, apiPaths);
         // Auto-inject raw Accept header for contents endpoints so file
         // responses return plain text instead of base64-encoded JSON.
         // Directory listings are unaffected — GitHub ignores the media type
@@ -112,8 +112,8 @@ export const register = (server: McpServer) =>
         return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...args.slice(2)]);
       }
 
-      if (!matchesAllowlist(args, SUBCOMMANDS))
-        return rejectSubcommand(args, SUBCOMMANDS);
+      if (!matchesAllowlist(args, subcommands))
+        return rejectSubcommand(args, subcommands);
       return exec('gh', args);
     },
   );

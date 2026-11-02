@@ -2,14 +2,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, matchesAllowlist, rejectBlockedFlags, rejectSubcommand } from '../lib/allowlist.ts';
 import { execShell } from '../lib/exec.ts';
 
-const SUBCOMMANDS = new Set([
+const subcommands = new Set([
   'audit', 'bin', 'explain', 'fund', 'ls', 'outdated', 'root', 'search', 'view',
 ]);
 
 // --fix: npm audit fix attempts to update packages
 // --registry: prevents SSRF / data exfiltration via attacker-controlled registries
 // --no-ignore-scripts: overrides the injected --ignore-scripts (npm uses last-wins)
-const BLOCKED_FLAGS = new Set(['--fix', '--registry', '--no-ignore-scripts', '--ignore-scripts']);
+const blockedFlags = new Set(['--fix', '--registry', '--no-ignore-scripts', '--ignore-scripts']);
 
 export const register = (server: McpServer) =>
   server.registerTool(
@@ -19,9 +19,9 @@ export const register = (server: McpServer) =>
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
-      if (!matchesAllowlist(args, SUBCOMMANDS))
-        return rejectSubcommand(args, SUBCOMMANDS);
-      const rejected = rejectBlockedFlags(args, BLOCKED_FLAGS);
+      if (!matchesAllowlist(args, subcommands))
+        return rejectSubcommand(args, subcommands);
+      const rejected = rejectBlockedFlags(args, blockedFlags);
       if (rejected) return rejected;
       return execShell('npm', ['--ignore-scripts', ...args]);
     },

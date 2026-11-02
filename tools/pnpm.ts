@@ -5,15 +5,15 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, matchesAllowlist, rejectBlockedFlags, rejectSubcommand } from '../lib/allowlist.ts';
 import { execShell } from '../lib/exec.ts';
 
-const GLOBAL_FLAGS = new Set(['--version', '--help', '-h']);
+const globalFlags = new Set(['--version', '--help', '-h']);
 
-const SUBCOMMANDS = new Set([
+const subcommands = new Set([
   'audit', 'bin', 'licenses list', 'list', 'outdated', 'root', 'search', 'store status', 'why',
 ]);
 
 // --fix: pnpm audit --fix attempts to update packages
 // --registry: prevents SSRF / data exfiltration via attacker-controlled registries
-const BLOCKED_FLAGS = new Set(['--fix', '--registry']);
+const blockedFlags = new Set(['--fix', '--registry']);
 
 export const register = (server: McpServer) =>
   server.registerTool(
@@ -24,10 +24,10 @@ export const register = (server: McpServer) =>
     },
     async ({ args }) => {
       const [only, ...rest] = args;
-      const isGlobal = only !== undefined && rest.length === 0 && GLOBAL_FLAGS.has(only);
-      if (!isGlobal && !matchesAllowlist(args, SUBCOMMANDS))
-        return rejectSubcommand(args, SUBCOMMANDS);
-      const rejected = rejectBlockedFlags(args, BLOCKED_FLAGS);
+      const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
+      if (!isGlobal && !matchesAllowlist(args, subcommands))
+        return rejectSubcommand(args, subcommands);
+      const rejected = rejectBlockedFlags(args, blockedFlags);
       if (rejected) return rejected;
       return execShell('pnpm', args);
     },

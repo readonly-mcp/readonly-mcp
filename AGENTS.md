@@ -38,8 +38,8 @@ These are non-negotiable. Every change must preserve them:
 
 1. Create `tools/<name>.ts` — export a function that takes a `McpServer` and
    registers the tool via `server.registerTool()`
-1. Define a `SUBCOMMANDS` set of allowed subcommands
-1. Define `BLOCKED_FLAGS` for any flags that could mutate state, leak secrets,
+1. Define a `subcommands` set of allowed subcommands
+1. Define `blockedFlags` for any flags that could mutate state, leak secrets,
    or enable SSRF
 1. Use `rejectSubcommand()` and `rejectBlockedFlags()` from `lib/allowlist.ts`
 1. Use `exec()` from `lib/exec.ts` — never `child_process` directly
@@ -49,7 +49,7 @@ These are non-negotiable. Every change must preserve them:
 
 ## Adding Subcommands to an Existing Tool
 
-1. Add the subcommand to the tool's `SUBCOMMANDS` set
+1. Add the subcommand to the tool's `subcommands` set
 1. If the subcommand has sub-subcommands (e.g., `git stash list`), add an
    allowed-subs set and validate in the handler
 1. Add tests for the new subcommand — both positive and negative cases

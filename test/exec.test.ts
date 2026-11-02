@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { MAX_BUFFER, errorResult, fail, text } from '../lib/exec.ts';
+import { errorResult, fail, maxBuffer, text } from '../lib/exec.ts';
 import * as build from './builders.ts';
 import { textOf } from './helpers.ts';
 
@@ -95,7 +95,7 @@ describe(errorResult, () => {
     const result = errorResult(err, cmd, args);
 
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe(`Command output exceeded ${MAX_BUFFER} bytes: ${cmd} ${args.join(' ')}`);
+    expect(textOf(result)).toBe(`Command output exceeded ${maxBuffer} bytes: ${cmd} ${args.join(' ')}`);
   });
 
   it('returns ordinary failure output without isError', ({ expect }) => {
