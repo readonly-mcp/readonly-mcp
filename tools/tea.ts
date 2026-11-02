@@ -113,7 +113,7 @@ const blockedFlags = new Set(['--debug', '--vvv']);
 // labels --save / -s: writes the label set to a file.
 const nounBlockedFlags: Record<string, ReadonlySet<string>> = { labels: new Set(['--save', '-s']) };
 
-const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): CallToolResult | null =>
+const rejectFlags = (args: readonly string[], blocked: ReadonlySet<string>): CallToolResult | undefined =>
   rejectBlockedFlags(args, blocked) ??
   rejectBlockedFlags(args.map(toLongForm), blocked);
 
@@ -130,23 +130,23 @@ const repoValues = (args: readonly string[]): string[] => args.flatMap((arg, ind
   return [eq === -1 ? args[index + 1] ?? '' : arg.slice(eq + 1)];
 });
 
-const rejectRepoPath = (args: readonly string[]): CallToolResult | null => {
+const rejectRepoPath = (args: readonly string[]): CallToolResult | undefined => {
   const path = repoValues(args).find(value => !isRepoSlug(value));
-  return path === undefined ? null : fail(`--repo must be an owner/name slug, not a path: ${path}`);
+  return path === undefined ? undefined : fail(`--repo must be an owner/name slug, not a path: ${path}`);
 };
 
 // Walks the args after a bare command, consuming each flag's value by arity.
 // Unknown flags are rejected because their arity, and so whether the next arg
 // is a value or a positional, cannot be known.
-const rejectBareArgs = (args: readonly string[], { booleans, positional, values }: BarePolicy): CallToolResult | null => {
-  const step = (index: number, positionals: readonly string[], isPastOptions: boolean): CallToolResult | null => {
+const rejectBareArgs = (args: readonly string[], { booleans, positional, values }: BarePolicy): CallToolResult | undefined => {
+  const step = (index: number, positionals: readonly string[], isPastOptions: boolean): CallToolResult | undefined => {
     // Past the end, whether by one or by a skipped flag value.
     const arg = args[index];
     if (arg === undefined) {
       if (positionals.length > 1)
         return fail(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
       const invalid = positionals.find(candidate => !positional(candidate));
-      return invalid === undefined ? null : fail(`Positional argument not allowed: ${invalid}`);
+      return invalid === undefined ? undefined : fail(`Positional argument not allowed: ${invalid}`);
     }
     if (isPastOptions || !arg.startsWith('-') || arg === '-')
       return step(index + 1, [...positionals, arg], isPastOptions);
@@ -162,7 +162,7 @@ const rejectBareArgs = (args: readonly string[], { booleans, positional, values 
 const resolve = (args: readonly string[]) => {
   const [first, second] = args;
   const noun = first === undefined ? undefined : nouns.get(first);
-  if (!noun) return null;
+  if (!noun) return;
   const verb = second === undefined ? undefined : verbs[noun]?.get(second);
   return verb
     ? { command: [noun, verb], key: `${noun} ${verb}`, noun, rest: args.slice(2) }

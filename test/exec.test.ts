@@ -63,6 +63,20 @@ describe('fail()', () => {
   });
 });
 
+/**
+ * What execFile rejects with when its timeout kills the command.
+ */
+const timeoutKill = (stdout: string) => ({
+  /* eslint-disable-next-line unicorn/no-null --
+     execFile rejects a killed process with a null code */
+  code: null,
+  killed: true,
+  message: faker.lorem.sentence(),
+  signal: 'SIGTERM',
+  stderr: '',
+  stdout,
+});
+
 describe(errorResult, () => {
   // Shapes mirror what node:child_process.execFile rejects with: a timeout
   // sets killed/signal with empty output; maxBuffer overflow sets the
@@ -71,7 +85,7 @@ describe(errorResult, () => {
   it('surfaces a timeout kill instead of the generic message', ({ expect }) => {
     const cmd = faker.lorem.word();
     const args = build.words(2);
-    const err = { killed: true, signal: 'SIGTERM', code: null, message: faker.lorem.sentence(), stdout: '', stderr: '' };
+    const err = timeoutKill('');
     const result = errorResult(err, cmd, args);
 
     expect(result.isError).toBe(true);
@@ -82,7 +96,7 @@ describe(errorResult, () => {
     const cmd = faker.lorem.word();
     const args = build.words(2);
     const partial = faker.lorem.sentence();
-    const err = { killed: true, signal: 'SIGTERM', code: null, message: faker.lorem.sentence(), stdout: `${partial}\n`, stderr: '' };
+    const err = timeoutKill(`${partial}\n`);
     const result = errorResult(err, cmd, args);
 
     expect(textOf(result)).toBe(`Command timed out after 30s: ${cmd} ${args.join(' ')}\n${partial}`);

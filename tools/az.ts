@@ -58,7 +58,7 @@ const flagValues = (args: readonly string[], flag: string): string[] => {
   return values;
 };
 
-const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | null => {
+const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | undefined => {
   const areas = flagValues(args, '--area');
   const resources = flagValues(args, '--resource');
   if (areas.length === 0)
@@ -71,7 +71,7 @@ const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | null =>
     return fail('Flag not allowed: duplicate --resource');
   const endpoint = `${areas[0]}/${resources[0]}`;
   return invokeAllowedEndpoints.has(endpoint)
-    ? null
+    ? undefined
     : fail(`Endpoint not allowed for devops invoke: --area ${areas[0]} --resource ${resources[0]}. Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
 };
 

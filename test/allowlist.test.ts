@@ -192,15 +192,15 @@ describe('rejectBlockedFlags', () => {
       expect(result?.isError).toBe(true);
     });
 
-    it('returns null when no blocked flags present', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), build.longFlag()], blocked)).toBeNull();
+    it('returns undefined when no blocked flags present', ({ expect }) => {
+      expect(rejectBlockedFlags([faker.lorem.word(), build.longFlag()], blocked)).toBeUndefined();
     });
   });
 
   describe('skips args[0]', () => {
     it('does not check the subcommand at index 0', ({ expect }) => {
       // "--fix" at index 0 is the "subcommand", not checked
-      expect(rejectBlockedFlags(['--fix'], blocked)).toBeNull();
+      expect(rejectBlockedFlags(['--fix'], blocked)).toBeUndefined();
     });
   });
 
@@ -231,7 +231,7 @@ describe('rejectBlockedFlags', () => {
 
     it('does not block unrelated flag with similar prefix', ({ expect }) => {
       // "--format" does not start any blocked flag, and no blocked flag starts with "--format"
-      expect(rejectBlockedFlags([faker.lorem.word(), '--format', faker.lorem.word()], blocked)).toBeNull();
+      expect(rejectBlockedFlags([faker.lorem.word(), '--format', faker.lorem.word()], blocked)).toBeUndefined();
     });
 
     it('does not block longer flag that starts with blocked flag', ({ expect }) => {
@@ -242,7 +242,7 @@ describe('rejectBlockedFlags', () => {
       // So we check if "--fix".startsWith("--fix-missing-peers") → false
       // and if "--registry".startsWith("--fix-missing-peers") → false
       // So this should pass through
-      expect(rejectBlockedFlags([faker.lorem.word(), '--fix-missing-peers'], blocked)).toBeNull();
+      expect(rejectBlockedFlags([faker.lorem.word(), '--fix-missing-peers'], blocked)).toBeUndefined();
     });
   });
 
@@ -266,7 +266,7 @@ describe('rejectBlockedFlags', () => {
       // -Xtra is not a concatenated -X if -X is not in the blocked set for this test
       const unrelated = new Set(['--registry']);
 
-      expect(rejectBlockedFlags([faker.lorem.word(), '-Xtra'], unrelated)).toBeNull();
+      expect(rejectBlockedFlags([faker.lorem.word(), '-Xtra'], unrelated)).toBeUndefined();
     });
 
     it('does not apply short-flag rule to long flags', ({ expect }) => {
@@ -278,27 +278,27 @@ describe('rejectBlockedFlags', () => {
       // long flag rule doesn't apply (--method.length !== 2)
       // but a.startsWith(f + "=") → "--methodical".startsWith("--method=") → false
       // and f.startsWith(a.split("=")[0]) → "--method".startsWith("--methodical") → false
-      expect(rejectBlockedFlags([faker.lorem.word(), '--methodical'], longOnly)).toBeNull();
+      expect(rejectBlockedFlags([faker.lorem.word(), '--methodical'], longOnly)).toBeUndefined();
     });
   });
 
   describe('end-of-options marker', () => {
     it('does not false-positive on bare --', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), '--', faker.lorem.word()], blocked)).toBeNull();
+      expect(rejectBlockedFlags([faker.lorem.word(), '--', faker.lorem.word()], blocked)).toBeUndefined();
     });
 
     it('does not false-positive on bare -', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), '-', faker.lorem.word()], blocked)).toBeNull();
+      expect(rejectBlockedFlags([faker.lorem.word(), '-', faker.lorem.word()], blocked)).toBeUndefined();
     });
   });
 
   describe('edge cases', () => {
-    it('returns null for single-element args', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word()], blocked)).toBeNull();
+    it('returns undefined for single-element args', ({ expect }) => {
+      expect(rejectBlockedFlags([faker.lorem.word()], blocked)).toBeUndefined();
     });
 
-    it('returns null for empty blocked set', ({ expect }) => {
-      expect(rejectBlockedFlags([faker.lorem.word(), build.longFlag()], new Set())).toBeNull();
+    it('returns undefined for empty blocked set', ({ expect }) => {
+      expect(rejectBlockedFlags([faker.lorem.word(), build.longFlag()], new Set())).toBeUndefined();
     });
 
     it('reports the first blocked flag found', ({ expect }) => {

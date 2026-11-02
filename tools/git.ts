@@ -96,7 +96,7 @@ export const register = (server: McpServer) =>
         if (rejected) return rejected;
       }
       if (sub === 'stash') {
-        let stashSub = null;
+        let stashSub: string | undefined;
         for (const arg of args.slice(1)) {
           if (arg === '--') break;
           if (!arg.startsWith('-')) { stashSub = arg; break; }
@@ -105,7 +105,7 @@ export const register = (server: McpServer) =>
           return fail(`Subcommand not allowed for git stash: ${stashSub ?? '(none)'}. Allowed: ${[...stashAllowedSubs].join(', ')}`);
       }
       if (sub === 'worktree') {
-        let wSub = null;
+        let wSub: string | undefined;
         for (const arg of args.slice(1)) {
           if (arg === '--') break;
           if (!arg.startsWith('-')) { wSub = arg; break; }
@@ -114,7 +114,7 @@ export const register = (server: McpServer) =>
           return fail(`Subcommand not allowed for git worktree: ${wSub ?? '(none)'}. Allowed: ${[...worktreeAllowedSubs].join(', ')}`);
       }
       if (sub === 'reflog') {
-        let rSub = null;
+        let rSub: string | undefined;
         for (const arg of args.slice(1)) {
           if (arg === '--') break;
           if (!arg.startsWith('-')) { rSub = arg; break; }

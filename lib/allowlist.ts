@@ -75,7 +75,7 @@ export const rejectApiEndpoint = (endpoint: string | undefined, patterns: readon
 // with `--fix` (e.g., a hypothetical `--fixup`). This errs on the side of
 // safety: false positives (blocking a legitimate flag) are preferable to false
 // negatives (allowing a dangerous abbreviated flag through).
-export const rejectBlockedFlags = (args: readonly string[], blockedFlags: ReadonlySet<string>): CallToolResult | null => {
+export const rejectBlockedFlags = (args: readonly string[], blockedFlags: ReadonlySet<string>): CallToolResult | undefined => {
   const flag = args.slice(1).find(arg =>
     arg !== '--' && arg !== '-' &&
     [...blockedFlags].some(blocked =>
@@ -85,5 +85,5 @@ export const rejectBlockedFlags = (args: readonly string[], blockedFlags: Readon
       (blocked.length === 2 && blocked.startsWith('-') && blocked[1] !== '-' && arg.startsWith(blocked)),
     ),
   );
-  return flag ? fail(`Flag not allowed: ${flag}`) : null;
+  return flag ? fail(`Flag not allowed: ${flag}`) : undefined;
 };

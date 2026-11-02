@@ -205,7 +205,7 @@ export const withEchoExec = async (importOriginal: () => Promise<typeof ExecModu
 export const echoed = (result: CallToolResult) => EchoSchema.parse(JSON.parse(textOf(result)));
 
 /** The text of a result's first content item, which must be text. */
-export const textOf = (result: CallToolResult | null): string => {
+export const textOf = (result: CallToolResult | undefined): string => {
   const first = result?.content[0];
   if (first?.type !== 'text')
     throw new Error(`Expected a text content item, got: ${JSON.stringify(result)}`);

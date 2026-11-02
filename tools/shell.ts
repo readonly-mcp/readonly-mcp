@@ -24,20 +24,20 @@ const jqValueFlags = new Set(['--indent']);
 // Single characters corresponding to file-reading short flags (-f, -L)
 const jqFileChars = 'fL';
 
-const rejectFileFlag = (arg: string): CallToolResult | null => {
+const rejectFileFlag = (arg: string): CallToolResult | undefined => {
   const base = arg.split('=', 1)[0] ?? arg;
   if (jqFileFlags.has(base)) return fail(`Flag not allowed for jq: ${base}`);
   if (arg.startsWith('-') && !arg.startsWith('--')) {
     const fileChar = [...arg.slice(1)].find(char => jqFileChars.includes(char));
     if (fileChar) return fail(`Flag not allowed for jq: -${fileChar}`);
   }
-  return null;
+  return undefined;
 };
 
 // Two-phase scan: walks flags before the filter expression (skipping flag-value
 // pairs like --arg k v), then blocks any non-flag positional after the filter
 // as a file path.
-const validateJqArgs = (args: readonly string[]): CallToolResult | null => {
+const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => {
   // The index skips flag values, so these stay counted loops. Each binds its
   // element once; the undefined check never fires within the length bound.
   for (let index = 0; index < args.length; index++) {
@@ -61,7 +61,7 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | null => {
     }
     break;
   }
-  return null;
+  return undefined;
 };
 
 export const register = (server: McpServer) =>
