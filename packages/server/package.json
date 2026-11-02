@@ -35,6 +35,8 @@
   "devDependencies": {
     "@faker-js/faker": "catalog:",
     "@gtbuchanan/eslint-config": "catalog:",
+    "@gtbuchanan/vitest-config": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {
