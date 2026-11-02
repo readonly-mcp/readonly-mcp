@@ -35,44 +35,24 @@ const rejectFileFlag = (arg: string): CallToolResult | undefined => {
   return undefined;
 };
 
-// Two-phase scan: walks flags before the filter expression (skipping flag-value
-// pairs like --arg k v), then blocks any non-flag positional after the filter
-// as a file path.
+// Walks the args, skipping flag values (like --arg k v). The first positional
+// is the filter expression; any positional after it is a file path.
 const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => {
-  // The index skips flag values, so these stay counted loops. Each binds its
+  let hasFilter = false;
+  // The index skips flag values, so this stays a counted loop. It binds each
   // element once; the undefined check never fires within the length bound.
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === undefined) break;
     const blocked = rejectFileFlag(arg);
     if (blocked) return blocked;
-    if (jqPairFlags.has(arg)) {
-      index += pairFlagValues;
-      continue;
+    if (jqPairFlags.has(arg)) index += pairFlagValues;
+    else if (jqValueFlags.has(arg)) index++;
+    else if (!arg.startsWith('-')) {
+      if (hasFilter)
+        return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
+      hasFilter = true;
     }
-    if (jqValueFlags.has(arg)) {
-      index++;
-      continue;
-    }
-    if (arg.startsWith('-')) continue;
-    // First non-flag arg is the filter expression; rest are file paths
-    for (let restIndex = index + 1; restIndex < args.length; restIndex++) {
-      const rest = args[restIndex];
-      if (rest === undefined) break;
-      const jblocked = rejectFileFlag(rest);
-      if (jblocked) return jblocked;
-      if (jqPairFlags.has(rest)) {
-        restIndex += pairFlagValues;
-        continue;
-      }
-      if (jqValueFlags.has(rest)) {
-        restIndex++;
-        continue;
-      }
-      if (rest.startsWith('-')) continue;
-      return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${rest}`);
-    }
-    break;
   }
   return undefined;
 };
