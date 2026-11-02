@@ -45,6 +45,13 @@ const rejectFileFlag = (arg: string): CallToolResult | undefined => {
   return undefined;
 };
 
+/*
+ * jq reads an arg as an option only when a letter, a second dash, or nothing
+ * follows its dash (its isoptish check). Anything else dash-led, such as -1
+ * or -(1), is a filter or file, so it must be checked as one.
+ */
+const isJqOption = (arg: string): boolean => /^-(?:[a-zA-Z\-]|$)/v.test(arg);
+
 // The first positional is the filter; any after it is a file path.
 const rejectPositional = (arg: string, hasFilter: boolean): CallToolResult | undefined => {
   if (hasFilter)
@@ -66,7 +73,7 @@ const validateJqArgs = (args: readonly string[]): CallToolResult | undefined => 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === undefined) break;
-    if (isPastOptions || !arg.startsWith('-')) {
+    if (isPastOptions || !isJqOption(arg)) {
       const rejected = rejectPositional(arg, hasFilter);
       if (rejected) return rejected;
       hasFilter = true;

@@ -77,6 +77,19 @@ describe.concurrent('jq file argument blocking', () => {
       assertBlocked(expect, await call(['--', '.', '-data.json']));
     });
 
+    // jq reads a dash-led arg as an option only when a letter or dash follows.
+    integration('blocks a file arg whose dash precedes a digit', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['.', '-1.json']));
+    });
+
+    integration('blocks a filter whose dash precedes a digit', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['-n', '-1 as $x | $ENV']));
+    });
+
+    integration('blocks a filter whose dash precedes a paren', async ({ call, expect }) => {
+      assertBlocked(expect, await call(['-n', '-(1) as $x | env']));
+    });
+
     // Without --, jq would reject -length as an unknown option.
     integration('allows a dash-led filter after --', async ({ call, expect }) => {
       assertNotBlocked(expect, await call(['-n', '--', '-length']));
