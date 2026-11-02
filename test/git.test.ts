@@ -1,8 +1,10 @@
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, afterAll, beforeAll, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from './builders.ts';
 import { type Server, assertBlocked, assertNotBlocked, connectTool, echoed, textOf, useServer } from './helpers.ts';
 
@@ -142,14 +144,43 @@ describe.concurrent('git tool (unit)', () => {
 });
 
 // --- Integration tests (real MCP server) ---
+const run = promisify(execFile);
+
+interface LinkedWorktree extends AsyncDisposable {
+  readonly branch: string;
+  readonly path: string;
+}
+
+/**
+ * Adds a linked worktree of this repository on a new branch, both removed on
+ * disposal.
+ */
+const addLinkedWorktree = async (): Promise<LinkedWorktree> => {
+  const branch = `readonly-mcp-test-${faker.string.alphanumeric({ casing: 'lower', length: 8 })}`;
+  const path = join(tmpdir(), branch);
+  await run('git', ['worktree', 'add', '-b', branch, path]);
+  return {
+    branch,
+    path,
+    [Symbol.asyncDispose]: async () => {
+      await run('git', ['worktree', 'remove', '--force', path]);
+      await run('git', ['branch', '-D', branch]);
+    },
+  };
+};
+
 /**
  * A call to git that also passes the tool's `cwd`.
  */
 type GitCall = (args: readonly string[], cwd?: string) => Promise<CallToolResult>;
 
-const integration = it.extend<{ call: GitCall; server: Server }>({
+const integration = it.extend<{ call: GitCall; server: Server; worktree: LinkedWorktree }>({
   call: async ({ server }, use) => use((args, cwd) => server.callTool('git', { args, cwd })),
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
+  worktree: [async ({}, use) => {
+    await using worktree = await addLinkedWorktree();
+    await use(worktree);
+  }, { scope: 'file' }],
 });
 
 describe.concurrent('git tool (integration)', () => {
@@ -444,29 +475,15 @@ describe.concurrent('git tool (integration)', () => {
   });
 
   describe('cwd with linked worktree', () => {
-    const worktreePath = join(tmpdir(), `mcp-test-wt-${process.pid}`);
-    const branchName = `test-cwd-wt-${process.pid}`;
-
-    beforeAll(() => {
-      execFileSync('git', ['worktree', 'add', '-b', branchName, worktreePath], {
-        timeout: 10_000,
-      });
+    integration('accepts linked worktree as cwd', async ({ call, expect, worktree }) => {
+      assertNotBlocked(expect, await call(['status'], worktree.path));
     });
 
-    afterAll(() => {
-      try { execFileSync('git', ['worktree', 'remove', '--force', worktreePath], { timeout: 10_000 }); } catch {}
-      try { execFileSync('git', ['branch', '-D', branchName], { timeout: 5000 }); } catch {}
-    });
-
-    integration('accepts linked worktree as cwd', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['status'], worktreePath));
-    });
-
-    integration('resolves HEAD from linked worktree, not main', async ({ call, expect }) => {
-      const result = await call(['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
+    integration('resolves HEAD from linked worktree, not main', async ({ call, expect, worktree }) => {
+      const result = await call(['rev-parse', '--abbrev-ref', 'HEAD'], worktree.path);
       const branch = textOf(result).trim();
 
-      expect(branch).toBe(branchName);
+      expect(branch).toBe(worktree.branch);
     });
   });
 
