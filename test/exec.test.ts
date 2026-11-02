@@ -109,7 +109,7 @@ describe(errorResult, () => {
     const result = errorResult(err, cmd, args);
 
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe(`Command output exceeded ${maxBuffer} bytes: ${cmd} ${args.join(' ')}`);
+    expect(textOf(result)).toBe(`Command output exceeded ${String(maxBuffer)} bytes: ${cmd} ${args.join(' ')}`);
   });
 
   it('returns ordinary failure output without isError', ({ expect }) => {

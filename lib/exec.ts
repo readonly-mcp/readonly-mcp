@@ -62,9 +62,9 @@ export const errorResult = (err: unknown, cmd: string, args: readonly string[]):
   const { code, killed, message, stderr = '', stdout = '' } = parsed.data;
   const partial = stdout + stderr;
   if (code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER')
-    return fail(append(`Command output exceeded ${maxBuffer} bytes: ${cmd} ${args.join(' ')}`, partial));
+    return fail(append(`Command output exceeded ${String(maxBuffer)} bytes: ${cmd} ${args.join(' ')}`, partial));
   if (killed)
-    return fail(append(`Command timed out after ${timeoutMs / millisecondsPerSecond}s: ${cmd} ${args.join(' ')}`, partial));
+    return fail(append(`Command timed out after ${String(timeoutMs / millisecondsPerSecond)}s: ${cmd} ${args.join(' ')}`, partial));
   if (partial) return text(stdout, stderr);
   return fail(message);
 };

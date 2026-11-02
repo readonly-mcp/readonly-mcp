@@ -59,20 +59,20 @@ const flagValues = (args: readonly string[], flag: string): string[] => {
 };
 
 const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | undefined => {
-  const areas = flagValues(args, '--area');
-  const resources = flagValues(args, '--resource');
-  if (areas.length === 0)
+  const [area, ...extraAreas] = flagValues(args, '--area');
+  if (area === undefined)
     return fail('Missing required flag: --area');
-  if (resources.length === 0)
+  const [resource, ...extraResources] = flagValues(args, '--resource');
+  if (resource === undefined)
     return fail('Missing required flag: --resource');
-  if (areas.length > 1)
+  if (extraAreas.length > 0)
     return fail('Flag not allowed: duplicate --area');
-  if (resources.length > 1)
+  if (extraResources.length > 0)
     return fail('Flag not allowed: duplicate --resource');
-  const endpoint = `${areas[0]}/${resources[0]}`;
+  const endpoint = `${area}/${resource}`;
   return invokeAllowedEndpoints.has(endpoint)
     ? undefined
-    : fail(`Endpoint not allowed for devops invoke: --area ${areas[0]} --resource ${resources[0]}. Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
+    : fail(`Endpoint not allowed for devops invoke: --area ${area} --resource ${resource}. Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
 };
 
 export const register = (server: McpServer): RegisteredTool =>

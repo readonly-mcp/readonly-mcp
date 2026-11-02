@@ -104,8 +104,9 @@ describe('isAllowlisted', () => {
 
   describe('three-word allowlist', () => {
     const word = build.distinctWords();
-    const path = [word(), word(), word()];
-    const deep = new Set([path.join(' '), `${path[0]} ${word()} ${word()}`]);
+    const head = word();
+    const path = [head, word(), word()];
+    const deep = new Set([path.join(' '), `${head} ${word()} ${word()}`]);
 
     it('matches three-word subcommand', ({ expect }) => {
       expect(isAllowlisted(path, deep)).toBe(true);
