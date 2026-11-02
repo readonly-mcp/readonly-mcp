@@ -19,6 +19,8 @@ jobs:
 
       - run: pnpm run typecheck:ts
 
+      - run: pnpm run lint:eslint
+
       - run: pnpm run build
 
       - run: pnpm test

@@ -21,7 +21,7 @@
   "scripts": {
     "build": "pnpm run compile:ts && node scripts/stage-package.ts",
     "compile:ts": "tsc -p tsconfig.build.json",
-    "lint:eslint": "eslint",
+    "lint:eslint": "eslint --max-warnings=0",
     "test": "vitest run",
     "typecheck:ts": "tsc"
   },
