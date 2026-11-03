@@ -3,22 +3,22 @@ allowBuilds:
   unrs-resolver: false
 
 catalog:
-  '@changesets/cli': ^3.0.0
+  '@changesets/cli': ^3.0.3
   '@faker-js/faker': ^10.6.0
   '@gtbuchanan/cli': ^1.0.0
   '@gtbuchanan/eslint-config': ^0.5.2
   '@gtbuchanan/tsconfig': ^0.2.0
   '@gtbuchanan/vitest-config': ^0.3.0
-  '@modelcontextprotocol/sdk': ^1.29.0
+  '@modelcontextprotocol/sdk': ^1.32.2
   '@types/node': ^24.19.2
-  '@vitest/coverage-v8': ^4.1.12
-  eslint: ^10.13.0
+  '@vitest/coverage-v8': ^5.0.5
+  eslint: ^10.14.0
   jiti: ^2.7.0
   skills: ^1.7.4
   turbo: ^2.11.10
   typescript: ^6.0.3
-  vitest: ^4.1.12
-  zod: ^4.4.3
+  vitest: ^5.0.5
+  zod: ^4.6.7
 
 engineStrict: true
 
