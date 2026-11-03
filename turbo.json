@@ -48,7 +48,8 @@
         "check",
         "compile",
         "pack",
-        "test:slow"
+        "test:slow",
+        "test:e2e"
       ]
     },
     "build:ci": {
@@ -162,9 +163,31 @@
         "dist/source/package.json"
       ]
     },
+    "test:e2e": {
+      "dependsOn": [
+        "test:vitest:e2e"
+      ]
+    },
     "test:slow": {
       "dependsOn": [
         "test:vitest:slow"
+      ]
+    },
+    "test:vitest:e2e": {
+      "dependsOn": [
+        "pack",
+        "^pack",
+        "transit"
+      ],
+      "env": [
+        "CI"
+      ],
+      "inputs": [
+        "e2e/**",
+        "vitest.config.e2e.*"
+      ],
+      "outputs": [
+        "dist/test-results/vitest/blob-e2e.json"
       ]
     },
     "test:vitest:fast": {

@@ -12,8 +12,6 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     uses: gtbuchanan/tooling/.github/workflows/ci.yml@main
     with:
-      # The server has no e2e tier; its integration suites run with the rest.
-      run-e2e: false
       # The npm and pnpm integration suites carry the slow tag.
       run-slow-tests: true
 

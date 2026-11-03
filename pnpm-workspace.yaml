@@ -10,8 +10,10 @@ catalog:
   '@gtbuchanan/tsconfig': ^0.2.0
   '@gtbuchanan/vitest-config': ^0.3.0
   '@modelcontextprotocol/sdk': ^1.32.2
+  '@types/cross-spawn': ^6.0.6
   '@types/node': ^24.19.2
   '@vitest/coverage-v8': ^5.0.5
+  cross-spawn: ^7.0.6
   eslint: ^10.14.0
   jiti: ^2.7.0
   skills: ^1.7.4

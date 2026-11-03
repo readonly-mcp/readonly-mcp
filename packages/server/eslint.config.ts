@@ -10,7 +10,7 @@ export default [
     tsconfigRootDir: import.meta.dirname,
   }),
   {
-    files: ['test/**/*.ts'],
+    files: ['e2e/**/*.ts', 'test/**/*.ts'],
     rules: {
       // The assert* helpers in test/ wrap expect, so a test that calls one asserts.
       'vitest/expect-expect': ['warn', { assertFunctionNames: ['expect', 'assert*'] }],

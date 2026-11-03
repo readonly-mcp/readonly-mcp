@@ -17,6 +17,7 @@
     "lint:eslint": "gtb task lint:eslint . --ignore-pattern \"packages/*/**\"",
     "pack": "gtb turbo run pack",
     "prepare": "gtb prepare",
+    "test:e2e": "gtb turbo run test:e2e",
     "test:slow": "gtb turbo run test:slow",
     "typecheck:ts": "gtb task typecheck:ts",
     "verify": "gtb verify"

@@ -24,6 +24,9 @@ test/
   canary.ts         Per-test file that injection tests prove untouched
   helpers.ts        Shared test utilities
   package-fixture.ts  Throwaway npm/pnpm project for package-manager integration tests
+e2e/
+  package.test.ts   Smoke tests of the packed tarball, installed as a consumer would
+  fixture.ts        Installs the tarball into a throwaway project and starts its bin
 ```
 
 ## Security Principles
@@ -59,11 +62,16 @@ These are non-negotiable. Every change must preserve them:
 ## Testing
 
 Run the full build from the repository root before every commit. It
-typechecks, lints, runs the fast and slow tests, and packs the package:
+typechecks, lints, runs the fast and slow tests, packs the package, and runs
+the e2e tests against the packed tarball:
 
 ```bash
 pnpm run build
 ```
+
+Tests in `test/` run against source, and they are where the security boundary
+is tested. `e2e/` only checks that the published package installs and starts,
+so put a new restriction's tests in `test/`.
 
 Tests validate the security boundary, not just functionality. Every blocked
 flag, blocked subcommand, and injection vector has a corresponding test.
