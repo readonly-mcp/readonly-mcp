@@ -2,14 +2,6 @@
   "name": "@readonly-mcp/server",
   "version": "1.0.0",
   "description": "Security-hardened MCP server providing read-only CLI access for AI agents",
-  "homepage": "https://github.com/readonly-mcp/readonly-mcp/tree/main/packages/server",
-  "bugs": "https://github.com/readonly-mcp/readonly-mcp/issues",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/readonly-mcp/readonly-mcp.git",
-    "directory": "packages/server"
-  },
-  "license": "MIT",
   "type": "module",
   "imports": {
     "#src/*.js": "./src/*.ts",
@@ -22,11 +14,14 @@
     "src/"
   ],
   "scripts": {
-    "build": "pnpm run compile:ts && node scripts/stage-package.ts",
-    "compile:ts": "tsc -p tsconfig.build.json",
-    "lint:eslint": "eslint --max-warnings=0",
-    "test": "vitest run",
-    "typecheck:ts": "tsc"
+    "compile:ts": "gtb task compile:ts",
+    "coverage:codecov:upload": "gtb task coverage:codecov:upload",
+    "coverage:vitest:merge": "gtb task coverage:vitest:merge",
+    "lint:eslint": "gtb task lint:eslint",
+    "pack:npm": "gtb task pack:npm",
+    "test:vitest:fast": "gtb task test:vitest:fast",
+    "test:vitest:slow": "gtb task test:vitest:slow",
+    "typecheck:ts": "gtb task typecheck:ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
@@ -47,6 +42,7 @@
     "bin": {
       "readonly-mcp": "./src/index.js"
     },
+    "directory": "dist/source",
     "imports": {
       "#src/*.js": "./src/*.js"
     }

@@ -1,13 +1,15 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "noEmit": true
   },
-  "exclude": [
-    "dist"
-  ],
   "extends": "../../tsconfig.base.json",
   "include": [
-    "**/*.ts"
+    "bin",
+    "scripts",
+    "src",
+    "test",
+    "e2e",
+    "*",
+    ".*"
   ]
 }

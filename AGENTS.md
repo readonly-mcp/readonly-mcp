@@ -17,8 +17,6 @@ src/
   tools/
     index.ts        Tool registry (barrel export)
     <tool>.ts       One file per CLI tool (git, gh, az, npm, pnpm, chezmoi, acli, shell, tea)
-scripts/
-  stage-package.ts  Stages the npm package in dist/source (`pnpm run build`)
 test/
   <tool>.test.ts    Per-tool security + functionality tests
   shell-injection.test.ts   Cross-tool injection attack tests
@@ -60,10 +58,11 @@ These are non-negotiable. Every change must preserve them:
 
 ## Testing
 
-Run the full suite before every commit:
+Run the full build from the repository root before every commit. It
+typechecks, lints, runs the fast and slow tests, and packs the package:
 
 ```bash
-pnpm test
+pnpm run build
 ```
 
 Tests validate the security boundary, not just functionality. Every blocked

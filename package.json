@@ -10,17 +10,26 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "pnpm -r run build",
-    "lint:eslint": "eslint --max-warnings=0 . --ignore-pattern \"packages/*/**\" && pnpm -r run lint:eslint",
-    "test": "pnpm -r test",
-    "typecheck:ts": "tsc && pnpm -r run typecheck:ts"
+    "build": "gtb turbo run build",
+    "build:ci": "gtb turbo run build:ci",
+    "check": "gtb turbo run check",
+    "coverage:merge": "gtb turbo run coverage:merge",
+    "lint:eslint": "gtb task lint:eslint . --ignore-pattern \"packages/*/**\"",
+    "pack": "gtb turbo run pack",
+    "prepare": "gtb prepare",
+    "test:slow": "gtb turbo run test:slow",
+    "typecheck:ts": "gtb task typecheck:ts",
+    "verify": "gtb verify"
   },
   "devDependencies": {
+    "@gtbuchanan/cli": "catalog:",
     "@gtbuchanan/eslint-config": "catalog:",
     "@gtbuchanan/tsconfig": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "jiti": "catalog:",
+    "skills": "catalog:",
+    "turbo": "catalog:",
     "typescript": "catalog:"
   },
   "packageManager": "pnpm@11.3.0",

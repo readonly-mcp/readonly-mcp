@@ -4,6 +4,7 @@ allowBuilds:
 
 catalog:
   '@faker-js/faker': ^10.6.0
+  '@gtbuchanan/cli': ^1.0.0
   '@gtbuchanan/eslint-config': ^0.5.2
   '@gtbuchanan/tsconfig': ^0.2.0
   '@gtbuchanan/vitest-config': ^0.3.0
@@ -12,6 +13,8 @@ catalog:
   '@vitest/coverage-v8': ^4.1.12
   eslint: ^10.13.0
   jiti: ^2.7.0
+  skills: ^1.7.4
+  turbo: ^2.11.10
   typescript: ^6.0.3
   vitest: ^4.1.12
   zod: ^4.4.3

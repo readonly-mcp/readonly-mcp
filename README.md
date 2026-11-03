@@ -9,6 +9,7 @@ Security-hardened MCP server providing read-only CLI access for AI agents.
 ## Development
 
 ```bash
-pnpm install   # first time only
-pnpm test
+pnpm install     # first time only
+pnpm run check   # typecheck, lint and fast tests
+pnpm run build   # also slow tests and the npm package
 ```

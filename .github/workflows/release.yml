@@ -1,5 +1,5 @@
-# Stopgap until gtbuchanan/tooling's CLI is adopted; its reusable cd.yml
-# versions and publishes through changesets, which this repo does not use yet.
+# Stopgap until the repository adopts changesets, through which
+# gtbuchanan/tooling's reusable cd.yml versions and publishes.
 ---
 jobs:
   publish:
@@ -33,13 +33,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run build
-
       # pnpm packs, since it replaces `catalog:` specifiers with versions.
-      - run: pnpm -C packages/server/dist/source pack --out "$RUNNER_TEMP/package.tgz"
+      - run: pnpm run pack
 
       # npm, not pnpm, so trusted publishing exchanges the OIDC token itself.
-      - run: npm publish "$RUNNER_TEMP/package.tgz"
+      - run: npm publish packages/server/dist/packages/npm/*.tgz
 
 name: Release
 
