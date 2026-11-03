@@ -1,0 +1,21 @@
+# The oldest mise that reads mise.lock's `lockfile_version = 3`, declared so an
+# older one fails with a version error instead of a confusing lockfile one. CI
+# pins its own version in gtbuchanan/tooling's mise-setup action.
+# minimum_release_age_excludes (below) needs 2026.6.2, which this also covers.
+min_version = "2026.9.16"
+
+[settings]
+lockfile = true
+# Matches the pnpm and Renovate 3-day quarantine for fuzzy resolution.
+minimum_release_age = "3d"
+# Self-published packages skip the quarantine, as in pnpm-workspace.yaml.
+minimum_release_age_excludes = ["npm:@gtbuchanan/*", "npm:@readonly-mcp/*"]
+
+# mise.tasks.toml is generated and owned by `gtb sync`.
+[task_config]
+includes = ["mise.tasks.toml"]
+
+[tools]
+node = "24.18.0"
+# Duplicates `packageManager` in package.json, which turbo requires.
+pnpm = "11.3.0"

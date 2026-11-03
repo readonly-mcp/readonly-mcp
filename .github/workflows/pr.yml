@@ -1,23 +1,17 @@
-# Stopgap until the repository adopts mise, which gtbuchanan/tooling's reusable
-# ci.yml sets up its toolchain through.
 ---
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-
-      - uses: actions/setup-node@v7
-        with:
-          cache: pnpm
-          node-version: 24
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm run build
+  ci:
+    name: CI
+    # Passed explicitly: secrets: inherit reaches only workflows in the same
+    # organization or account.
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    uses: gtbuchanan/tooling/.github/workflows/ci.yml@main
+    with:
+      # The server has no e2e tier; its integration suites run with the rest.
+      run-e2e: false
+      # The npm and pnpm integration suites carry the slow tag.
+      run-slow-tests: true
 
 name: PR
 
