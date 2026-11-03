@@ -1,0 +1,24 @@
+// Pre-commit, check and fix hooks (https://hk.jdx.dev), built from the shared
+// @gtbuchanan/hk-config preset. Its steps are gated by glob or file type, so
+// the shell steps stay inert in a repo with no shell sources.
+amends "package://github.com/jdx/hk/releases/download/v2.8.1/hk@2.8.1#/Config.pkl"
+import "package://github.com/gtbuchanan/tooling/releases/download/hk-config@0.5.0/hk-config@0.5.0#/Defaults.pkl"
+
+// eslint and gtb are pnpm devDependencies, not mise tools.
+local eslintArgs = "--max-warnings=0 --no-warn-ignored {{files}}"
+
+local allSteps = new Mapping<String, Step> {
+  ...Defaults.recommended
+  ["eslint"] {
+    check = "pnpm exec eslint \(eslintArgs)"
+    fix = "pnpm exec eslint --fix \(eslintArgs)"
+  }
+  // Regenerates the gtb-owned config on commit and fails on drift in CI. It
+  // reads the whole workspace, so it takes no glob.
+  ["gtb-verify"] {
+    check = "pnpm exec gtb verify"
+    fix = "pnpm exec gtb sync"
+  }
+}
+
+hooks = Defaults.hooksFor(allSteps)

@@ -4,7 +4,18 @@
 # minimum_release_age_excludes (below) needs 2026.6.2, which this also covers.
 min_version = "2026.9.16"
 
+[env]
+# hk wraps hook steps in `mise x`, so mise-managed tools resolve without
+# activation.
+HK_MISE = "1"
+
+[hooks]
+# Installs hk's git hooks once `mise install` has the tools.
+postinstall = "hk install --mise"
+
 [settings]
+# Required for the [hooks] table.
+experimental = true
 lockfile = true
 # Matches the pnpm and Renovate 3-day quarantine for fuzzy resolution.
 minimum_release_age = "3d"
@@ -16,6 +27,20 @@ minimum_release_age_excludes = ["npm:@gtbuchanan/*", "npm:@readonly-mcp/*"]
 includes = ["mise.tasks.toml"]
 
 [tools]
+# The hk actionlint step.
+actionlint = "1.7.12"
+hk = "2.8.1"
 node = "24.18.0"
+# renovate-config-validator, for the hk renovate-config step. The exemption
+# opts one transitive dependency out of the no-downgrade trust policy:
+# @yarnpkg/libzip 3.2.2 is a manual publish without the provenance 3.2.1 had.
+# It names the reviewed version, so a later one without provenance still fails.
+"npm:renovate" = { trust_policy_excludes = [
+  "@yarnpkg/libzip@3.2.2",
+], version = "44.169.0" }
+# hk evaluates hk.pkl with pkl.
+pkl = "0.32.2"
 # Duplicates `packageManager` in package.json, which turbo requires.
 pnpm = "11.3.0"
+# Lets actionlint lint workflow run scripts.
+shellcheck = "0.11.0"

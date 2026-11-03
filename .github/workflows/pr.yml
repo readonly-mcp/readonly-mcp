@@ -17,6 +17,13 @@ jobs:
       # The npm and pnpm integration suites carry the slow tag.
       run-slow-tests: true
 
+  pre-commit:
+    name: Pre-Commit
+    uses: gtbuchanan/tooling/.github/workflows/pre-commit.yml@main
+    with:
+      # The eslint and gtb-verify steps run through `pnpm exec`.
+      use-pnpm: true
+
 name: PR
 
 on:
