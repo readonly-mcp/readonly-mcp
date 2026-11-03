@@ -74,13 +74,6 @@ export const createPackageFixture = async (manager: PackageManager): Promise<Pac
   }
 };
 
-/*
- * The timeout for the `beforeAll` that initializes a server from
- * {@link usePackageServer}, whose setup also installs the project: sized to
- * an install on a loaded machine rather than to the commands under test.
- */
-export const packageServerTimeout = 60_000;
-
 /**
  * The body of a `server` fixture running in a {@link PackageFixture}
  * installed by `manager`, as {@link useServer} is for the repository.

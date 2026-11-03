@@ -51,7 +51,6 @@ export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } =
 
   const rl = createInterface({ input: proc.stdout });
   const pending = new Map<number, (msg: Response) => void>();
-  const timers = new Map<number, NodeJS.Timeout>();
   let nextId = 1;
 
   rl.on('line', (line) => {
@@ -61,8 +60,6 @@ export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } =
       const msg = parsed.data;
       const resolve = pending.get(msg.id);
       if (resolve) {
-        clearTimeout(timers.get(msg.id));
-        timers.delete(msg.id);
         resolve(msg);
         pending.delete(msg.id);
       }
@@ -70,18 +67,11 @@ export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } =
   });
 
   const send = (method: string, params: unknown) =>
-    new Promise<Response>((resolve, reject) => {
+    new Promise<Response>((resolve) => {
       const id = nextId++;
       pending.set(id, resolve);
       const msg = JSON.stringify({ jsonrpc: '2.0', id, method, params });
       proc.stdin.write(msg + '\n');
-      timers.set(id, setTimeout(() => {
-        timers.delete(id);
-        if (pending.has(id)) {
-          pending.delete(id);
-          reject(new Error(`Timeout waiting for response to ${method}`));
-        }
-      }, 15_000));
     });
 
   const initialize = () =>

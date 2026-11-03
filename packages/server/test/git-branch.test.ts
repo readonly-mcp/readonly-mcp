@@ -60,15 +60,9 @@ const integration = it.extend<{ call: Call; repo: Repo; server: Server }>({
   server: [async ({ repo }, use) => useServer(use, { cwd: repo.path }), { scope: 'file' }],
 });
 
-/*
- * The hook builds the repository and starts the server in it, which can
- * outlast the default hook timeout when the whole suite runs at once.
- */
-const setupTimeout = 30_000;
-
 // Sequential: each test compares the shared repository before and after.
 describe('git branch list mode (integration)', () => {
-  integration.beforeAll(({ server }) => server.initialize(), setupTimeout);
+  integration.beforeAll(({ server }) => server.initialize());
 
   integration.for<{ attack: (side: string) => string[]; name: string }>([
     { attack: () => [build.branchName()], name: 'a bare name creates a branch' },

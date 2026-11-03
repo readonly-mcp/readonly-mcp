@@ -4,9 +4,7 @@ import * as build from '#test/builders.js';
 import {
   type Call, type Server, assertBlocked, assertNotBlocked, connectTool, textOf,
 } from '#test/helpers.js';
-import {
-  packageServerTimeout, usePackageServer,
-} from '#test/package-fixture.js';
+import { usePackageServer } from '#test/package-fixture.js';
 
 // --- Unit tests (mocked execShell) ---
 vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
@@ -59,7 +57,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
 });
 
 describe.concurrent('pnpm tool (integration)', { tags: ['slow'] }, () => {
-  integration.beforeAll(({ server }) => server.initialize(), packageServerTimeout);
+  integration.beforeAll(({ server }) => server.initialize());
 
   describe('allowed global flags', () => {
     integration.for([
