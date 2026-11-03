@@ -103,20 +103,34 @@ const run = promisify(execFile);
 interface LinkedWorktree extends AsyncDisposable {
   readonly branch: string;
   readonly path: string;
+  /**
+   * Adds the worktree and its branch, which disposal removes.
+   */
+  readonly add: () => Promise<void>;
 }
 
 /**
- * Adds a linked worktree of this repository on a new branch, both removed on
- * disposal.
+ * A linked worktree of this repository on a new branch, added by `add`. The
+ * suite adds it in a `beforeAll` on the extended test function, as with
+ * `useServer`, so the checkout runs once against the hook timeout rather than
+ * inside each concurrent test that asks for it.
  */
-const addLinkedWorktree = async (): Promise<LinkedWorktree> => {
+const linkedWorktree = (): LinkedWorktree => {
   const branch = `readonly-mcp-test-${faker.string.alphanumeric({ casing: 'lower', length: 8 })}`;
   const worktreePath = path.join(tmpdir(), branch);
-  await run('git', ['worktree', 'add', '-b', branch, worktreePath]);
+  let isAdded = false;
   return {
+    add: async () => {
+      await run('git', ['worktree', 'add', '-b', branch, worktreePath]);
+      isAdded = true;
+    },
     branch,
     path: worktreePath,
     [Symbol.asyncDispose]: async () => {
+      if (!isAdded) {
+        return;
+      }
+
       await run('git', ['worktree', 'remove', '--force', worktreePath]);
       await run('git', ['branch', '-D', branch]);
     },
@@ -132,7 +146,7 @@ const integration = it.extend<{ call: GitCall; server: Server; worktree: LinkedW
   call: async ({ server }, use) => use((args, cwd) => server.callTool('git', { args, cwd })),
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
   worktree: [async ({}, use) => {
-    await using worktree = await addLinkedWorktree();
+    await using worktree = linkedWorktree();
     await use(worktree);
   }, { scope: 'file' }],
 });
@@ -169,6 +183,8 @@ describe.concurrent('git tool cwd (integration)', () => {
   });
 
   describe('cwd with linked worktree', () => {
+    integration.beforeAll(({ worktree }) => worktree.add());
+
     integration('accepts linked worktree as cwd', async ({ call, expect, worktree }) => {
       assertNotBlocked(expect, await call(['status'], worktree.path));
     });
