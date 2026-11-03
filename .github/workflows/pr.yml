@@ -17,6 +17,14 @@ jobs:
       # The npm and pnpm integration suites carry the slow tag.
       run-slow-tests: true
 
+  dependencies:
+    name: Dependencies
+    # Dependency Review comments its summary on the pull request.
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: gtbuchanan/tooling/.github/workflows/dependency-review.yml@main
+
   pre-commit:
     name: Pre-Commit
     uses: gtbuchanan/tooling/.github/workflows/pre-commit.yml@main
