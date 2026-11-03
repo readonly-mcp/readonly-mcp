@@ -1,5 +1,9 @@
 ---
 jobs:
+  changeset:
+    name: Changeset
+    uses: gtbuchanan/tooling/.github/workflows/changeset-check.yml@main
+
   ci:
     name: CI
     # Passed explicitly: secrets: inherit reaches only workflows in the same

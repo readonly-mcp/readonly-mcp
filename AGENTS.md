@@ -79,6 +79,13 @@ relation between two flags, the shape of an attack. Give `it.for` rows that
 carry generated values an explicit `name` rather than deriving it from their
 args, so test names stay the same across runs.
 
+## Changesets for the Published Server
+
+A change to `packages/server` carries a changeset: run `pnpm exec changeset`
+and commit the file it writes under `.changeset/`. The Changeset check fails a
+pull request that changes the package without one. Changesets collects them
+into a release pull request, and merging that publishes the new version.
+
 ## Formatting
 
 See `.editorconfig`. TypeScript, ESM only. Import a package's own modules

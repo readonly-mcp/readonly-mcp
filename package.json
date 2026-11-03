@@ -22,6 +22,7 @@
     "verify": "gtb verify"
   },
   "devDependencies": {
+    "@changesets/cli": "catalog:",
     "@gtbuchanan/cli": "catalog:",
     "@gtbuchanan/eslint-config": "catalog:",
     "@gtbuchanan/tsconfig": "catalog:",
