@@ -1,37 +1,117 @@
-import { describe, it } from 'vitest';
+import { faker } from '@faker-js/faker';
+import { describe, it, vi } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Call, type Server, assertBlocked, assertNotBlocked, useServer,
+  type Call, type Server, assertNotBlocked, connectTool, echoed, textOf, useServer,
 } from '#test/helpers.js';
 
+// --- Unit tests (mocked exec) ---
+vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
+  const { withEchoExec } = await import('#test/helpers.js');
+  return withEchoExec(importOriginal);
+});
+
+const { register } = await import('#src/tools/git.js');
+
+const callTool = await connectTool(register);
+
+const callBlame = (args: readonly string[]) => callTool({ args: ['blame', ...args] });
+
+describe.concurrent('git blame option allowlist (unit)', () => {
+  /*
+   * Each asserts the allowlist's own message: git rejects some of these
+   * itself, and its error would pass for a block.
+   */
+  it.for([
+    { flag: '--contents', name: '--contents <path>', rest: [build.absolutePath()] },
+    { flag: `--contents=${build.absolutePath()}`, name: '--contents=<path>', rest: [] },
+    { flag: '--cont', name: '--cont (abbreviation)', rest: [build.absolutePath()] },
+    { flag: '-S', name: '-S <path>', rest: [build.absolutePath()] },
+    { flag: `-S${build.absolutePath()}`, name: '-S<path>', rest: [] },
+    { flag: '-wS', name: '-wS (grouped)', rest: [build.absolutePath()] },
+    {
+      flag: '--ignore-revs-file', name: '--ignore-revs-file <path>',
+      rest: [build.absolutePath()],
+    },
+    {
+      flag: `--ignore-revs-file=${build.absolutePath()}`, name: '--ignore-revs-file=<path>',
+      rest: [],
+    },
+    { flag: '--stdin', name: 'a rev-list option outside the allowlist', rest: [] },
+    { flag: '--porc', name: 'an abbreviation of an allowed option', rest: [] },
+    { flag: '-wx', name: 'a short flag outside the allowlist, grouped', rest: [] },
+    { flag: '--porcelain=1', name: 'a value on an option that takes none', rest: [] },
+  ])('rejects $name', async ({ flag, rest }, { expect }) => {
+    const result = await callBlame([flag, ...rest, build.fileName('md')]);
+
+    expect(textOf(result)).toBe(`Flag not allowed for git blame: ${flag}`);
+  });
+
+  /*
+   * Stepping over an option's value must stop there: the option after it is
+   * still checked, whether the range came as the next arg or in the group.
+   */
+  it.for([
+    { args: ['-L', '1,2'], name: '-L <range>' },
+    { args: ['-L1,2L'], name: '-L<range> ending in L' },
+    { args: ['--ignore-rev', faker.git.commitSha()], name: '--ignore-rev <rev>' },
+  ])('checks the option after $name', async ({ args }, { expect }) => {
+    const result = await callBlame([...args, '--stdin', build.fileName('md')]);
+
+    expect(textOf(result)).toBe('Flag not allowed for git blame: --stdin');
+  });
+
+  it.for([
+    { args: ['-w'], name: '-w' },
+    { args: ['-ls'], name: '-ls (grouped)' },
+    { args: ['-wM'], name: '-wM (grouped, optional score)' },
+    { args: ['-C20'], name: '-C20 (attached score)' },
+    { args: ['-L', '1,2'], name: '-L <range>' },
+    { args: ['-wL1,2'], name: '-wL<range> (grouped)' },
+    { args: ['-L/S/,+1'], name: '-L<range> holding an S' },
+    { args: ['--porcelain'], name: '--porcelain' },
+    { args: ['--no-progress'], name: '--no-progress (negated)' },
+    { args: ['--diff-algorithm', faker.lorem.word()], name: '--diff-algorithm <name>' },
+    { args: [`--diff-algorithm=${faker.lorem.word()}`], name: '--diff-algorithm=<name>' },
+    { args: ['--abbrev=8'], name: '--abbrev=<n>' },
+    { args: ['--first-parent'], name: '--first-parent' },
+    { args: [`--date=${faker.lorem.word()}`], name: '--date=<format>' },
+    { args: ['--encoding', faker.lorem.word()], name: '--encoding <encoding>' },
+    { args: [`--since=${faker.lorem.word()}`], name: '--since=<date>' },
+    { args: ['--until', faker.lorem.word()], name: '--until <date>' },
+    {
+      args: ['--ignore-rev', faker.git.commitSha()],
+      name: '--ignore-rev <rev>, a prefix of --ignore-revs-file',
+    },
+    {
+      args: [`--ignore-rev=${faker.git.commitSha()}`],
+      name: '--ignore-rev=<rev>, a prefix of --ignore-revs-file',
+    },
+    { args: ['--', `-${build.fileName('md')}`], name: 'a dash-led path after --' },
+  ])('passes $name to git', async ({ args }, { expect }) => {
+    const file = build.fileName('md');
+    const result = await callBlame([...args, file]);
+
+    expect(echoed(result).args).toStrictEqual(['--no-pager', 'blame', ...args, file]);
+  });
+});
+
+// --- Integration tests (real MCP server) ---
 const integration = it.extend<{ call: Call; server: Server }>({
   call: async ({ server }, use) => use(args => server.callTool('git', { args })),
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('git blame file-read blocking (integration)', () => {
+describe.concurrent('git blame option allowlist (integration)', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
-  integration.for([
-    { args: ['--contents', build.absolutePath()], name: '--contents <path>' },
-    { args: [`--contents=${build.absolutePath()}`], name: '--contents=<path>' },
-    { args: ['--cont', build.absolutePath()], name: '--cont (abbreviation)' },
-    { args: ['-S', build.absolutePath()], name: '-S <path>' },
-    { args: [`-S${build.absolutePath()}`], name: '-S<path>' },
-    { args: ['-wS', build.absolutePath()], name: '-wS (grouped)' },
-    { args: ['--ignore-revs-file', build.absolutePath()], name: '--ignore-revs-file <path>' },
-    { args: [`--ignore-revs-file=${build.absolutePath()}`], name: '--ignore-revs-file=<path>' },
-  ])('blocks blame $name', async ({ args }, { call, expect }) => {
-    assertBlocked(expect, await call(['blame', ...args, 'README.md']));
+  integration('rejects a file reader before git runs', async ({ call, expect }) => {
+    const result = await call(['blame', '--contents', build.absolutePath(), 'README.md']);
+
+    expect(textOf(result)).toBe('Flag not allowed for git blame: --contents');
   });
 
-  integration('allows blame -L whose range holds an S', async ({ call, expect }) => {
-    assertNotBlocked(expect, await call(['blame', '-L/S/,+1', 'README.md']));
+  integration('runs an allowed option with its value', async ({ call, expect }) => {
+    assertNotBlocked(expect, await call(['blame', '-L', '1,2', 'README.md']));
   });
-
-  integration.for([['--ignore-rev', 'HEAD'], ['--ignore-rev=HEAD']])(
-    'allows blame %s, a prefix of --ignore-revs-file', async (args, { call, expect }) => {
-      assertNotBlocked(expect, await call(['blame', ...args, 'README.md']));
-    },
-  );
 });

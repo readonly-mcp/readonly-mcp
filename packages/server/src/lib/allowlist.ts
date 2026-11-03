@@ -77,6 +77,29 @@ export const rejectApiEndpoint = (
   return fail(`API endpoint not allowed: ${normalized}. Allowed patterns: ${patterns.join(', ')}`);
 };
 
+interface ShortFlagGroup {
+  readonly flags: readonly string[];
+  // What follows the flag that ended the group, or '' when nothing does.
+  readonly value: string;
+}
+
+/**
+ * The flags of a short-flag group (`-wC5` holds w and C) and the value after
+ * them, or no flags when the arg is not a group. The first flag in
+ * `takesValue` ends the group, since it takes the rest of it as its value
+ * (`-L1,5`, `-C5`).
+ */
+export const shortFlags = (
+  arg: string, takesValue: ReadonlySet<string>,
+): ShortFlagGroup => {
+  if (!/^-[^\-]/v.test(arg)) return { flags: [], value: '' };
+  const group = arg.slice(1).match(/./gsv) ?? [];
+  const end = group.findIndex(flag => takesValue.has(flag));
+  return end === -1
+    ? { flags: group, value: '' }
+    : { flags: group.slice(0, end + 1), value: group.slice(end + 1).join('') };
+};
+
 // Uses prefix matching to defeat CLI flag abbreviation. Many CLIs (notably npm
 // and pnpm) expand unique prefixes internally, so `--reg` resolves to
 // `--registry`. Exact matching would be bypassable via abbreviation. The

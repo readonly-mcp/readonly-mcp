@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { z } from 'zod';
 import {
-  ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
+  ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
 import * as build from '#test/builders.js';
 import { textOf } from '#test/helpers.js';
@@ -319,5 +319,33 @@ describe('rejectBlockedFlags', () => {
 
       expect(textOf(result)).toBe('Flag not allowed: --fix');
     });
+  });
+});
+
+describe('shortFlags', () => {
+  // The flags stay literal: each case pins where a group ends.
+  const takesValue = new Set(['L', 'M']);
+
+  it.for([
+    { arg: '-w', flags: ['w'], name: 'a lone flag', value: '' },
+    { arg: '-wbs', flags: ['w', 'b', 's'], name: 'a group', value: '' },
+    {
+      arg: '-wL1,5', flags: ['w', 'L'], name: 'a group ended by a flag taking a value',
+      value: '1,5',
+    },
+    { arg: '-L/S/,+1', flags: ['L'], name: 'a value holding flag letters', value: '/S/,+1' },
+    { arg: '-wM', flags: ['w', 'M'], name: 'a value flag with nothing after it', value: '' },
+    { arg: '-L😀', flags: ['L'], name: 'a value outside the BMP', value: '😀' },
+  ])('reads $name', ({ arg, flags, value }, { expect }) => {
+    expect(shortFlags(arg, takesValue)).toStrictEqual({ flags, value });
+  });
+
+  it.for([
+    { arg: build.longFlag(), name: 'a long option' },
+    { arg: '-', name: 'a lone dash' },
+    { arg: '--', name: 'the end of options' },
+    { arg: build.fileName('md'), name: 'a positional' },
+  ])('reads no flags from $name', ({ arg }, { expect }) => {
+    expect(shortFlags(arg, takesValue)).toStrictEqual({ flags: [], value: '' });
   });
 });
