@@ -144,14 +144,17 @@ const rejectCwd = (cwd: string | undefined): Rejection =>
     ? undefined
     : fail('cwd rejected: not a known git worktree');
 
-// Block -o short flag on diff only: standalone (-o), concatenated (-ofile),
-// or combined with other short flags (-ao, -abo/tmp/evil.txt).
-// Only diff has --output; other commands use -o for unrelated flags
-// (e.g., ls-files -o = --others).
+/*
+ * Block -o short flag on diff only: standalone (-o), concatenated (-ofile),
+ * or combined with other short flags (-ao, -abo/tmp/evil.txt). No flag ends
+ * the group early, so an o anywhere before `=` is rejected, value or not.
+ * Only diff has --output; other commands use -o for unrelated flags
+ * (e.g., ls-files -o = --others).
+ */
+const noValueFlags: ReadonlySet<string> = new Set();
 const rejectShortOutput = (args: readonly string[]): Rejection => {
   const shortO = args.slice(1).find(arg =>
-    arg.startsWith('-') && !arg.startsWith('--') && arg !== '-' &&
-    (arg.slice(1).split('=', 1)[0] ?? arg.slice(1)).includes('o'),
+    shortFlags(arg.split('=', 1)[0] ?? arg, noValueFlags).flags.includes('o'),
   );
   return shortO ? fail(`Flag not allowed: ${shortO}`) : undefined;
 };
