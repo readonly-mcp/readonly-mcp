@@ -29,18 +29,18 @@ includes = ["mise.tasks.toml"]
 [tools]
 # The hk actionlint step.
 actionlint = "1.7.12"
-hk = "2.8.1"
-node = "24.18.0"
+hk = "2.10.0"
+node = "26.13.0"
 # renovate-config-validator, for the hk renovate-config step. The exemption
 # opts one transitive dependency out of the no-downgrade trust policy:
 # @yarnpkg/libzip 3.2.2 is a manual publish without the provenance 3.2.1 had.
 # It names the reviewed version, so a later one without provenance still fails.
 "npm:renovate" = { trust_policy_excludes = [
   "@yarnpkg/libzip@3.2.2",
-], version = "44.169.0" }
+], version = "44.198.3" }
 # hk evaluates hk.pkl with pkl.
 pkl = "0.32.2"
 # Duplicates `packageManager` in package.json, which turbo requires.
-pnpm = "11.3.0"
+pnpm = "12.16.1"
 # Lets actionlint lint workflow run scripts.
 shellcheck = "0.11.0"

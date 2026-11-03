@@ -1,7 +1,7 @@
 // Pre-commit, check and fix hooks (https://hk.jdx.dev), built from the shared
 // @gtbuchanan/hk-config preset. Its steps are gated by glob or file type, so
 // the shell steps stay inert in a repo with no shell sources.
-amends "package://github.com/jdx/hk/releases/download/v2.8.1/hk@2.8.1#/Config.pkl"
+amends "package://github.com/jdx/hk/releases/download/v2.10.0/hk@2.10.0#/Config.pkl"
 import "package://github.com/gtbuchanan/tooling/releases/download/hk-config@0.5.0/hk-config@0.5.0#/Defaults.pkl"
 
 // eslint and gtb are pnpm devDependencies, not mise tools.
