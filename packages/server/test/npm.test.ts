@@ -47,6 +47,48 @@ describe.concurrent('npm tool (unit)', () => {
       expect(args).toStrictEqual(['--ignore-scripts', 'view', 'zod']);
     });
   });
+
+  // Each redirects registry requests by a name --registry does not prefix.
+  describe('blocked registry overrides', () => {
+    const scopedRegistry = `--@${faker.internet.domainWord()}:registry`;
+    const configFile = build.relativeFilePath();
+    const directory = build.absolutePath();
+    const name = faker.internet.domainWord();
+    const url = build.httpsUrl();
+
+    it.for([
+      { name: '--@scope:registry <url>', args: ['view', name, scopedRegistry, url] },
+      { name: '--@scope:registry=<url>', args: ['view', name, `${scopedRegistry}=${url}`] },
+      { name: '--userconfig <file>', args: ['view', name, '--userconfig', configFile] },
+      { name: '--userconfig=<file>', args: ['view', name, `--userconfig=${configFile}`] },
+      { name: '--globalconfig <file>', args: ['view', name, '--globalconfig', configFile] },
+      // The prefix is where npm reads the project .npmrc from.
+      { name: '--prefix <dir>', args: ['ls', '--prefix', directory] },
+      { name: '-C <dir>', args: ['ls', '-C', directory] },
+      // npm expands a group of short flags into each of them.
+      { name: '-lC <dir>', args: ['ls', '-lC', directory] },
+      { name: '--proxy <url>', args: ['view', name, '--proxy', url] },
+      { name: '--https-proxy <url>', args: ['view', name, '--https-proxy', url] },
+      // npm reads a single-dash arg as a long name unless it spells out shorthands.
+      { name: '-registry=<url>', args: ['view', name, `-registry=${url}`] },
+      { name: '-reg=<url>', args: ['view', name, `-reg=${url}`] },
+      { name: '-userconfig <file>', args: ['view', name, '-userconfig', configFile] },
+      { name: '-prefix <dir>', args: ['ls', '-prefix', directory] },
+      { name: '-proxy <url>', args: ['view', name, '-proxy', url] },
+    ])('blocks $name', async ({ args }, { expect }) => {
+      assertBlocked(expect, await callMocked(args));
+    });
+
+    // A whole flag name is not an abbreviation of the blocked flag it prefixes.
+    it.for([
+      { name: 'ls --global (prefixes --globalconfig)', args: ['ls', '--global'] },
+      { name: 'root --global (prefixes --globalconfig)', args: ['root', '--global'] },
+      { name: 'ls -global (prefixes --globalconfig)', args: ['ls', '-global'] },
+      { name: 'ls -g (a shorthand, not a long name)', args: ['ls', '-g'] },
+    ])('allows $name', async ({ args }, { expect }) => {
+      assertAllowed(expect, await callMocked(args));
+    });
+  });
 });
 
 // --- Integration tests (real MCP server) ---

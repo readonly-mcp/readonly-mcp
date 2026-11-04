@@ -16,7 +16,7 @@ The goal is to make auto-allow safe for read-only tools. Without enforcement at 
 - **No `cwd` parameter** — commands run in the server's working directory only, preventing agents from reading files in arbitrary directories
 - **`execFile`, no shell** — prevents shell metacharacter injection (`;`, `&&`, `|`, `$()`, `` ` ``) even when args contain untrusted input
 - **Prefix flag matching** — `rejectBlockedFlags` uses prefix matching to defeat CLI flag abbreviation (e.g., npm expands `--reg` to `--registry`). Exact matching would be bypassable.
-- **`--registry` blocked** — prevents SSRF / data exfiltration to attacker-controlled registries
+- **`--registry` blocked** — prevents SSRF / data exfiltration to attacker-controlled registries. The flags that reach the registry by another name are blocked with it: `--@scope:registry`, pnpm's `--config.<key>`, the flags that read an `.npmrc`, the flags that move the project root whose `.npmrc` is read, and the proxy flags. Each is also matched in its single-dash form (`-registry`), which npm reads as the long flag.
 - **`--ignore-scripts` injected** — defense-in-depth for npm to block lifecycle scripts. `--no-ignore-scripts` and `--ignore-scripts` are also blocked from user-provided args to prevent last-wins override.
 - **`az devops invoke` flag allowlist** — unknown flags are rejected (allowlist, not blocklist), blocking abbreviation bypass
 - **Resource limits** — 10 s timeout, 2 MB maxBuffer to prevent runaway commands
@@ -105,7 +105,7 @@ Read-only Azure DevOps CLI commands: `devops project/team/extension/service-endp
 
 Read-only npm commands: `audit`, `bin`, `explain`, `fund`, `ls`, `outdated`, `root`, `search`, `view`
 
-Blocked flags: `--fix`, `--registry`, `--no-ignore-scripts`, `--ignore-scripts`. `--ignore-scripts` is always re-injected by the server.
+Blocked flags: `--fix`, `--registry`, `--@scope:registry`, `--userconfig`, `--globalconfig`, `--prefix`, `-C` (also inside a short-flag group such as `-lC`), `--proxy`, `--https-proxy`, `--no-ignore-scripts`, `--ignore-scripts`. The server always re-injects `--ignore-scripts`.
 
 **Schema:** `{ args: string[] }`
 
@@ -115,7 +115,7 @@ Read-only pnpm commands: `audit`, `bin`, `licenses list`, `list`, `outdated`, `r
 
 Also supports `--version`, `--help`, `-h` as standalone flags.
 
-Blocked flags: `--fix`, `--registry`
+Blocked flags: `--fix`, `--registry`, `--@scope:registry`, `--config.<key>`, `--userconfig`, `--globalconfig`, `--npmrc-auth-file`, `--dir`, `-C` (also inside a short-flag group such as `-rC`), `--proxy`, `--https-proxy`
 
 **Schema:** `{ args: string[] }`
 

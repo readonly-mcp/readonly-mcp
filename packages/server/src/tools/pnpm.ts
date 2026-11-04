@@ -3,7 +3,7 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server
 // npm or corepack ships as a .cmd wrapper that execFile cannot invoke directly.
 // execShell is a no-op on non-Windows and wraps with bash on Windows.
 import {
-  ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
+  ArgsSchema, type BlockedFlagOptions, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { execShell } from '#src/lib/exec.js';
 
@@ -15,7 +15,27 @@ const subcommands = new Set([
 
 // --fix: pnpm audit --fix attempts to update packages
 // --registry: prevents SSRF / data exfiltration via attacker-controlled registries
-const blockedFlags = new Set(['--fix', '--registry']);
+// --userconfig / --globalconfig / --npmrc-auth-file: read a caller-chosen .npmrc
+// --dir / -C: move the project root, and with it the .npmrc pnpm reads
+// --proxy / --https-proxy: route registry requests through a caller-chosen host
+const blockedFlags = new Set([
+  '--fix', '--registry',
+  '--userconfig', '--globalconfig', '--npmrc-auth-file', '--dir', '-C',
+  '--proxy', '--https-proxy',
+]);
+
+const blockedFlagOptions = {
+  // --global is a flag of its own, not an abbreviation of --globalconfig
+  exempt: new Set(['--global']),
+  expandsShortGroups: true,
+  patterns: [
+    // --config.<key>: sets any setting, the registry among them
+    /^--config\./v,
+    // --@scope:registry: sets the registry for one scope, which --registry does not prefix
+    /:registry$/v,
+  ],
+  readsSingleDashLong: true,
+} satisfies BlockedFlagOptions;
 
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
@@ -30,7 +50,7 @@ export const register = (server: McpServer): RegisteredTool =>
       const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
       if (!isGlobal && !isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
-      const rejected = rejectBlockedFlags(args, blockedFlags);
+      const rejected = rejectBlockedFlags(args, blockedFlags, blockedFlagOptions);
       if (rejected) return rejected;
       return execShell('pnpm', args);
     },

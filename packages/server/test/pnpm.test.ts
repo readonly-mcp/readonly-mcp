@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from '#test/builders.js';
@@ -44,6 +45,45 @@ describe.concurrent('pnpm tool (unit)', () => {
       { name: 'search', args: ['search', 'zod'] },
       { name: 'store status', args: ['store', 'status'] },
       { name: 'why', args: ['why', 'zod'] },
+    ])('allows $name', async ({ args }, { expect }) => {
+      assertAllowed(expect, await callMocked(args));
+    });
+  });
+
+  // Each redirects registry requests by a name --registry does not prefix.
+  describe('blocked registry overrides', () => {
+    const scopedRegistry = `--@${faker.internet.domainWord()}:registry`;
+    const configFile = build.relativeFilePath();
+    const directory = build.absolutePath();
+    const url = build.httpsUrl();
+
+    it.for([
+      { name: '--config.registry <url>', args: ['outdated', '--config.registry', url] },
+      { name: '--config.registry=<url>', args: ['outdated', `--config.registry=${url}`] },
+      { name: '--@scope:registry=<url>', args: ['outdated', `${scopedRegistry}=${url}`] },
+      { name: '--userconfig <file>', args: ['outdated', '--userconfig', configFile] },
+      { name: '--globalconfig <file>', args: ['outdated', '--globalconfig', configFile] },
+      { name: '--npmrc-auth-file <file>', args: ['outdated', '--npmrc-auth-file', configFile] },
+      // The directory is where pnpm reads the project .npmrc from.
+      { name: '--dir <dir>', args: ['list', '--dir', directory] },
+      { name: '-C <dir>', args: ['list', '-C', directory] },
+      // pnpm expands a group of short flags into each of them.
+      { name: '-rC <dir>', args: ['list', '-rC', directory] },
+      { name: '--proxy <url>', args: ['outdated', '--proxy', url] },
+      { name: '--https-proxy <url>', args: ['outdated', '--https-proxy', url] },
+      // pnpm before 12 parses flags as npm does, reading -name as --name.
+      { name: '-registry=<url>', args: ['outdated', `-registry=${url}`] },
+      { name: '-config.registry=<url>', args: ['outdated', `-config.registry=${url}`] },
+      { name: '-dir <dir>', args: ['list', '-dir', directory] },
+    ])('blocks $name', async ({ args }, { expect }) => {
+      assertBlocked(expect, await callMocked(args));
+    });
+
+    // A whole flag name is not an abbreviation of the blocked flag it prefixes.
+    it.for([
+      { name: 'list --global (prefixes --globalconfig)', args: ['list', '--global'] },
+      { name: 'root --global (prefixes --globalconfig)', args: ['root', '--global'] },
+      { name: 'list -g (a shorthand, not a long name)', args: ['list', '-g'] },
     ])('allows $name', async ({ args }, { expect }) => {
       assertAllowed(expect, await callMocked(args));
     });

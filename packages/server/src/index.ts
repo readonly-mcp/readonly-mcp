@@ -53,6 +53,15 @@
  * - --registry blocked: prevents SSRF / data exfiltration to attacker-controlled registries.
  *   Uses prefix matching because npm/pnpm expand abbreviated flags internally
  *   (e.g., `--reg` resolves to `--registry`). Exact matching would be bypassable.
+ *   The registry is also reachable by names `--registry` does not prefix, so
+ *   those are blocked too: `--@scope:registry`, pnpm's `--config.<key>`, the
+ *   .npmrc readers (`--userconfig`, `--globalconfig`, `--npmrc-auth-file`),
+ *   the flags that move the project root whose .npmrc is read (npm
+ *   `--prefix`/`-C`, pnpm `--dir`/`-C`), and the proxies a request can be
+ *   routed through (`--proxy`, `--https-proxy`). Both expand a group of short
+ *   flags, so `-lC` is matched as `-C`, and read any other single-dash arg as
+ *   a long name, so `-reg` is matched as `--reg`. `--global` passes, though
+ *   it prefixes `--globalconfig`: it names a flag of its own.
  * - --ignore-scripts injected: defense-in-depth for npm to prevent lifecycle scripts.
  *   `--no-ignore-scripts` is also blocked to prevent last-wins override.
  *   Not needed for pnpm: its allowed subcommands are inherently read-only and reject the flag.

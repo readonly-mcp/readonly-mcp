@@ -100,6 +100,42 @@ export const shortFlags = (
     : { flags: group.slice(0, end + 1), value: group.slice(end + 1).join('') };
 };
 
+export interface BlockedFlagOptions {
+  /*
+   * Whole flag names of the CLI that prefix a blocked flag, such as npm's
+   * `--global` before `--globalconfig`. The CLI reads each as itself rather
+   * than as an abbreviation, so the prefix match passes them.
+   */
+  readonly exempt?: ReadonlySet<string>;
+  /*
+   * Whether the CLI expands a group of short flags into each of them, as
+   * npm reads `-lC` as `-l -C`. A blocked short flag is then matched anywhere
+   * in the group, not only at its start.
+   */
+  readonly expandsShortGroups?: boolean;
+  /*
+   * Blocked names no fixed list can hold, such as npm's `--@scope:registry`,
+   * where the caller picks the scope. Each is tested against the flag's name,
+   * the part before any `=`.
+   */
+  readonly patterns?: readonly RegExp[];
+  /*
+   * Whether the CLI reads `-name` as `--name`, as npm does for any
+   * single-dash arg that does not spell out its shorthands. A single-dash arg
+   * of more than one character is then also matched in its long form, so
+   * `-reg` is caught as `--reg`. A shorthand group that happens to prefix a
+   * blocked name (`-gl` before `--globalconfig`) is rejected with it.
+   */
+  readonly readsSingleDashLong?: boolean;
+}
+
+const noValueFlags: ReadonlySet<string> = new Set();
+
+const isShortFlag = (flag: string): boolean => /^-[^\-]$/v.test(flag);
+
+// A single dash followed by at least two name characters.
+const isSingleDashLong = (arg: string): boolean => /^-[^\-][^=]/v.test(arg);
+
 // Uses prefix matching to defeat CLI flag abbreviation. Many CLIs (notably npm
 // and pnpm) expand unique prefixes internally, so `--reg` resolves to
 // `--registry`. Exact matching would be bypassable via abbreviation. The
@@ -109,16 +145,26 @@ export const shortFlags = (
 // negatives (allowing a dangerous abbreviated flag through).
 export const rejectBlockedFlags = (
   args: readonly string[], blockedFlags: ReadonlySet<string>,
+  {
+    exempt = new Set(), expandsShortGroups = false, patterns = [], readsSingleDashLong = false,
+  }: BlockedFlagOptions = {},
 ): Rejection => {
+  const isBlocked = (arg: string): boolean => {
+    const name = arg.split('=', 1)[0] ?? arg;
+    const group = expandsShortGroups ? shortFlags(name, noValueFlags).flags : [];
+    return (arg.startsWith('-') && patterns.some(pattern => pattern.test(name))) ||
+      [...blockedFlags].some(blocked =>
+        arg === blocked || arg.startsWith(blocked + '=') ||
+        (blocked.startsWith(name) && !exempt.has(name)) ||
+        // Short flags (-X) accept concatenated values (-XPOST) in most CLIs
+        // (pflag/cobra, getopt). Match any arg starting with a 2-char short flag.
+        (isShortFlag(blocked) && arg.startsWith(blocked)) ||
+        (isShortFlag(blocked) && group.includes(blocked.slice(1))),
+      );
+  };
   const flag = args.slice(1).find(arg =>
     arg !== '--' && arg !== '-' &&
-    [...blockedFlags].some(blocked =>
-      arg === blocked || arg.startsWith(blocked + '=') ||
-      blocked.startsWith(arg.split('=', 1)[0] ?? arg) ||
-      // Short flags (-X) accept concatenated values (-XPOST) in most CLIs
-      // (pflag/cobra, getopt). Match any arg starting with a 2-char short flag.
-      (/^-[^\-]$/v.test(blocked) && arg.startsWith(blocked)),
-    ),
+    (isBlocked(arg) || (readsSingleDashLong && isSingleDashLong(arg) && isBlocked('-' + arg))),
   );
   return flag ? fail(`Flag not allowed: ${flag}`) : undefined;
 };
