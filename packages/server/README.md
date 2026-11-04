@@ -123,6 +123,8 @@ Blocked flags: `--fix`, `--registry`, `--@scope:registry`, `--config.<key>`, `--
 
 Read-only chezmoi commands: `diff`, `doctor`, `managed`, `source-path`, `status`, `target-path`, `verify`
 
+Only allowlisted options pass, each by its full name: each allowed command's own options, under that command only, and the global ones that only shape output. Rejected among the rest: `--source`/`-S` and `--config`/`-c`, whose templates and hooks run commands; `--pager`, which runs one; `--init`; the path writers `--output`/`-o`, `--cache` and `--persistent-state`; `--override-data` and `--override-data-file`; `--destination`/`-D`; `--working-tree`/`-W`; `--refresh-externals`/`-R`; and `--debug`. Every dash-led arg is checked, after `--` too, since chezmoi can read `--` as an option's value. A short option's value goes in its own arg (`-f json`, not `-fjson`).
+
 **Schema:** `{ args: string[] }`
 
 ### `acli`

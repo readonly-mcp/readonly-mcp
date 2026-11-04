@@ -114,6 +114,16 @@
  * - `chezmoi data`: leaks template variables that may contain secrets.
  * - `chezmoi cat-config`: may expose encryption keys, GPG recipient IDs, or
  *   other sensitive configuration values.
+ * - chezmoi options outside its allowlist: `--source`/`-S` and `--config`/`-c`
+ *   point chezmoi at templates and hooks the caller wrote, which run
+ *   commands when `diff`, `status` or `verify` renders them, and `--pager`
+ *   runs one directly. `--init` rewrites the config; `--output`, `--cache`
+ *   and `--persistent-state` write to a caller-chosen path;
+ *   `--override-data` and `--override-data-file` set data a template may
+ *   pass to a command; `--destination` and `--working-tree` move what
+ *   chezmoi reads; `--refresh-externals` fetches; and `--debug` may print
+ *   template data. Options are allowed per command, since chezmoi defines
+ *   short letters and names per command.
  * - `printenv` / `env`: leaks environment variables (API keys, tokens).
  * - `rg`: redundant with host `Grep` tool; allows searching arbitrary paths.
  * - `cat`, `head`, `tail`, `bat`, `diff`, `delta`: redundant with host `Read`
