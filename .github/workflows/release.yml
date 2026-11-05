@@ -6,21 +6,22 @@ jobs:
     name: CD
     needs: ci
     # A called workflow can only narrow the caller's token, so CD's publish
-    # job gets the grants it needs from here.
+    # job gets the grants it needs from here. Its writes to the repository go
+    # through the GitHub App token, so the job token only reads.
     permissions:
-      contents: write
+      contents: read
       id-token: write
     # Passed explicitly: secrets: inherit reaches only workflows in the same
     # organization or account.
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-    uses: gtbuchanan/tooling/.github/workflows/cd.yml@main
+    uses: gtbuchanan/tooling/.github/workflows/cd.yml@v1.0.0
 
   ci:
     name: CI
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    uses: gtbuchanan/tooling/.github/workflows/ci.yml@main
+    uses: gtbuchanan/tooling/.github/workflows/ci.yml@v1.0.0
     with:
       # The npm and pnpm integration suites carry the slow tag.
       run-slow-tests: true
