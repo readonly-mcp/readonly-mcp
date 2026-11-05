@@ -27,9 +27,9 @@ minimum_release_age_excludes = ["npm:@gtbuchanan/*", "npm:@readonly-mcp/*"]
 includes = ["mise.tasks.toml"]
 
 [tools]
-# The hk actionlint step.
-actionlint = "1.7.12"
 hk = "2.11.0"
+# The hk jactionlint step.
+jactionlint = "v2.4.0"
 node = "26.13.0"
 # renovate-config-validator, for the hk renovate-config step. The exemption
 # opts one transitive dependency out of the no-downgrade trust policy:
@@ -42,5 +42,5 @@ node = "26.13.0"
 pkl = "0.32.2"
 # Duplicates `packageManager` in package.json, which turbo requires.
 pnpm = "12.16.1"
-# Lets actionlint lint workflow run scripts.
+# Lets jactionlint lint workflow run scripts.
 shellcheck = "0.11.0"
