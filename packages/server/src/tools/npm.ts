@@ -40,7 +40,6 @@ export const register = (server: McpServer): RegisteredTool =>
       if (!isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
       const rejected = rejectBlockedFlags(args, blockedFlags, blockedFlagOptions);
-      if (rejected) return rejected;
-      return execShell('npm', ['--ignore-scripts', ...args]);
+      return rejected ?? execShell('npm', ['--ignore-scripts', ...args]);
     },
   );

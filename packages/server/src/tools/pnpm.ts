@@ -51,7 +51,6 @@ export const register = (server: McpServer): RegisteredTool =>
       if (!isGlobal && !isAllowlisted(args, subcommands))
         return rejectSubcommand(args, subcommands);
       const rejected = rejectBlockedFlags(args, blockedFlags, blockedFlagOptions);
-      if (rejected) return rejected;
-      return execShell('pnpm', args);
+      return rejected ?? execShell('pnpm', args);
     },
   );

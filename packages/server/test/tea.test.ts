@@ -157,8 +157,6 @@ describe.concurrent('tea tool (unit)', () => {
       ['pulls', 'list', '--repo', 'C:/Users/someone/repo'],
       ['pulls', 'list', '--repo', '/etc/repo'],
       ['pulls', 'list', '--repo', '../other'],
-      /* eslint-disable-next-line unicorn/prefer-string-raw --
-         String.raw widens to string; build.template needs the literal type */
       ['pulls', 'list', '--repo', '..\\other'],
       ['pulls', 'list', '--repo', '../other/repo'],
       ['pulls', 'list', '--repo', ':owner/:repo/:word'],

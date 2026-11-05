@@ -50,8 +50,8 @@ const maxOutputLines = 40;
 const tail = (output: string): string =>
   output.trimEnd().split('\n').slice(-maxOutputLines).join('\n');
 
-const exec = (command: string, args: readonly string[], options: SpawnSyncOptions): void => {
-  const result = spawn.sync(command, [...args], {
+const npm = (args: readonly string[], options: SpawnSyncOptions): void => {
+  const result = spawn.sync('npm', [...args], {
     ...options,
     encoding: 'utf8',
     maxBuffer: maxOutputBytes,
@@ -60,7 +60,7 @@ const exec = (command: string, args: readonly string[], options: SpawnSyncOption
   if (result.error) throw result.error;
   if (result.status === 0) return;
   throw new Error([
-    `${command} ${args.join(' ')} exited with ${String(result.status)}`,
+    `npm ${args.join(' ')} exited with ${String(result.status)}`,
     tail(result.stdout),
     tail(result.stderr),
   ].join('\n'));
@@ -77,11 +77,11 @@ const staleMetadataPattern = /^npm (?:error|ERR!) (?:code ETARGET\b|notarget\b)/
 
 const npmInstall = (cwd: string, specs: readonly string[]): void => {
   try {
-    exec('npm', ['install', ...specs, ...offlineFirst], { cwd });
+    npm(['install', ...specs, ...offlineFirst], { cwd });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (staleMetadataPattern.exec(message) === null) throw error;
-    exec('npm', ['install', ...specs, ...revalidate], { cwd });
+    npm(['install', ...specs, ...revalidate], { cwd });
   }
 };
 
@@ -100,7 +100,7 @@ export const createPackageFixture = async (): Promise<PackageFixture> => {
     rmSync(projectDir, { force: true, maxRetries: 3, recursive: true });
   };
   try {
-    exec('npm', ['init', '--yes', '--init-type', 'module'], { cwd: projectDir });
+    npm(['init', '--yes', '--init-type', 'module'], { cwd: projectDir });
     npmInstall(projectDir, [locateTarball(), ...externalPackages.map(pinned)]);
     const client = new Client({ name: 'e2e', version: '1.0.0' });
     // The SDK spawns through cross-spawn, which resolves the shim's .cmd on Windows.

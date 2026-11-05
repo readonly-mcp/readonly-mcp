@@ -99,11 +99,10 @@ export const register = (server: McpServer): RegisteredTool =>
         // checked here because they don't start with `-` in normal usage.
         const unknownFlag = invokeArgs.find(arg =>
           arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
-        if (unknownFlag) return fail(`Flag not allowed: ${unknownFlag}`);
-        const endpointRejection = rejectInvokeEndpoint(args);
-        if (endpointRejection) return endpointRejection;
         // Explicitly force GET so we don't depend on az CLI's default
-        return execShell('az', [...args, '--http-method', 'GET']);
+        return unknownFlag
+          ? fail(`Flag not allowed: ${unknownFlag}`)
+          : rejectInvokeEndpoint(args) ?? execShell('az', [...args, '--http-method', 'GET']);
       }
       return execShell('az', args);
     },
