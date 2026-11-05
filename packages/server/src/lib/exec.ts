@@ -82,6 +82,5 @@ export const exec = async (cmd: string, args: readonly string[]): Promise<CallTo
 };
 
 export const execShell = async (cmd: string, args: readonly string[]): Promise<CallToolResult> => {
-  if (!isWindows) return exec(cmd, args);
-  return exec('bash', ['-c', 'exec "$@"', '--', cmd, ...args]);
+  return isWindows ? exec('bash', ['-c', 'exec "$@"', '--', cmd, ...args]) : exec(cmd, args);
 };

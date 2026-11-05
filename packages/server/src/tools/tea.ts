@@ -127,7 +127,7 @@ const isRepoSlug = (value: string): boolean =>
 const repoValues = (args: readonly string[]): string[] => args.flatMap((arg, index) => {
   if (!isFlag(arg) || !['r', 'repo'].includes(flagName(arg))) return [];
   const eq = arg.indexOf('=');
-  return [eq === -1 ? args[index + 1] ?? '' : arg.slice(eq + 1)];
+  return eq === -1 ? args[index + 1] ?? '' : arg.slice(eq + 1);
 });
 
 const rejectRepoPath = (args: readonly string[]): Rejection => {
@@ -262,10 +262,9 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
     rejectFlags(args, blockedFlags) ??
     rejectFlags(args, apiBlockedFlags) ??
     rejectRepoPath(rest);
-  if (rejected) return rejected;
   // Inject --method GET immediately after the endpoint, before any
   // user-supplied flags, so a `--` in user args cannot turn it positional.
-  return exec('tea', ['api', endpoint, '--method', 'GET', ...rest]);
+  return rejected ?? exec('tea', ['api', endpoint, '--method', 'GET', ...rest]);
 };
 
 const runCommand = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
@@ -279,10 +278,9 @@ const runCommand = (args: readonly string[]): Promise<CallToolResult> | CallTool
     (nounBlockedFlags[noun] && rejectFlags(args, nounBlockedFlags[noun])) ??
     rejectRepoPath(rest) ??
     (barePolicies[key] && rejectBareArgs(rest, barePolicies[key]));
-  if (rejected) return rejected;
 
   // Run under canonical names so what executes is what was validated.
-  return exec('tea', [...command, ...rest]);
+  return rejected ?? exec('tea', [...command, ...rest]);
 };
 
 export const register = (server: McpServer): RegisteredTool =>

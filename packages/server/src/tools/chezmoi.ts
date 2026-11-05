@@ -16,8 +16,8 @@ export const register = (server: McpServer): RegisteredTool =>
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
-      if (!isAllowlisted(args, subcommands))
-        return rejectSubcommand(args, subcommands);
-      return exec('chezmoi', args);
+      return isAllowlisted(args, subcommands)
+        ? exec('chezmoi', args)
+        : rejectSubcommand(args, subcommands);
     },
   );

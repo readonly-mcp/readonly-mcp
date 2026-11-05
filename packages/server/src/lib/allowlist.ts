@@ -158,8 +158,8 @@ export const rejectBlockedFlags = (
         (blocked.startsWith(name) && !exempt.has(name)) ||
         // Short flags (-X) accept concatenated values (-XPOST) in most CLIs
         // (pflag/cobra, getopt). Match any arg starting with a 2-char short flag.
-        (isShortFlag(blocked) && arg.startsWith(blocked)) ||
-        (isShortFlag(blocked) && group.includes(blocked.slice(1))),
+        (isShortFlag(blocked) &&
+          (arg.startsWith(blocked) || group.includes(blocked.slice(1)))),
       );
   };
   const flag = args.slice(1).find(arg =>
