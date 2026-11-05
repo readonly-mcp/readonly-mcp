@@ -1,6 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ArgsSchema, type Rejection } from '#src/lib/allowlist.js';
+import { ArgsSchema, type Rejection, findBlockedJqName } from '#src/lib/allowlist.js';
 import { execShell, fail } from '#src/lib/exec.js';
 
 const commands = new Set([
@@ -35,27 +35,21 @@ const jqLongOptions = new Map([
 const jqShortOptions = /^-[CMRSVabcehjnrs]+$/v;
 
 /*
- * Names a filter must not use: env and $ENV print the server's environment,
- * and import, include and modulemeta load modules from jq's default search
- * path, which blocking -L does not cover. jq cannot build a name at
- * runtime, so matching the word is enough. `.env` is a field, never the
- * builtin, so it is skipped. A string holding one of these words is
- * rejected too, which fails closed.
- */
-const jqBlockedNames = /(?<!\.)\b(?:env|ENV|import|include|modulemeta)\b/v;
-
-/*
  * jq reads an arg as an option only when a letter, a second dash, or nothing
  * follows its dash (its isoptish check). Anything else dash-led, such as -1
  * or -(1), is a filter or file, so it must be checked as one.
  */
 const isJqOption = (arg: string): boolean => /^-(?:[a-zA-Z\-]|$)/v.test(arg);
 
-// The first positional is the filter; any after it is a file path.
+/*
+ * The first positional is the filter; any after it is a file path. The
+ * filter's module names are checked because jq still loads from its
+ * default search path when -L is blocked.
+ */
 const rejectPositional = (arg: string, hasFilter: boolean): Rejection => {
   if (hasFilter)
     return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
-  const name = jqBlockedNames.exec(arg)?.[0];
+  const name = findBlockedJqName(arg);
   return name ? fail(`Filter may not use ${name} for jq`) : undefined;
 };
 

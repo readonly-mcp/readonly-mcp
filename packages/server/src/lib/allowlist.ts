@@ -77,6 +77,20 @@ export const rejectApiEndpoint = (
   return fail(`API endpoint not allowed: ${normalized}. Allowed patterns: ${patterns.join(', ')}`);
 };
 
+/*
+ * Names a jq filter must not use: env and $ENV print the server's
+ * environment, and import, include and modulemeta load modules from the
+ * evaluating jq's search path. jq cannot build a name at runtime, so
+ * matching the word is enough. `.env` is a field, never the builtin, so it
+ * is skipped. A string holding one of these words is rejected too, which
+ * fails closed.
+ */
+const jqBlockedNames = /(?<!\.)\b(?:env|ENV|import|include|modulemeta)\b/v;
+
+// The first name a jq filter must not use, or undefined when it uses none.
+export const findBlockedJqName = (filter: string): string | undefined =>
+  jqBlockedNames.exec(filter)?.[0];
+
 interface ShortFlagGroup {
   readonly flags: readonly string[];
   // What follows the flag that ended the group, or '' when nothing does.
