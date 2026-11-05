@@ -118,6 +118,13 @@ describe.concurrent('gh api (unit)', () => {
     assertBlocked(expect, result);
   });
 
+  it('reports a disallowed endpoint before a blocked filter', async ({ expect }) => {
+    const endpoint = build.template('repos/:owner/:repo/git/refs');
+    const result = await callMocked(['api', endpoint, '--jq', 'env']);
+
+    expect(textOf(result)).toContain(`API endpoint not allowed: ${endpoint}`);
+  });
+
   it('blocks bare api (no endpoint)', async ({ expect }) => {
     const result = await callMocked(['api']);
     assertBlocked(expect, result);

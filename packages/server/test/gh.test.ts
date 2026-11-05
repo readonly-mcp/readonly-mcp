@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import { type Server, assertBlocked, connectTool, textOf, useServer } from '#test/helpers.js';
@@ -65,6 +66,48 @@ describe.concurrent('gh tool (unit)', () => {
 
     it('allows subcommand with flags', async ({ expect }) => {
       const args = ['pr', 'list', '--state', 'open', '--json', 'number'];
+      assertAllowed(expect, await callMocked(args));
+    });
+  });
+
+  describe('--jq filters', () => {
+    const json = () => ['--json', faker.lorem.word()];
+
+    it.for([
+      { args: ['pr', 'list', ...json(), '--jq', '$ENV'], name: '--jq $ENV', used: 'ENV' },
+      { args: ['pr', 'list', ...json(), '--jq', 'env'], name: '--jq env', used: 'env' },
+      { args: ['repo', 'view', ...json(), '-q', '$ENV.GH_TOKEN'], name: '-q', used: 'ENV' },
+      { args: ['repo', 'view', ...json(), '-q$ENV'], name: 'attached -q', used: 'ENV' },
+      { args: ['repo', 'view', ...json(), '-q=$ENV'], name: '-q=', used: 'ENV' },
+      { args: ['repo', 'view', ...json(), '--jq=env'], name: '--jq=', used: 'env' },
+      { args: ['pr', 'view', ...json(), '-wq', 'env'], name: 'q ending a group', used: 'env' },
+      { args: ['pr', 'view', ...json(), '-wqenv'], name: 'q inside a group', used: 'env' },
+      { args: ['api', 'user', '--jq', '$ENV'], name: 'api --jq', used: 'ENV' },
+      {
+        args: ['pr', 'list', ...json(), '--jq', 'import "m" as m; .'],
+        name: '--jq import', used: 'import',
+      },
+      { args: ['pr', 'list', ...json(), '--jq', '"env"'], name: 'a string', used: 'env' },
+    ])('blocks a filter using $name', async ({ args, used }, { expect }) => {
+      const result = await callMocked(args);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toBe(`Filter may not use ${used} for gh --jq`);
+    });
+
+    it.for([
+      {
+        args: ['pr', 'list', ...json(), '--jq', `.[].${faker.lorem.word()}`],
+        name: 'a plain filter',
+      },
+      { args: ['repo', 'view', ...json(), '-q', '.env'], name: 'an .env field' },
+      { args: ['api', 'user', '--jq', `.${faker.lorem.word()}`], name: 'api --jq' },
+      { args: ['search', 'issues', 'env', ...json()], name: 'env as a search term' },
+      // gh reads the next arg as the filter only when nothing follows q.
+      { args: ['repo', 'view', ...json(), '-q.', 'env'], name: 'env after an attached filter' },
+      { args: ['search', 'issues', '-Rorg/aqua', 'env'], name: 'env after a value holding q' },
+      { args: ['pr', 'list', '-Squery', 'env'], name: 'env after a search holding q' },
+    ])('allows $name', async ({ args }, { expect }) => {
       assertAllowed(expect, await callMocked(args));
     });
   });

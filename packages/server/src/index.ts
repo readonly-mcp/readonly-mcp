@@ -32,6 +32,10 @@
  *   Full URLs (http/https) are rejected — only relative paths accepted.
  *   Short-flag concatenation (-XPOST) is caught by the prefix matcher's
  *   short-flag rule.
+ * - gh --jq filters: gh evaluates `--jq`/`-q` with an embedded jq whose `env`
+ *   and `$ENV` return the server's environment, `GH_TOKEN` included when it
+ *   is set there. Filters are held to the same names check as the jq tool,
+ *   on every gh command, `api` included.
  * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
  *   `ls`, `git-credential`), so args are resolved to canonical names before
  *   matching and executed under those names. Unknown aliases stay unresolved

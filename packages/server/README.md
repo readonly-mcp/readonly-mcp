@@ -71,6 +71,8 @@ Read-only GitHub CLI commands: `attestation verify`, `cache list`, `gist list/vi
 
 Also supports `--version`, `--help`, `-h` as standalone flags.
 
+`--jq`/`-q` filters may not use `env`, `$ENV`, `import`, `include` or `modulemeta`, on `api` too: gh's embedded jq reads the server's environment through `env` and `$ENV`. As with `jq`, the check matches the word, so a string spelling one is rejected too; `.env` is a field and passes.
+
 **Schema:** `{ args: string[] }`
 
 ### `tea`
