@@ -29,7 +29,7 @@ includes = ["mise.tasks.toml"]
 [tools]
 # The hk actionlint step.
 actionlint = "1.7.12"
-hk = "2.10.0"
+hk = "2.11.0"
 node = "26.13.0"
 # renovate-config-validator, for the hk renovate-config step. The exemption
 # opts one transitive dependency out of the no-downgrade trust policy:
