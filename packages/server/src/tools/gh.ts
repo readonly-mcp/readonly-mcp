@@ -124,7 +124,9 @@ export const register = (server: McpServer): RegisteredTool =>
         'list/view, repo list/view, ruleset check/list/view, run list/view, search ' +
         'code/commits/issues/prs/repos, secret list, status, variable list, workflow list/view, ' +
         'api GET: pulls/reviews+reviewers, deployments+environments, check-runs+suites, ' +
-        'commits+statuses, compare, contents, user)',
+        'commits+statuses, compare, contents, user). api contents/<path> returns a ' +
+        'file\'s raw body, not base64 JSON; a directory still returns its JSON listing. ' +
+        'The endpoint comes before any flags.',
       inputSchema: ArgsSchema,
     },
     async ({ args }) => {
