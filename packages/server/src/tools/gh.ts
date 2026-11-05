@@ -1,7 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, isAllowedApiPath, isAllowlisted,
+  ArgsSchema, findBlockedFlag, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { exec, fail } from '#src/lib/exec.js';
@@ -89,17 +89,11 @@ const headerFlags = new Set(['-H', '--header']);
 const rawContentsHint = 'contents endpoints already return raw file content, ' +
   'so no Accept header is needed';
 
-const appendHint = (result: CallToolResult, hint: string): CallToolResult => ({
-  ...result,
-  content: result.content.map(item =>
-    item.type === 'text' ? { ...item, text: `${item.text}. ${hint}` } : item),
-});
-
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const [, endpoint, ...apiArgs] = args;
   if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
-  const header = rejectBlockedFlags(args, headerFlags);
-  if (header) return appendHint(header, rawContentsHint);
+  const header = findBlockedFlag(args, headerFlags);
+  if (header) return fail(`Flag not allowed: ${header}. ${rawContentsHint}`);
   const rejected = rejectBlockedFlags(args, apiBlockedFlags);
   if (rejected) return rejected;
   if (endpoint.startsWith('-'))
