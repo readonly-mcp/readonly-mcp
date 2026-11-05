@@ -4,7 +4,7 @@ import {
   ArgsSchema, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { exec } from '#src/lib/exec.js';
+import { exec, fail } from '#src/lib/exec.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
@@ -80,12 +80,30 @@ const apiBlockedFlags = new Set([
   '-H', '--header',
 ]);
 
+const headerFlags = new Set(['-H', '--header']);
+
+/*
+ * Agents usually reach for a header to get a file's raw body, which contents
+ * endpoints already return, so the rejection tells them so.
+ */
+const rawContentsHint = 'contents endpoints already return raw file content, ' +
+  'so no Accept header is needed';
+
+const appendHint = (result: CallToolResult, hint: string): CallToolResult => ({
+  ...result,
+  content: result.content.map(item =>
+    item.type === 'text' ? { ...item, text: `${item.text}. ${hint}` } : item),
+});
+
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const [, endpoint, ...apiArgs] = args;
-  if (!endpoint || endpoint.startsWith('-'))
-    return rejectApiEndpoint(endpoint, apiPaths);
+  if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
+  const header = rejectBlockedFlags(args, headerFlags);
+  if (header) return appendHint(header, rawContentsHint);
   const rejected = rejectBlockedFlags(args, apiBlockedFlags);
   if (rejected) return rejected;
+  if (endpoint.startsWith('-'))
+    return fail(`gh api endpoint must come first, before any flags: got ${endpoint}`);
   if (!isAllowedApiPath(endpoint, apiPaths))
     return rejectApiEndpoint(endpoint, apiPaths);
   // Auto-inject raw Accept header for contents endpoints so file

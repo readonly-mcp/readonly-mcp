@@ -128,6 +128,29 @@ describe.concurrent('gh api (unit)', () => {
     assertBlocked(expect, result);
   });
 
+  it('asks for the endpoint first when a flag precedes it', async ({ expect }) => {
+    const result = await callMocked(['api', '--jq', '.[].id', build.prCommentsPath()]);
+    assertBlocked(expect, result);
+
+    expect(textOf(result)).toContain('endpoint must come first');
+  });
+
+  it('reports a blocked flag before the endpoint as a blocked flag', async ({ expect }) => {
+    const result = await callMocked([
+      'api', '-H', 'Accept: text/plain', build.template('repos/:owner/:repo/contents/:file'),
+    ]);
+
+    expect(textOf(result)).toContain('Flag not allowed: -H');
+  });
+
+  it.for([
+    { name: '-H', args: apiArgs('-H', header()) },
+    { name: '--header', args: apiArgs('--header', header()) },
+    { name: '-HAccept:... (concatenated)', args: apiArgs('-HAccept:text/plain') },
+  ])('says contents are already raw when $name is blocked', async ({ args }, { expect }) => {
+    expect(textOf(await callMocked(args))).toContain('contents endpoints already return raw');
+  });
+
   it('blocks --method flag', async ({ expect }) => {
     const result = await callMocked(apiArgs('--method', 'POST'));
     assertBlocked(expect, result);
