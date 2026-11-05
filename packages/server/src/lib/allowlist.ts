@@ -143,12 +143,12 @@ const isSingleDashLong = (arg: string): boolean => /^-[^\-][^=]/v.test(arg);
 // with `--fix` (e.g., a hypothetical `--fixup`). This errs on the side of
 // safety: false positives (blocking a legitimate flag) are preferable to false
 // negatives (allowing a dangerous abbreviated flag through).
-export const rejectBlockedFlags = (
+export const findBlockedFlag = (
   args: readonly string[], blockedFlags: ReadonlySet<string>,
   {
     exempt = new Set(), expandsShortGroups = false, patterns = [], readsSingleDashLong = false,
   }: BlockedFlagOptions = {},
-): Rejection => {
+): string | undefined => {
   const isBlocked = (arg: string): boolean => {
     const name = arg.split('=', 1)[0] ?? arg;
     const group = expandsShortGroups ? shortFlags(name).flags : [];
@@ -162,9 +162,15 @@ export const rejectBlockedFlags = (
           (arg.startsWith(blocked) || group.includes(blocked.slice(1)))),
       );
   };
-  const flag = args.slice(1).find(arg =>
+  return args.slice(1).find(arg =>
     arg !== '--' && arg !== '-' &&
     (isBlocked(arg) || (readsSingleDashLong && isSingleDashLong(arg) && isBlocked('-' + arg))),
   );
+};
+
+export const rejectBlockedFlags = (
+  args: readonly string[], blockedFlags: ReadonlySet<string>, options?: BlockedFlagOptions,
+): Rejection => {
+  const flag = findBlockedFlag(args, blockedFlags, options);
   return flag ? fail(`Flag not allowed: ${flag}`) : undefined;
 };

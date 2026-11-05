@@ -1,10 +1,10 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, isAllowedApiPath, isAllowlisted,
+  ArgsSchema, findBlockedFlag, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { exec } from '#src/lib/exec.js';
+import { exec, fail } from '#src/lib/exec.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
@@ -80,12 +80,24 @@ const apiBlockedFlags = new Set([
   '-H', '--header',
 ]);
 
+const headerFlags = new Set(['-H', '--header']);
+
+/*
+ * Agents usually reach for a header to get a file's raw body, which contents
+ * endpoints already return, so the rejection tells them so.
+ */
+const rawContentsHint = 'contents endpoints already return raw file content, ' +
+  'so no Accept header is needed';
+
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const [, endpoint, ...apiArgs] = args;
-  if (!endpoint || endpoint.startsWith('-'))
-    return rejectApiEndpoint(endpoint, apiPaths);
+  if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
+  const header = findBlockedFlag(args, headerFlags);
+  if (header) return fail(`Flag not allowed: ${header}. ${rawContentsHint}`);
   const rejected = rejectBlockedFlags(args, apiBlockedFlags);
   if (rejected) return rejected;
+  if (endpoint.startsWith('-'))
+    return fail(`gh api endpoint must come first, before any flags: got ${endpoint}`);
   if (!isAllowedApiPath(endpoint, apiPaths))
     return rejectApiEndpoint(endpoint, apiPaths);
   // Auto-inject raw Accept header for contents endpoints so file
