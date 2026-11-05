@@ -87,10 +87,12 @@ interface ShortFlagGroup {
  * The flags of a short-flag group (`-wC5` holds w and C) and the value after
  * them, or no flags when the arg is not a group. The first flag in
  * `takesValue` ends the group, since it takes the rest of it as its value
- * (`-L1,5`, `-C5`).
+ * (`-L1,5`, `-C5`). Without it, every character is read as a flag.
  */
+const noValueFlags: ReadonlySet<string> = new Set();
+
 export const shortFlags = (
-  arg: string, takesValue: ReadonlySet<string>,
+  arg: string, takesValue: ReadonlySet<string> = noValueFlags,
 ): ShortFlagGroup => {
   if (!/^-[^\-]/v.test(arg)) return { flags: [], value: '' };
   const group = arg.slice(1).match(/./gsv) ?? [];
@@ -129,8 +131,6 @@ export interface BlockedFlagOptions {
   readonly readsSingleDashLong?: boolean;
 }
 
-const noValueFlags: ReadonlySet<string> = new Set();
-
 const isShortFlag = (flag: string): boolean => /^-[^\-]$/v.test(flag);
 
 // A single dash followed by at least two name characters.
@@ -151,7 +151,7 @@ export const rejectBlockedFlags = (
 ): Rejection => {
   const isBlocked = (arg: string): boolean => {
     const name = arg.split('=', 1)[0] ?? arg;
-    const group = expandsShortGroups ? shortFlags(name, noValueFlags).flags : [];
+    const group = expandsShortGroups ? shortFlags(name).flags : [];
     return (arg.startsWith('-') && patterns.some(pattern => pattern.test(name))) ||
       [...blockedFlags].some(blocked =>
         arg === blocked || arg.startsWith(blocked + '=') ||
