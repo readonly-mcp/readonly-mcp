@@ -34,6 +34,11 @@ minimumReleaseAgeExclude:
   - '@gtbuchanan/*'
   - '@readonly-mcp/*'
 
+overrides:
+  # oxfmt 0.35 pins tinypool 2.1.0, which carries two prototype-pollution
+  # advisories fixed in 2.1.2. Drop this once oxfmt moves past it.
+  'tinypool@<2.1.2': 2.2.0
+
 packages:
   - 'packages/*'
 
