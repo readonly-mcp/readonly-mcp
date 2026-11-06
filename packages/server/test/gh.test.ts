@@ -140,6 +140,8 @@ describe.concurrent('gh tool (unit)', () => {
       },
       { args: () => ['pr', 'view', `http://github.localhost/${build.repoSlug()}/pull/1`], name: 'a URL' },
       { args: () => ['repo', 'view', `GitHub.LocalHost/${build.repoSlug()}`], name: 'any case' },
+      // gh lowercases hosts with Go, which maps İ (U+0130) to a plain i.
+      { args: () => ['repo', 'view', `gİthub.localhost/${build.repoSlug()}`], name: 'a dotted İ' },
     ])('blocks $name naming it', async ({ args }, { expect }) => {
       const sent = args();
       const result = await callMocked(sent);

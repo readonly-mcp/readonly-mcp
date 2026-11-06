@@ -125,8 +125,20 @@ const rejectJqFilter = (args: readonly string[]): Rejection => {
  */
 const localGitHub = /github\.localhost/iv;
 
+/*
+ * gh lowercases a host with Go, which folds some non-ASCII letters into
+ * ASCII ones (İ to i) that a case-insensitive regex leaves apart. Each arg
+ * is decomposed and stripped of combining marks first, so such a letter
+ * matches its base; a spelling gh would not fold is rejected too, failing
+ * closed.
+ */
+const combiningMarks = /\p{M}/gv;
+
+const doesNameLocalGitHub = (arg: string): boolean =>
+  localGitHub.test(arg.normalize('NFKD').replaceAll(combiningMarks, ''));
+
 const rejectLocalhost = (args: readonly string[]): Rejection => {
-  const arg = args.find(candidate => localGitHub.test(candidate));
+  const arg = args.find(doesNameLocalGitHub);
   return arg === undefined ? undefined : fail(`gh may not reach github.localhost: ${arg}`);
 };
 

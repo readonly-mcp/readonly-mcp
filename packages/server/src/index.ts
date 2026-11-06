@@ -48,7 +48,8 @@
  * - gh github.localhost: gh treats `github.localhost` and its subdomains as
  *   github.com, so it sends `GH_TOKEN` there over plain HTTP, and many
  *   resolvers map `*.localhost` to loopback, where any local listener reads
- *   it. A gh arg naming that host anywhere, in any case, is rejected, which
+ *   it. A gh arg naming that host anywhere, in any case or in a spelling Go's
+ *   lowercasing folds into it (`gİthub`), is rejected, which
  *   covers `-R`, URL positionals and `--hostname` without parsing any.
  * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
  *   `ls`, `git-credential`), so args are resolved to canonical names before

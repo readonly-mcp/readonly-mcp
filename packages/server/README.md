@@ -75,7 +75,7 @@ Also supports `--version`, `--help`, `-h` as standalone flags.
 
 gh runs without `GH_ENTERPRISE_TOKEN` and `GITHUB_ENTERPRISE_TOKEN`: gh sends either to any host outside github.com that `-R HOST/OWNER/REPO`, a URL positional or `attestation verify --hostname` names. To reach GitHub Enterprise Server through this tool, store a token for it with `gh auth login --hostname <host>`, which gh sends to that host only.
 
-Args naming `github.localhost` are rejected, in any case and at any position: gh treats that host and its subdomains as github.com, so it sends `GH_TOKEN` there over plain HTTP, to wherever `*.localhost` resolves.
+Args naming `github.localhost` are rejected, in any case, at any position, and in spellings gh's lowercasing folds into it (`gİthub`): gh treats that host and its subdomains as github.com, so it sends `GH_TOKEN` there over plain HTTP, to wherever `*.localhost` resolves.
 
 **Schema:** `{ args: string[] }`
 
