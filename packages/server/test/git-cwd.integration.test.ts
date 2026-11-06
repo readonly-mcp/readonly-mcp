@@ -77,8 +77,11 @@ describe.concurrent('git tool cwd (integration)', () => {
       assertNotBlocked(expect, await call(['status'], toplevel));
     });
 
-    integration('rejects empty string cwd', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['status'], ''));
+    integration('rejects an empty cwd at the input schema', async ({ call, expect }) => {
+      const result = await call(['status'], '');
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toMatch(/Input validation error[\s\S]+\bcwd\b/v);
     });
 
     integration('rejects path traversal from valid worktree', async ({ call, expect }) => {
