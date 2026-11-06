@@ -149,10 +149,9 @@ const rejectCwd = async (cwd: string | undefined): Promise<Rejection> =>
  * Only diff has --output; other commands use -o for unrelated flags
  * (e.g., ls-files -o = --others).
  */
-const noValueFlags: ReadonlySet<string> = new Set();
 const rejectShortOutput = (args: readonly string[]): Rejection => {
   const shortO = args.slice(1).find(arg =>
-    shortFlags(arg.split('=', 1)[0] ?? arg, noValueFlags).flags.includes('o'),
+    shortFlags(arg.split('=', 1)[0] ?? arg).flags.includes('o'),
   );
   return shortO ? fail(`Flag not allowed: ${shortO}`) : undefined;
 };
