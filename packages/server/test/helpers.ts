@@ -1,7 +1,6 @@
 /**
- * Shared MCP test client for integration tests.
- *
- * Spawns the MCP server as a child process and communicates over JSON-RPC/stdio.
+ * Shared MCP test clients for integration tests: an in-process server, or
+ * one spawned as a child process and spoken to over JSON-RPC/stdio.
  */
 
 import { spawn } from 'node:child_process';
@@ -43,7 +42,7 @@ const describeRequest = (result: CallToolResult): string =>
 /**
  * Spawns the server in `cwd`, the directory its tools run commands in.
  */
-export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } = {}) => {
+export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } = {}): Server => {
   const proc = spawn('node', [serverPath], {
     stdio: ['pipe', 'pipe', 'pipe'],
     cwd,
@@ -113,7 +112,50 @@ export const startServer = ({ cwd = process.cwd() }: { readonly cwd?: string } =
   return { initialize, callTool, close };
 };
 
-export type Server = ReturnType<typeof startServer>;
+/**
+ * A server an integration suite calls tools on, spawned or in-process.
+ */
+export interface Server {
+  readonly callTool: (name: string, args: unknown) => Promise<CallToolResult>;
+  readonly close: () => Promise<void>;
+  readonly initialize: () => Promise<unknown>;
+}
+
+/**
+ * Every tool registered on one McpServer, as `src/index.ts` registers them,
+ * connected to a client in memory. Tools run real commands in the test's own
+ * process, so coverage counts them; a suite that needs another working
+ * directory spawns the server with `startServer` instead.
+ */
+export const connectServer = (): Server => {
+  const server = new McpServer({ name: 'test', version: '0.0.0' });
+  const client = new Client({ name: 'test', version: '0.0.0' });
+
+  const initialize = async () => {
+    const tools = await import('#src/tools/index.js');
+    for (const register of Object.values(tools)) register(server);
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  };
+
+  // A protocol error, such as an unknown tool, answers as a failed result.
+  const callTool = async (name: string, args: unknown): Promise<CallToolResult> => {
+    const params = { arguments: z.record(z.string(), z.unknown()).parse(args), name };
+    try {
+      return remember(args, CallToolResultSchema.parse(await client.callTool(params)));
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      return remember(args, { content: [{ text, type: 'text' }], isError: true });
+    }
+  };
+
+  const close = async () => {
+    await client.close();
+    await server.close();
+  };
+
+  return { callTool, close, initialize };
+};
 
 /**
  * A call to one tool with `args`, as a suite's `call` fixture binds it:
@@ -125,8 +167,9 @@ export type Server = ReturnType<typeof startServer>;
 export type Call = (args: readonly string[]) => Promise<CallToolResult>;
 
 /**
- * The body of a `server` fixture: hands `use` a server spawned in `cwd` and
- * closes it once `use` settles.
+ * The body of a `server` fixture: hands `use` a server and closes it once
+ * `use` settles. The server runs in-process unless `cwd` is given, which
+ * spawns it there.
  *
  * The suite initializes it in a `beforeAll` on the extended test function.
  * A file-scoped fixture is otherwise set up inside whichever tests first ask
@@ -147,7 +190,7 @@ export type Call = (args: readonly string[]) => Promise<CallToolResult>;
 export const useServer = async (
   use: (server: Server) => Promise<void>, options?: { readonly cwd?: string },
 ) => {
-  const server = startServer(options);
+  const server = options?.cwd === undefined ? connectServer() : startServer(options);
   try {
     await use(server);
   } finally {
