@@ -1,6 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, isAllowlisted, rejectSubcommand } from '#src/lib/allowlist.js';
-import { exec } from '#src/lib/exec.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, run } from '#src/lib/plan.js';
 
 const subcommands = new Set([
   'jira board list',
@@ -13,6 +14,9 @@ const subcommands = new Set([
   'jira workitem view',
 ]);
 
+export const plan = (args: readonly string[]): Plan =>
+  isAllowlisted(args, subcommands) ? run('acli', args) : rejectSubcommand(args, subcommands);
+
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'acli',
@@ -21,9 +25,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'board/filter/project/sprint/workitem list/search/view/comment list)',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      return isAllowlisted(args, subcommands)
-        ? exec('acli', args)
-        : rejectSubcommand(args, subcommands);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );

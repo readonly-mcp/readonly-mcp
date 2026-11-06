@@ -13,7 +13,8 @@ src/
   index.ts          Server entry point (security rationale in header comment)
   lib/
     allowlist.ts    Allowlist matching, flag blocking, JSON array coercion
-    exec.ts         Sandboxed command execution (execFile, no shell)
+    exec.ts         Sandboxed command execution (execFile, no shell); runPlan
+    plan.ts         What a tool decides: run a command, or reject the call
   tools/
     index.ts        Tool registry (barrel export)
     <tool>.ts       One file per CLI tool (git, gh, az, npm, pnpm, chezmoi, acli, shell, tea)
@@ -48,7 +49,9 @@ These are non-negotiable. Every change must preserve them:
 1. Define `blockedFlags` for any flags that could mutate state, leak secrets,
    or enable SSRF
 1. Use `rejectSubcommand()` and `rejectBlockedFlags()` from `src/lib/allowlist.ts`
-1. Use `exec()` from `src/lib/exec.ts` — never `child_process` directly
+1. Export a pure `plan(args)` that returns `run()` or `reject()` from
+   `src/lib/plan.ts`, and have the handler return `runPlan(plan(args))` from
+   `src/lib/exec.ts` — never `child_process` directly
 1. Re-export from `src/tools/index.ts`
 1. Add tests in `test/<name>.test.ts` covering allowed commands, blocked
    subcommands, blocked flags, and injection attempts.

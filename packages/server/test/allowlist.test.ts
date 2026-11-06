@@ -5,7 +5,6 @@ import {
   ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
 import * as build from '#test/builders.js';
-import { textOf } from '#test/helpers.js';
 
 describe('ArgsSchema coercion', () => {
   const schema = z.object(ArgsSchema);
@@ -151,29 +150,29 @@ describe('rejectSubcommand', () => {
   const allowed = [word(), word()];
   const allowlist = new Set(allowed);
 
-  it('returns isError: true', ({ expect }) => {
+  it('returns a rejection', ({ expect }) => {
     const result = rejectSubcommand([word()], allowlist);
 
-    expect(result.isError).toBe(true);
+    expect(result.kind).toBe('reject');
   });
 
   it('includes the rejected subcommand in message', ({ expect }) => {
     const rejected = word();
     const result = rejectSubcommand([rejected], allowlist);
 
-    expect(textOf(result)).toContain(`not allowed: ${rejected}.`);
+    expect(result.reason).toContain(`not allowed: ${rejected}.`);
   });
 
   it('includes allowed subcommands in message', ({ expect }) => {
     const result = rejectSubcommand([word()], allowlist);
 
-    expect(textOf(result)).toContain(`Allowed: ${allowed.join(', ')}`);
+    expect(result.reason).toContain(`Allowed: ${allowed.join(', ')}`);
   });
 
   it('shows (none) for empty args', ({ expect }) => {
     const result = rejectSubcommand([], allowlist);
 
-    expect(textOf(result)).toContain('(none)');
+    expect(result.reason).toContain('(none)');
   });
 });
 
@@ -194,13 +193,13 @@ describe('rejectBlockedFlags', () => {
     it('blocks exact flag', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand('--fix'), blocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('blocks flag=value form', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand(`--registry=${build.httpsUrl()}`), blocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('returns undefined when no blocked flags present', ({ expect }) => {
@@ -221,25 +220,25 @@ describe('rejectBlockedFlags', () => {
     it('blocks abbreviated --reg (matches --registry)', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand('--reg', build.httpsUrl()), blocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('blocks abbreviated --registr', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand('--registr', build.httpsUrl()), blocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('blocks abbreviated --fi (matches --fix)', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand('--fi'), blocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('blocks abbreviated --reg=value form', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand(`--reg=${build.httpsUrl()}`), blocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('does not block unrelated flag with similar prefix', ({ expect }) => {
@@ -262,14 +261,14 @@ describe('rejectBlockedFlags', () => {
     it('blocks -XPOST (value concatenated to short flag)', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand(faker.lorem.word(), '-XPOST'), shortBlocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('blocks -fkey=val (value concatenated to short flag)', ({ expect }) => {
       const arg = `-f${faker.lorem.word()}=${faker.lorem.word()}`;
       const result = rejectBlockedFlags(withSubcommand(faker.lorem.word(), arg), shortBlocked);
 
-      expect(result?.isError).toBe(true);
+      expect(result?.kind).toBe('reject');
     });
 
     it('does not false-positive on long flag starting with single dash char', ({ expect }) => {
@@ -317,7 +316,7 @@ describe('rejectBlockedFlags', () => {
     it('reports the first blocked flag found', ({ expect }) => {
       const result = rejectBlockedFlags(withSubcommand('--fix', '--registry'), blocked);
 
-      expect(textOf(result)).toBe('Flag not allowed: --fix');
+      expect(result?.reason).toBe('Flag not allowed: --fix');
     });
   });
 });

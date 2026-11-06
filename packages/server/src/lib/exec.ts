@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import type { Plan } from '#src/lib/plan.js';
 
 const run = promisify(execFile);
 
@@ -111,6 +112,15 @@ export const readOutput = async (cmd: string, args: readonly string[]): Promise<
   return stdout;
 };
 
-export const execShell = async (cmd: string, args: readonly string[]): Promise<CallToolResult> => {
-  return isWindows ? exec('bash', ['-c', 'exec "$@"', '--', cmd, ...args]) : exec(cmd, args);
+export const execShell = async (
+  cmd: string, args: readonly string[], options: ExecOptions = {},
+): Promise<CallToolResult> => isWindows
+  ? exec('bash', ['-c', 'exec "$@"', '--', cmd, ...args], options)
+  : exec(cmd, args, options);
+
+// Carries out a tool's plan: runs its command, or answers with its rejection.
+export const runPlan = async (plan: Plan): Promise<CallToolResult> => {
+  if (plan.kind === 'reject') return fail(plan.reason);
+  const runner = plan.runner === 'shell' ? execShell : exec;
+  return runner(plan.cmd, plan.args, plan.options);
 };

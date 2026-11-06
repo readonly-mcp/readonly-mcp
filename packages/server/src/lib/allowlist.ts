@@ -1,9 +1,5 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { fail } from '#src/lib/exec.js';
-
-// What a reject helper returns: the failure, or undefined when nothing is rejected.
-export type Rejection = CallToolResult | undefined;
+import { type Reject, type Rejection, reject } from '#src/lib/plan.js';
 
 // LLMs frequently serialize array parameters as JSON strings instead of native
 // arrays (e.g., '["status", "-sb"]' instead of ["status", "-sb"]). The MCP
@@ -37,10 +33,10 @@ export const isAllowlisted = (args: readonly string[], allowlist: ReadonlySet<st
 
 export const rejectSubcommand = (
   args: readonly string[], allowlist: ReadonlySet<string>,
-): CallToolResult => {
+): Reject => {
   const depth = maxDepthOf(allowlist);
   const sub = args.slice(0, depth).join(' ') || '(none)';
-  return fail(`Subcommand not allowed: ${sub}. Allowed: ${[...allowlist].join(', ')}`);
+  return reject(`Subcommand not allowed: ${sub}. Allowed: ${[...allowlist].join(', ')}`);
 };
 
 export const normalizeApiPath = (endpoint: string | undefined): string =>
@@ -72,9 +68,10 @@ export const isAllowedApiPath = (
 
 export const rejectApiEndpoint = (
   endpoint: string | undefined, patterns: readonly string[],
-): CallToolResult => {
+): Reject => {
   const normalized = normalizeApiPath(endpoint) || '(none)';
-  return fail(`API endpoint not allowed: ${normalized}. Allowed patterns: ${patterns.join(', ')}`);
+  return reject(`API endpoint not allowed: ${normalized}. ` +
+    `Allowed patterns: ${patterns.join(', ')}`);
 };
 
 /*
@@ -186,5 +183,5 @@ export const rejectBlockedFlags = (
   args: readonly string[], blockedFlags: ReadonlySet<string>, options?: BlockedFlagOptions,
 ): Rejection => {
   const flag = findBlockedFlag(args, blockedFlags, options);
-  return flag ? fail(`Flag not allowed: ${flag}`) : undefined;
+  return flag ? reject(`Flag not allowed: ${flag}`) : undefined;
 };

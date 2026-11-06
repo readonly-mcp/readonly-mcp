@@ -1,8 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  ArgsSchema, type Rejection, rejectSubcommand, shortFlags,
-} from '#src/lib/allowlist.js';
-import { exec, fail } from '#src/lib/exec.js';
+import { ArgsSchema, rejectSubcommand, shortFlags } from '#src/lib/allowlist.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 
 interface Options {
   readonly long: ReadonlySet<string>;
@@ -87,7 +86,14 @@ const isOption = (arg: string): boolean => arg.startsWith('-') && arg !== '-' &&
  */
 const rejectOptions = (args: readonly string[], own: Options): Rejection => {
   const option = args.slice(1).find(arg => isOption(arg) && !isAllowedOption(arg, own));
-  return option === undefined ? undefined : fail(`Flag not allowed for chezmoi: ${option}`);
+  return option === undefined ? undefined : reject(`Flag not allowed for chezmoi: ${option}`);
+};
+
+export const plan = (args: readonly string[]): Plan => {
+  const own = commandOptions.get(args[0] ?? '');
+  return own
+    ? rejectOptions(args, own) ?? run('chezmoi', args)
+    : rejectSubcommand(args, subcommands);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -98,10 +104,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'target-path, verify)',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      const own = commandOptions.get(args[0] ?? '');
-      return own
-        ? rejectOptions(args, own) ?? exec('chezmoi', args)
-        : rejectSubcommand(args, subcommands);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );

@@ -1,7 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ArgsSchema, isAllowlisted, rejectSubcommand } from '#src/lib/allowlist.js';
-import { execShell, fail } from '#src/lib/exec.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 
 const subcommands = new Set([
   // devops
@@ -58,22 +58,40 @@ const flagValues = (args: readonly string[], flag: string): string[] => {
   return values;
 };
 
-const rejectInvokeEndpoint = (args: readonly string[]): CallToolResult | undefined => {
+const rejectInvokeEndpoint = (args: readonly string[]): Rejection => {
   const [area, ...extraAreas] = flagValues(args, '--area');
   if (area === undefined)
-    return fail('Missing required flag: --area');
+    return reject('Missing required flag: --area');
   const [resource, ...extraResources] = flagValues(args, '--resource');
   if (resource === undefined)
-    return fail('Missing required flag: --resource');
+    return reject('Missing required flag: --resource');
   if (extraAreas.length > 0)
-    return fail('Flag not allowed: duplicate --area');
+    return reject('Flag not allowed: duplicate --area');
   if (extraResources.length > 0)
-    return fail('Flag not allowed: duplicate --resource');
+    return reject('Flag not allowed: duplicate --resource');
   const endpoint = `${area}/${resource}`;
   return invokeAllowedEndpoints.has(endpoint)
     ? undefined
-    : fail(`Endpoint not allowed for devops invoke: --area ${area} --resource ${resource}. ` +
+    : reject(`Endpoint not allowed for devops invoke: --area ${area} --resource ${resource}. ` +
       `Allowed: ${[...invokeAllowedEndpoints].join(', ')}`);
+};
+
+export const plan = (args: readonly string[]): Plan => {
+  if (!isAllowlisted(args, subcommands))
+    return rejectSubcommand(args, subcommands);
+  const [group, command, ...invokeArgs] = args;
+  if (group !== 'devops' || command !== 'invoke') return run('az', args, { runner: 'shell' });
+  // Reject any flag (single or double dash) not in the allowlist. This
+  // blocks unknown short flags (e.g., `-X`) that could bypass the `--`-only
+  // check. Flag values for known flags (e.g., `--area build`) are not
+  // checked here because they don't start with `-` in normal usage.
+  const unknownFlag = invokeArgs.find(arg =>
+    arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
+  // Explicitly force GET so we don't depend on az CLI's default
+  return unknownFlag
+    ? reject(`Flag not allowed: ${unknownFlag}`)
+    : rejectInvokeEndpoint(args) ??
+      run('az', [...args, '--http-method', 'GET'], { runner: 'shell' });
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -88,22 +106,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'logs/timeline).',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      if (!isAllowlisted(args, subcommands))
-        return rejectSubcommand(args, subcommands);
-      const [group, command, ...invokeArgs] = args;
-      if (group === 'devops' && command === 'invoke') {
-        // Reject any flag (single or double dash) not in the allowlist. This
-        // blocks unknown short flags (e.g., `-X`) that could bypass the `--`-only
-        // check. Flag values for known flags (e.g., `--area build`) are not
-        // checked here because they don't start with `-` in normal usage.
-        const unknownFlag = invokeArgs.find(arg =>
-          arg.startsWith('-') && !invokeAllowedFlags.has(arg.split('=', 1)[0] ?? arg));
-        // Explicitly force GET so we don't depend on az CLI's default
-        return unknownFlag
-          ? fail(`Flag not allowed: ${unknownFlag}`)
-          : rejectInvokeEndpoint(args) ?? execShell('az', [...args, '--http-method', 'GET']);
-      }
-      return execShell('az', args);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );

@@ -1,10 +1,10 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, type Rejection, isAllowedApiPath, normalizeApiPath,
+  ArgsSchema, isAllowedApiPath, normalizeApiPath,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { exec, fail } from '#src/lib/exec.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 
 const globalFlags = new Set(['--help', '--version', '-h', '-v']);
 
@@ -134,7 +134,7 @@ const rejectRepoPath = (args: readonly string[]): Rejection => {
   const path = repoValues(args).find(value => !isRepoSlug(value));
   return path === undefined
     ? undefined
-    : fail(`--repo must be an owner/name slug, not a path: ${path}`);
+    : reject(`--repo must be an owner/name slug, not a path: ${path}`);
 };
 
 // A value flag spans one arg as --name=value, two as --name value.
@@ -144,11 +144,11 @@ const rejectPositionals = (
   positionals: readonly string[], positional: BarePolicy['positional'],
 ): Rejection => {
   if (positionals.length > 1)
-    return fail(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
+    return reject(`At most one positional argument allowed, got: ${positionals.join(' ')}`);
   const invalid = positionals.find(candidate => !positional(candidate));
   return invalid === undefined
     ? undefined
-    : fail(`Positional argument not allowed: ${invalid}`);
+    : reject(`Positional argument not allowed: ${invalid}`);
 };
 
 // Walks the args after a bare command, consuming each flag's value by arity.
@@ -172,7 +172,7 @@ const rejectBareArgs = (
       const width = arg.includes('=') ? 1 : flagAndValueArgs;
       return step(index + width, positionals, false);
     }
-    return fail(`Flag not allowed: ${arg}`);
+    return reject(`Flag not allowed: ${arg}`);
   };
   return step(0, [], false);
 };
@@ -254,7 +254,7 @@ const isAllowedEndpoint = (endpoint: string): boolean =>
   isAllowedApiPath(endpoint, apiPaths) &&
   normalizeApiPath(endpoint).split('/').every(isPlainSegment);
 
-const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
+const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...rest] = args;
   if (!endpoint || endpoint.startsWith('-') || !isAllowedEndpoint(endpoint))
     return rejectApiEndpoint(endpoint, apiPaths);
@@ -264,10 +264,10 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
     rejectRepoPath(rest);
   // Inject --method GET immediately after the endpoint, before any
   // user-supplied flags, so a `--` in user args cannot turn it positional.
-  return rejected ?? exec('tea', ['api', endpoint, '--method', 'GET', ...rest]);
+  return rejected ?? run('tea', ['api', endpoint, '--method', 'GET', ...rest]);
 };
 
-const runCommand = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
+const planCommand = (args: readonly string[]): Plan => {
   const resolved = resolve(args);
   if (!resolved || !allowed.has(resolved.key))
     return rejectSubcommand(args, allowed);
@@ -280,7 +280,14 @@ const runCommand = (args: readonly string[]): Promise<CallToolResult> | CallTool
     (barePolicies[key] && rejectBareArgs(rest, barePolicies[key]));
 
   // Run under canonical names so what executes is what was validated.
-  return rejected ?? exec('tea', [...command, ...rest]);
+  return rejected ?? run('tea', [...command, ...rest]);
+};
+
+export const plan = (args: readonly string[]): Plan => {
+  const [only, ...others] = args;
+  const isGlobal = only !== undefined && others.length === 0 && globalFlags.has(only);
+  if (isGlobal) return run('tea', args);
+  return args[0] === 'api' ? planApi(args) : planCommand(args);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -293,10 +300,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'pulls/reviews, commits/status+statuses, contents, raw, user)',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      const [only, ...others] = args;
-      const isGlobal = only !== undefined && others.length === 0 && globalFlags.has(only);
-      if (isGlobal) return exec('tea', args);
-      return args[0] === 'api' ? runApi(args) : runCommand(args);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );

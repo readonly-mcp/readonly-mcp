@@ -1,15 +1,17 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, type Rejection, findBlockedFlag, findBlockedJqName, isAllowedApiPath,
+  ArgsSchema, findBlockedFlag, findBlockedJqName, isAllowedApiPath,
   isAllowlisted, rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
-import { type ExecOptions, exec, fail } from '#src/lib/exec.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, type Rejection, type RunOptions, reject, run } from '#src/lib/plan.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
 // gh sends these to any host a caller names; see "gh enterprise tokens" in index.ts.
-const ghOptions: ExecOptions = { excludedEnv: ['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'] };
+const ghRun: RunOptions = {
+  options: { excludedEnv: ['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'] },
+};
 
 const subcommands = new Set([
   'attestation verify',
@@ -115,7 +117,7 @@ const jqFilters = (args: readonly string[]): string[] => args.flatMap((arg, inde
  */
 const rejectJqFilter = (args: readonly string[]): Rejection => {
   const name = jqFilters(args).map(findBlockedJqName).find(used => used !== undefined);
-  return name === undefined ? undefined : fail(`Filter may not use ${name} for gh --jq`);
+  return name === undefined ? undefined : reject(`Filter may not use ${name} for gh --jq`);
 };
 
 /*
@@ -139,18 +141,18 @@ const doesNameLocalGitHub = (arg: string): boolean =>
 
 const rejectLocalhost = (args: readonly string[]): Rejection => {
   const arg = args.find(doesNameLocalGitHub);
-  return arg === undefined ? undefined : fail(`gh may not reach github.localhost: ${arg}`);
+  return arg === undefined ? undefined : reject(`gh may not reach github.localhost: ${arg}`);
 };
 
-const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
+const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...apiArgs] = args;
   if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
   const header = findBlockedFlag(args, headerFlags);
-  if (header) return fail(`Flag not allowed: ${header}. ${rawContentsHint}`);
+  if (header) return reject(`Flag not allowed: ${header}. ${rawContentsHint}`);
   const rejected = rejectBlockedFlags(args, apiBlockedFlags);
   if (rejected) return rejected;
   if (endpoint.startsWith('-'))
-    return fail(`gh api endpoint must come first, before any flags: got ${endpoint}`);
+    return reject(`gh api endpoint must come first, before any flags: got ${endpoint}`);
   if (!isAllowedApiPath(endpoint, apiPaths))
     return rejectApiEndpoint(endpoint, apiPaths);
   // Auto-inject raw Accept header for contents endpoints so file
@@ -165,7 +167,19 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   // a `--` (end-of-options marker) in user args, since everything after
   // `--` is treated as positional, making the injected flag a no-op.
   return rejectLocalhost(args) ?? rejectJqFilter(args) ??
-    exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs], ghOptions);
+    run('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs], ghRun);
+};
+
+export const plan = (args: readonly string[]): Plan => {
+  const [only, ...rest] = args;
+  const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
+  if (isGlobal) return run('gh', args, ghRun);
+
+  if (args[0] === 'api') return planApi(args);
+
+  return isAllowlisted(args, subcommands)
+    ? rejectLocalhost(args) ?? rejectJqFilter(args) ?? run('gh', args, ghRun)
+    : rejectSubcommand(args, subcommands);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -183,15 +197,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'The endpoint comes before any flags.',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      const [only, ...rest] = args;
-      const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
-      if (isGlobal) return exec('gh', args, ghOptions);
-
-      if (args[0] === 'api') return runApi(args);
-
-      return isAllowlisted(args, subcommands)
-        ? rejectLocalhost(args) ?? rejectJqFilter(args) ?? exec('gh', args, ghOptions)
-        : rejectSubcommand(args, subcommands);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );

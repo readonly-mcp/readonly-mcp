@@ -13,6 +13,7 @@ import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol
 import type { ExpectStatic } from 'vitest';
 import { z } from 'zod';
 import type * as ExecModule from '#src/lib/exec.js';
+import type { Plan } from '#src/lib/plan.js';
 
 const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
 
@@ -242,8 +243,8 @@ const echoExec = (
 
 /**
  * A `vi.mock` factory for `lib/exec.ts` that keeps the real module but
- * replaces both runners with `echoExec`, so a tool reaching for either one
- * spawns nothing:
+ * replaces both runners and `runPlan` with `echoExec`, so a tool reaching
+ * for any of them spawns nothing:
  *
  * ```ts
  * vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
@@ -254,11 +255,18 @@ const echoExec = (
  *
  * The factory is hoisted above the file's imports, hence the dynamic import.
  */
-export const withEchoExec = async (importOriginal: () => Promise<typeof ExecModule>) => ({
-  ...(await importOriginal()),
-  exec: echoExec,
-  execShell: echoExec,
-});
+export const withEchoExec = async (importOriginal: () => Promise<typeof ExecModule>) => {
+  const original = await importOriginal();
+  return {
+    ...original,
+    exec: echoExec,
+    execShell: echoExec,
+    // runPlan calls the module's own exec, which the overrides above do not reach.
+    runPlan: async (plan: Plan): Promise<CallToolResult> => plan.kind === 'reject'
+      ? original.fail(plan.reason)
+      : echoExec(plan.cmd, plan.args, plan.options),
+  };
+};
 
 /**
  * The command an `echoExec` result says the tool would have run.

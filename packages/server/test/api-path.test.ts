@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { isAllowedApiPath, rejectApiEndpoint } from '#src/lib/allowlist.js';
 import * as build from '#test/builders.js';
-import { textOf } from '#test/helpers.js';
 
 describe('isAllowedApiPath', () => {
   const patterns = [
@@ -129,28 +128,28 @@ describe('isAllowedApiPath', () => {
 describe('rejectApiEndpoint', () => {
   const patterns = ['repos/*/pulls/*/comments'];
 
-  it('returns isError: true', ({ expect }) => {
+  it('returns a rejection', ({ expect }) => {
     const result = rejectApiEndpoint(`${build.repoApiPath()}/${faker.lorem.word()}`, patterns);
 
-    expect(result.isError).toBe(true);
+    expect(result.kind).toBe('reject');
   });
 
   it('includes normalized endpoint in message', ({ expect }) => {
     const endpoint = `${build.repoApiPath()}/${faker.lorem.word()}`;
     const result = rejectApiEndpoint(`/${endpoint}${build.queryString()}`, patterns);
 
-    expect(textOf(result)).toContain(`not allowed: ${endpoint}.`);
+    expect(result.reason).toContain(`not allowed: ${endpoint}.`);
   });
 
   it('includes allowed patterns in message', ({ expect }) => {
     const result = rejectApiEndpoint(build.words(2).join('/'), patterns);
 
-    expect(textOf(result)).toContain('repos/*/pulls/*/comments');
+    expect(result.reason).toContain('repos/*/pulls/*/comments');
   });
 
   it('shows (none) for undefined endpoint', ({ expect }) => {
     const result = rejectApiEndpoint(undefined, patterns);
 
-    expect(textOf(result)).toContain('(none)');
+    expect(result.reason).toContain('(none)');
   });
 });

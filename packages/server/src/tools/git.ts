@@ -2,9 +2,10 @@ import path from 'node:path';
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
-  ArgsSchema, type Rejection, rejectBlockedFlags, rejectSubcommand, shortFlags,
+  ArgsSchema, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
-import { exec, fail, readOutput } from '#src/lib/exec.js';
+import { readOutput, runPlan } from '#src/lib/exec.js';
+import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 
 const subcommands = new Set([
   'blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree',
@@ -140,7 +141,7 @@ const firstPositional = (args: readonly string[]): string | undefined => {
 const rejectCwd = async (cwd: string | undefined): Promise<Rejection> =>
   cwd === undefined || await isKnownWorktree(cwd)
     ? undefined
-    : fail('cwd rejected: not a known git worktree');
+    : reject('cwd rejected: not a known git worktree');
 
 /*
  * Block -o short flag on diff only: standalone (-o), concatenated (-ofile),
@@ -153,7 +154,7 @@ const rejectShortOutput = (args: readonly string[]): Rejection => {
   const shortO = args.slice(1).find(arg =>
     shortFlags(arg.split('=', 1)[0] ?? arg).flags.includes('o'),
   );
-  return shortO ? fail(`Flag not allowed: ${shortO}`) : undefined;
+  return shortO ? reject(`Flag not allowed: ${shortO}`) : undefined;
 };
 
 /*
@@ -167,7 +168,7 @@ const rejectBlameArgs = (args: readonly string[]): Rejection => {
     if (arg === '-' || !arg.startsWith('-')) return step(index + 1);
     const span = blameOptionSpan(arg);
     return span === undefined
-      ? fail(`Flag not allowed for git blame: ${arg}`)
+      ? reject(`Flag not allowed for git blame: ${arg}`)
       : step(index + span);
   };
   return step(1);
@@ -183,7 +184,7 @@ const allowSubcommands = (
   const subSub = firstPositional(args.slice(1));
   if (subSub ? allowedSubs.has(subSub) : isBareAllowed) return undefined;
   const allowed = [...isBareAllowed ? ['(none)'] : [], ...allowedSubs].join(', ');
-  return fail(`Subcommand not allowed for git ${sub}: ${subSub ?? '(none)'}. ` +
+  return reject(`Subcommand not allowed for git ${sub}: ${subSub ?? '(none)'}. ` +
     `Allowed: ${allowed}`);
 };
 
@@ -191,11 +192,11 @@ const rejectRemoteFlags = (args: readonly string[]): Rejection => {
   const remoteArgs = args.slice(1);
   // `remote show` requires `-n` to prevent network I/O (SSRF risk)
   if (firstPositional(remoteArgs) === 'show' && !remoteArgs.includes('-n'))
-    return fail('git remote show requires -n (no network I/O)');
+    return reject('git remote show requires -n (no network I/O)');
   const blockedFlag = remoteArgs
     .filter(arg => arg.startsWith('-'))
     .find(arg => !remoteAllowedFlags.has(arg));
-  return blockedFlag ? fail(`Flag not allowed for git remote: ${blockedFlag}`) : undefined;
+  return blockedFlag ? reject(`Flag not allowed for git remote: ${blockedFlag}`) : undefined;
 };
 
 const allowRemoteSubcommands =
@@ -227,6 +228,20 @@ const withListMode = (args: readonly string[]): readonly string[] => {
   return sub === 'branch' && !isShowCurrent ? [sub, '--list', ...rest] : args;
 };
 
+export const plan = async (args: readonly string[], cwd?: string): Promise<Plan> => {
+  const sub = args[0];
+  if (sub === undefined || !subcommands.has(sub)) return rejectSubcommand(args, subcommands);
+  const rejected =
+    // Block --output and --no-index with prefix matching (defeats abbreviation)
+    rejectBlockedFlags(args, blockedFlags) ??
+    subcommandChecks[sub]?.(args) ??
+    await rejectCwd(cwd);
+  // Inject --no-pager to prevent interactive pager from blocking the process.
+  // If a valid worktree cwd was given, inject -C <dir> to target that worktree.
+  const target = cwd ? ['-C', cwd] : [];
+  return rejected ?? run('git', ['--no-pager', ...target, ...withListMode(args)]);
+};
+
 const GitSchema = {
   ...ArgsSchema,
   cwd: z.string().min(1).optional()
@@ -243,18 +258,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'worktree). Pass cwd when operating from a linked worktree.',
       inputSchema: GitSchema,
     },
-    async ({ args, cwd }) => {
-      const sub = args[0];
-      if (sub === undefined || !subcommands.has(sub)) return rejectSubcommand(args, subcommands);
-      const rejected =
-        // Block --output and --no-index with prefix matching (defeats abbreviation)
-        rejectBlockedFlags(args, blockedFlags) ??
-        subcommandChecks[sub]?.(args) ??
-        await rejectCwd(cwd);
-      if (rejected) return rejected;
-      // Inject --no-pager to prevent interactive pager from blocking the process.
-      // If a valid worktree cwd was given, inject -C <dir> to target that worktree.
-      const target = cwd ? ['-C', cwd] : [];
-      return exec('git', ['--no-pager', ...target, ...withListMode(args)]);
-    },
+    async ({ args, cwd }) => runPlan(await plan(args, cwd)),
   );

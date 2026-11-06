@@ -5,7 +5,8 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server
 import {
   ArgsSchema, type BlockedFlagOptions, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { execShell } from '#src/lib/exec.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, run } from '#src/lib/plan.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
@@ -37,6 +38,15 @@ const blockedFlagOptions = {
   readsSingleDashLong: true,
 } satisfies BlockedFlagOptions;
 
+export const plan = (args: readonly string[]): Plan => {
+  const [only, ...rest] = args;
+  const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
+  return isGlobal || isAllowlisted(args, subcommands)
+    ? rejectBlockedFlags(args, blockedFlags, blockedFlagOptions) ??
+    run('pnpm', args, { runner: 'shell' })
+    : rejectSubcommand(args, subcommands);
+};
+
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'pnpm',
@@ -45,12 +55,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'list, outdated, root, search, store status, why)',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      const [only, ...rest] = args;
-      const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
-      if (!isGlobal && !isAllowlisted(args, subcommands))
-        return rejectSubcommand(args, subcommands);
-      const rejected = rejectBlockedFlags(args, blockedFlags, blockedFlagOptions);
-      return rejected ?? execShell('pnpm', args);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );

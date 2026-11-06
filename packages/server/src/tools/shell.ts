@@ -1,7 +1,8 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ArgsSchema, type Rejection, findBlockedJqName } from '#src/lib/allowlist.js';
-import { execShell, fail } from '#src/lib/exec.js';
+import { ArgsSchema, findBlockedJqName } from '#src/lib/allowlist.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 
 const commands = new Set([
   'basename', 'date', 'dirname', 'eza', 'file', 'jq', 'ls', 'pwd',
@@ -48,9 +49,9 @@ const isJqOption = (arg: string): boolean => /^-(?:[a-zA-Z\-]|$)/v.test(arg);
  */
 const rejectPositional = (arg: string, hasFilter: boolean): Rejection => {
   if (hasFilter)
-    return fail(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
+    return reject(`File arguments not allowed for jq (use stdin via piping). Got: ${arg}`);
   const name = findBlockedJqName(arg);
-  return name ? fail(`Filter may not use ${name} for jq`) : undefined;
+  return name ? reject(`Filter may not use ${name} for jq`) : undefined;
 };
 
 /*
@@ -68,10 +69,17 @@ const validateJqArgs = (args: readonly string[]): Rejection => {
     if (arg === '--') return step(index + 1, hasFilter, true);
     const span = jqShortOptions.test(arg) ? flagOnly : jqLongOptions.get(arg);
     return span === undefined
-      ? fail(`Flag not allowed for jq: ${arg}`)
+      ? reject(`Flag not allowed for jq: ${arg}`)
       : step(index + span, hasFilter, false);
   };
   return step(0, false, false);
+};
+
+export const plan = (command: string, args: readonly string[]): Plan => {
+  if (!commands.has(command))
+    return reject(`Command not allowed: ${command}. Allowed: ${[...commands].join(', ')}`);
+  return (command === 'jq' ? validateJqArgs(args) : undefined) ??
+    run(command, args, { runner: 'shell' });
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -85,13 +93,5 @@ export const register = (server: McpServer): RegisteredTool =>
         ...ArgsSchema,
       },
     },
-    async ({ command, args }) => {
-      if (!commands.has(command))
-        return fail(`Command not allowed: ${command}. Allowed: ${[...commands].join(', ')}`);
-      if (command === 'jq') {
-        const rejection = validateJqArgs(args);
-        if (rejection) return rejection;
-      }
-      return execShell(command, args);
-    },
+    async ({ command, args }) => runPlan(plan(command, args)),
   );

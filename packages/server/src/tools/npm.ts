@@ -2,7 +2,8 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server
 import {
   ArgsSchema, type BlockedFlagOptions, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { execShell } from '#src/lib/exec.js';
+import { runPlan } from '#src/lib/exec.js';
+import { type Plan, run } from '#src/lib/plan.js';
 
 const subcommands = new Set([
   'audit', 'bin', 'explain', 'fund', 'ls', 'outdated', 'root', 'search', 'view',
@@ -28,6 +29,12 @@ const blockedFlagOptions = {
   readsSingleDashLong: true,
 } satisfies BlockedFlagOptions;
 
+export const plan = (args: readonly string[]): Plan =>
+  isAllowlisted(args, subcommands)
+    ? rejectBlockedFlags(args, blockedFlags, blockedFlagOptions) ??
+    run('npm', ['--ignore-scripts', ...args], { runner: 'shell' })
+    : rejectSubcommand(args, subcommands);
+
 export const register = (server: McpServer): RegisteredTool =>
   server.registerTool(
     'npm',
@@ -36,10 +43,5 @@ export const register = (server: McpServer): RegisteredTool =>
         'search, view)',
       inputSchema: ArgsSchema,
     },
-    async ({ args }) => {
-      if (!isAllowlisted(args, subcommands))
-        return rejectSubcommand(args, subcommands);
-      const rejected = rejectBlockedFlags(args, blockedFlags, blockedFlagOptions);
-      return rejected ?? execShell('npm', ['--ignore-scripts', ...args]);
-    },
+    async ({ args }) => runPlan(plan(args)),
   );
