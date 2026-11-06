@@ -1,69 +1,31 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
-import {
-  connectTool, echoed, textOf } from '#test/helpers.js';
-
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
-
-const { register } = await import('#src/tools/git.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
-};
+import { describe, it } from 'vitest';
+import { plan } from '#src/tools/git.js';
+import { runOf } from '#test/helpers.js';
 
 describe.concurrent('git tool (unit)', () => {
-  describe('--no-pager injection', () => {
-    it('injects --no-pager as first arg', async ({ expect }) => {
-      const result = await callMocked(['log', '--oneline', '-1']);
-      const { args } = echoed(result);
-
-      expect(args[0]).toBe('--no-pager');
-    });
-
-    it('preserves original args after --no-pager', async ({ expect }) => {
-      const result = await callMocked(['status']);
-      const { args } = echoed(result);
-
-      expect(args).toStrictEqual(['--no-pager', 'status']);
-    });
-  });
-
   describe('allowed subcommands', () => {
     it.for([
-      'blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree', 'merge-base',
+      'blame', 'describe', 'diff', 'log', 'ls-files', 'ls-tree', 'merge-base',
       'rev-parse', 'shortlog', 'show', 'status',
-    ])(
-      'allows %s', async (sub, { expect }) => {
-        assertAllowed(expect, await callMocked([sub]));
-      },
-    );
+    ])('runs %s after --no-pager', async (sub, { expect }) => {
+      const { args, cmd } = runOf(await plan([sub]));
 
-    it('allows remote (bare)', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['remote']));
+      expect([cmd, ...args]).toStrictEqual(['git', '--no-pager', sub]);
     });
 
-    it('allows stash list', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['stash', 'list']));
+    it.for([
+      { args: ['log', '--oneline', '-1'], name: 'log with flags' },
+      { args: ['remote'], name: 'remote (bare)' },
+      { args: ['stash', 'list'], name: 'stash list' },
+      { args: ['worktree', 'list'], name: 'worktree list' },
+      { args: ['reflog', 'show'], name: 'reflog show' },
+      { args: ['reflog'], name: 'bare reflog (= reflog show)' },
+    ])('runs $name after --no-pager', async ({ args }, { expect }) => {
+      expect(runOf(await plan(args)).args).toStrictEqual(['--no-pager', ...args]);
     });
 
-    it('allows worktree list', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['worktree', 'list']));
-    });
-
-    it('allows reflog show', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['reflog', 'show']));
-    });
-
-    it('allows bare reflog (= reflog show)', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['reflog']));
+    it('runs branch in list mode', async ({ expect }) => {
+      expect(runOf(await plan(['branch'])).args).toStrictEqual(['--no-pager', 'branch', '--list']);
     });
   });
 });
