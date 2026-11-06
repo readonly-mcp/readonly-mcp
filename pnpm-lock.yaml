@@ -205,7 +205,7 @@ catalogs:
       version: 2.7.0
     skills:
       specifier: ^1.7.4
-      version: 1.7.4
+      version: 1.7.6
     turbo:
       specifier: ^2.11.10
       version: 2.11.10
@@ -231,7 +231,7 @@ importers:
         version: 3.0.3
       '@gtbuchanan/cli':
         specifier: 'catalog:'
-        version: 2.0.0(skills@1.7.4)(turbo@2.11.10)(typescript@6.0.3)
+        version: 2.0.0(skills@1.7.6)(turbo@2.11.10)(typescript@6.0.3)
       '@gtbuchanan/eslint-config':
         specifier: 'catalog:'
         version: 0.6.0(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)
@@ -249,7 +249,7 @@ importers:
         version: 2.7.0
       skills:
         specifier: 'catalog:'
-        version: 1.7.4
+        version: 1.7.6
       turbo:
         specifier: 'catalog:'
         version: 2.11.10
@@ -2759,8 +2759,8 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  skills@1.7.4:
-    resolution: {integrity: sha512-lHZJksE8UImNAr+LL6unqq7jERjdFw5EJasm17srycwL7rXHGdCmgu1L1ttLxUO9i3rdH+QQig+px0icHqLmRw==}
+  skills@1.7.6:
+    resolution: {integrity: sha512-dAee29yRGin7ub6VHwmifLEfHrysGD41yq4RkY0gg7QQh0wyQKWfhiORGb/r6uNpKWc9A1GY8yowV07Lh+4rCg==}
     engines: {node: '>=22.20.0'}
     hasBin: true
 
@@ -3389,7 +3389,7 @@ snapshots:
 
   '@faker-js/faker@10.6.0': {}
 
-  '@gtbuchanan/cli@2.0.0(skills@1.7.4)(turbo@2.11.10)(typescript@6.0.3)':
+  '@gtbuchanan/cli@2.0.0(skills@1.7.6)(turbo@2.11.10)(typescript@6.0.3)':
     dependencies:
       '@changesets/config': 4.0.1
       citty: 0.2.2
@@ -3397,7 +3397,7 @@ snapshots:
       find-up-simple: 1.0.1
       get-tsconfig: 4.14.3
       hosted-git-info: 10.1.1
-      skills: 1.7.4
+      skills: 1.7.6
       smol-toml: 1.9.1
       typescript: 6.0.3
       valibot: 1.5.0(typescript@6.0.3)
@@ -5701,7 +5701,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  skills@1.7.4:
+  skills@1.7.6:
     dependencies:
       tar: 7.5.22
       yaml: 2.9.1
