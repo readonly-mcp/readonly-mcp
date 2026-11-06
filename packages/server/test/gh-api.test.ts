@@ -1,24 +1,16 @@
 import { faker } from '@faker-js/faker';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it } from 'vitest';
+import type { Plan } from '#src/lib/plan.js';
+import { plan } from '#src/tools/gh.js';
 import * as build from '#test/builders.js';
-import {
-  assertBlocked, connectTool, echoed, textOf } from '#test/helpers.js';
+import { rejectionOf, runOf } from '#test/helpers.js';
 
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
+const assertRuns = (expect: ExpectStatic, args: readonly string[]) => {
+  expect(plan(args)).toMatchObject({ cmd: 'gh', kind: 'run' });
+};
 
-const { register } = await import('#src/tools/gh.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
+const assertRejected = (expect: ExpectStatic, result: Plan) => {
+  expect(result).toMatchObject({ kind: 'reject' });
 };
 
 describe.concurrent('gh api (unit)', () => {
@@ -44,34 +36,34 @@ describe.concurrent('gh api (unit)', () => {
     'repos/:owner/:repo/contents/:path',
     'user',
   ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
-    'allows api $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    'allows api $name', ({ args }, { expect }) => {
+      assertRuns(expect, args);
     },
   );
 
-  it('allows api endpoint with flags', async ({ expect }) => {
-    assertAllowed(expect, await callMocked([
-      'api', build.prCommentsPath(), '--jq', '.[].id',
-    ]));
-  });
-
-  it('strips leading slash from endpoint', async ({ expect }) => {
-    assertAllowed(expect, await callMocked([
-      'api', `/${build.prCommentsPath()}`,
-    ]));
-  });
-
-  it('strips query string from endpoint', async ({ expect }) => {
-    assertAllowed(expect, await callMocked([
-      'api', `${build.prCommentsPath()}${build.queryString()}`,
-    ]));
-  });
-
-  it('injects --method GET before user flags', async ({ expect }) => {
-    const result = await callMocked([
+  it('allows api endpoint with flags', ({ expect }) => {
+    assertRuns(expect, [
       'api', build.prCommentsPath(), '--jq', '.[].id',
     ]);
-    const { args } = echoed(result);
+  });
+
+  it('strips leading slash from endpoint', ({ expect }) => {
+    assertRuns(expect, [
+      'api', `/${build.prCommentsPath()}`,
+    ]);
+  });
+
+  it('strips query string from endpoint', ({ expect }) => {
+    assertRuns(expect, [
+      'api', `${build.prCommentsPath()}${build.queryString()}`,
+    ]);
+  });
+
+  it('injects --method GET before user flags', ({ expect }) => {
+    const result = plan([
+      'api', build.prCommentsPath(), '--jq', '.[].id',
+    ]);
+    const { args } = runOf(result);
     const methodIdx = args.indexOf('--method');
     const jqIdx = args.indexOf('--jq');
 
@@ -80,11 +72,11 @@ describe.concurrent('gh api (unit)', () => {
     expect(methodIdx).toBeLessThan(jqIdx);
   });
 
-  it('--method GET is not defeated by -- end-of-options', async ({ expect }) => {
-    const result = await callMocked([
+  it('--method GET is not defeated by -- end-of-options', ({ expect }) => {
+    const result = plan([
       'api', build.prCommentsPath(), '--',
     ]);
-    const { args } = echoed(result);
+    const { args } = runOf(result);
     const methodIdx = args.indexOf('--method');
     const dashDashIdx = args.indexOf('--');
 
@@ -92,156 +84,156 @@ describe.concurrent('gh api (unit)', () => {
     expect(methodIdx).toBeLessThan(dashDashIdx);
   });
 
-  it('blocks disallowed endpoint', async ({ expect }) => {
-    const result = await callMocked(['api', build.template('repos/:owner/:repo/git/refs')]);
-    assertBlocked(expect, result);
+  it('blocks disallowed endpoint', ({ expect }) => {
+    const result = plan(['api', build.template('repos/:owner/:repo/git/refs')]);
+    assertRejected(expect, result);
   });
 
-  it('reports a disallowed endpoint before a blocked filter', async ({ expect }) => {
+  it('reports a disallowed endpoint before a blocked filter', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/git/refs');
-    const result = await callMocked(['api', endpoint, '--jq', 'env']);
+    const result = plan(['api', endpoint, '--jq', 'env']);
 
-    expect(textOf(result)).toContain(`API endpoint not allowed: ${endpoint}`);
+    expect(rejectionOf(result)).toContain(`API endpoint not allowed: ${endpoint}`);
   });
 
-  it('blocks bare api (no endpoint)', async ({ expect }) => {
-    const result = await callMocked(['api']);
-    assertBlocked(expect, result);
+  it('blocks bare api (no endpoint)', ({ expect }) => {
+    const result = plan(['api']);
+    assertRejected(expect, result);
   });
 
-  it('blocks api with flag-like endpoint', async ({ expect }) => {
-    const result = await callMocked(['api', '--jq', '.[].id']);
-    assertBlocked(expect, result);
+  it('blocks api with flag-like endpoint', ({ expect }) => {
+    const result = plan(['api', '--jq', '.[].id']);
+    assertRejected(expect, result);
   });
 
-  it('asks for the endpoint first when a flag precedes it', async ({ expect }) => {
-    const result = await callMocked(['api', '--jq', '.[].id', build.prCommentsPath()]);
-    assertBlocked(expect, result);
+  it('asks for the endpoint first when a flag precedes it', ({ expect }) => {
+    const result = plan(['api', '--jq', '.[].id', build.prCommentsPath()]);
+    assertRejected(expect, result);
 
-    expect(textOf(result)).toContain('endpoint must come first');
+    expect(rejectionOf(result)).toContain('endpoint must come first');
   });
 
-  it('reports a blocked flag before the endpoint as a blocked flag', async ({ expect }) => {
-    const result = await callMocked([
+  it('reports a blocked flag before the endpoint as a blocked flag', ({ expect }) => {
+    const result = plan([
       'api', '-H', 'Accept: text/plain', build.template('repos/:owner/:repo/contents/:file'),
     ]);
 
-    expect(textOf(result)).toContain('Flag not allowed: -H');
+    expect(rejectionOf(result)).toContain('Flag not allowed: -H');
   });
 
   it.for([
     { name: '-H', args: build.apiArgs('-H', build.header()) },
     { name: '--header', args: build.apiArgs('--header', build.header()) },
     { name: '-HAccept:... (concatenated)', args: build.apiArgs('-HAccept:text/plain') },
-  ])('says contents are already raw when $name is blocked', async ({ args }, { expect }) => {
-    expect(textOf(await callMocked(args))).toContain('contents endpoints already return raw');
+  ])('says contents are already raw when $name is blocked', ({ args }, { expect }) => {
+    expect(rejectionOf(plan(args))).toContain('contents endpoints already return raw');
   });
 
-  it('blocks --method flag', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--method', 'POST'));
-    assertBlocked(expect, result);
+  it('blocks --method flag', ({ expect }) => {
+    const result = plan(build.apiArgs('--method', 'POST'));
+    assertRejected(expect, result);
   });
 
-  it('blocks -X flag', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-X', 'POST'));
-    assertBlocked(expect, result);
+  it('blocks -X flag', ({ expect }) => {
+    const result = plan(build.apiArgs('-X', 'POST'));
+    assertRejected(expect, result);
   });
 
-  it('blocks -XPOST (concatenated short flag)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-XPOST'));
-    assertBlocked(expect, result);
+  it('blocks -XPOST (concatenated short flag)', ({ expect }) => {
+    const result = plan(build.apiArgs('-XPOST'));
+    assertRejected(expect, result);
   });
 
-  it('blocks --input flag', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--input', build.fileName('json')));
-    assertBlocked(expect, result);
+  it('blocks --input flag', ({ expect }) => {
+    const result = plan(build.apiArgs('--input', build.fileName('json')));
+    assertRejected(expect, result);
   });
 
-  it('blocks --hostname flag (SSRF)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--hostname', faker.internet.domainName()));
-    assertBlocked(expect, result);
+  it('blocks --hostname flag (SSRF)', ({ expect }) => {
+    const result = plan(build.apiArgs('--hostname', faker.internet.domainName()));
+    assertRejected(expect, result);
   });
 
-  it('blocks -f flag (body field)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-f', build.field()));
-    assertBlocked(expect, result);
+  it('blocks -f flag (body field)', ({ expect }) => {
+    const result = plan(build.apiArgs('-f', build.field()));
+    assertRejected(expect, result);
   });
 
-  it('blocks -F flag (@file read)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-F', build.fileField()));
-    assertBlocked(expect, result);
+  it('blocks -F flag (@file read)', ({ expect }) => {
+    const result = plan(build.apiArgs('-F', build.fileField()));
+    assertRejected(expect, result);
   });
 
-  it('blocks -Fbody=@file (concatenated -F)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-Fbody=@/etc/passwd'));
-    assertBlocked(expect, result);
+  it('blocks -Fbody=@file (concatenated -F)', ({ expect }) => {
+    const result = plan(build.apiArgs('-Fbody=@/etc/passwd'));
+    assertRejected(expect, result);
   });
 
-  it('blocks --field flag', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--field', build.field()));
-    assertBlocked(expect, result);
+  it('blocks --field flag', ({ expect }) => {
+    const result = plan(build.apiArgs('--field', build.field()));
+    assertRejected(expect, result);
   });
 
-  it('blocks --raw-field flag', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--raw-field', build.field()));
-    assertBlocked(expect, result);
+  it('blocks --raw-field flag', ({ expect }) => {
+    const result = plan(build.apiArgs('--raw-field', build.field()));
+    assertRejected(expect, result);
   });
 
-  it('blocks --verbose flag (token leak)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--verbose'));
-    assertBlocked(expect, result);
+  it('blocks --verbose flag (token leak)', ({ expect }) => {
+    const result = plan(build.apiArgs('--verbose'));
+    assertRejected(expect, result);
   });
 
-  it('blocks -H flag (header injection)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-H', 'Accept: text/plain'));
-    assertBlocked(expect, result);
+  it('blocks -H flag (header injection)', ({ expect }) => {
+    const result = plan(build.apiArgs('-H', 'Accept: text/plain'));
+    assertRejected(expect, result);
   });
 
-  it('blocks --header flag', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('--header', build.header()));
-    assertBlocked(expect, result);
+  it('blocks --header flag', ({ expect }) => {
+    const result = plan(build.apiArgs('--header', build.header()));
+    assertRejected(expect, result);
   });
 
-  it('blocks -HAccept:text/plain (concatenated -H)', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs('-HAccept:text/plain'));
-    assertBlocked(expect, result);
+  it('blocks -HAccept:text/plain (concatenated -H)', ({ expect }) => {
+    const result = plan(build.apiArgs('-HAccept:text/plain'));
+    assertRejected(expect, result);
   });
 
-  it('blocks full URL', async ({ expect }) => {
-    const result = await callMocked(['api', `https://api.github.com/${build.prCommentsPath()}`]);
-    assertBlocked(expect, result);
+  it('blocks full URL', ({ expect }) => {
+    const result = plan(['api', `https://api.github.com/${build.prCommentsPath()}`]);
+    assertRejected(expect, result);
   });
 
-  it('allows contents without path (directory listing)', async ({ expect }) => {
-    assertAllowed(expect, await callMocked(['api', build.template('repos/:owner/:repo/contents')]));
+  it('allows contents without path (directory listing)', ({ expect }) => {
+    assertRuns(expect, ['api', build.template('repos/:owner/:repo/contents')]);
   });
 
-  it('allows contents with trailing slash (directory listing)', async ({ expect }) => {
+  it('allows contents with trailing slash (directory listing)', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/contents/');
-    assertAllowed(expect, await callMocked(['api', endpoint]));
+    assertRuns(expect, ['api', endpoint]);
   });
 
-  it('injects raw Accept header for contents endpoint', async ({ expect }) => {
-    const result = await callMocked(['api', build.template('repos/:owner/:repo/contents/:file')]);
-    const { args } = echoed(result);
+  it('injects raw Accept header for contents endpoint', ({ expect }) => {
+    const result = plan(['api', build.template('repos/:owner/:repo/contents/:file')]);
+    const { args } = runOf(result);
     const hIdx = args.indexOf('-H');
 
     expect(hIdx).toBeGreaterThan(-1);
     expect(args[hIdx + 1]).toBe('Accept: application/vnd.github.raw+json');
   });
 
-  it('injects raw Accept header for bare contents endpoint', async ({ expect }) => {
-    const result = await callMocked(['api', build.template('repos/:owner/:repo/contents')]);
-    const { args } = echoed(result);
+  it('injects raw Accept header for bare contents endpoint', ({ expect }) => {
+    const result = plan(['api', build.template('repos/:owner/:repo/contents')]);
+    const { args } = runOf(result);
     const hIdx = args.indexOf('-H');
 
     expect(hIdx).toBeGreaterThan(-1);
     expect(args[hIdx + 1]).toBe('Accept: application/vnd.github.raw+json');
   });
 
-  it('does not inject Accept header for non-contents endpoint', async ({ expect }) => {
-    const result = await callMocked(build.apiArgs());
-    const { args } = echoed(result);
+  it('does not inject Accept header for non-contents endpoint', ({ expect }) => {
+    const result = plan(build.apiArgs());
+    const { args } = runOf(result);
 
     expect(args.indexOf('-H')).toBe(-1);
   });
