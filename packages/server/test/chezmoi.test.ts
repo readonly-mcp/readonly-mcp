@@ -1,35 +1,26 @@
 import { faker } from '@faker-js/faker';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it } from 'vitest';
+import { plan } from '#src/tools/chezmoi.js';
 import * as build from '#test/builders.js';
-import { connectTool, textOf } from '#test/helpers.js';
+import { rejectionOf, runOf } from '#test/helpers.js';
 
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
+// chezmoi runs an allowed call exactly as given.
+const assertRunsAsGiven = (expect: ExpectStatic, args: readonly string[]) => {
+  const { args: argv, cmd } = runOf(plan(args));
 
-const { register } = await import('#src/tools/chezmoi.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
+  expect([cmd, ...argv]).toStrictEqual(['chezmoi', ...args]);
 };
 
 describe.concurrent('chezmoi tool (unit)', () => {
   describe('allowed subcommands', () => {
     it.for(['diff', 'doctor', 'managed', 'source-path', 'status', 'target-path', 'verify'])(
-      'allows %s', async (sub, { expect }) => {
-        assertAllowed(expect, await callMocked([sub]));
+      'runs %s', (sub, { expect }) => {
+        assertRunsAsGiven(expect, [sub]);
       },
     );
 
-    it('allows subcommand with flags', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['status', '--include', 'files']));
+    it('runs a subcommand with flags', ({ expect }) => {
+      assertRunsAsGiven(expect, ['status', '--include', 'files']);
     });
   });
 
@@ -140,8 +131,8 @@ describe.concurrent('chezmoi tool (unit)', () => {
         args: ['target-path', '--reverse'], flag: '--reverse',
         name: '--reverse under target-path',
       },
-    ])('rejects $name', async ({ args, flag }, { expect }) => {
-      expect(textOf(await callMocked(args))).toBe(`Flag not allowed for chezmoi: ${flag}`);
+    ])('rejects $name', ({ args, flag }, { expect }) => {
+      expect(rejectionOf(plan(args))).toBe(`Flag not allowed for chezmoi: ${flag}`);
     });
 
     it.for([
@@ -155,8 +146,8 @@ describe.concurrent('chezmoi tool (unit)', () => {
       { args: ['doctor', '--no-network'], name: 'doctor --no-network' },
       { args: ['diff', '-'], name: 'a bare - (a target, not an option)' },
       { args: ['diff', '--', build.relativeFilePath()], name: 'a target after --' },
-    ])('allows $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    ])('runs $name', ({ args }, { expect }) => {
+      assertRunsAsGiven(expect, args);
     });
 
     /*
@@ -193,8 +184,8 @@ describe.concurrent('chezmoi tool (unit)', () => {
       [...options, ...globalOptions].map(option => ({
         args: [command, ...option], name: `${command} ${option.join(' ')}`,
       }))))(
-      'allows $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'runs $name', ({ args }, { expect }) => {
+        assertRunsAsGiven(expect, args);
       },
     );
   });
