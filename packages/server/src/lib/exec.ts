@@ -72,9 +72,29 @@ export const errorResult = (err: unknown, cmd: string, args: readonly string[]):
   return fail(message);
 };
 
-export const exec = async (cmd: string, args: readonly string[]): Promise<CallToolResult> => {
+export interface ExecOptions {
+  // Inherited environment variables the command runs without, matched in any case.
+  readonly excludedEnv?: readonly string[];
+}
+
+/*
+ * The server's environment without the named variables, compared in any
+ * case: Windows reads names that way, and on POSIX dropping a variable that
+ * differs only in case fails closed.
+ */
+const envWithout = (names: readonly string[]): NodeJS.ProcessEnv => {
+  const unset = new Set(names.map(name => name.toUpperCase()));
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !unset.has(name.toUpperCase())),
+  );
+};
+
+export const exec = async (
+  cmd: string, args: readonly string[], { excludedEnv = [] }: ExecOptions = {},
+): Promise<CallToolResult> => {
+  const env = excludedEnv.length === 0 ? undefined : envWithout(excludedEnv);
   try {
-    const { stdout, stderr } = await run(cmd, args, execOptions);
+    const { stdout, stderr } = await run(cmd, args, { ...execOptions, env });
     return text(stdout, stderr);
   } catch (error) {
     return errorResult(error, cmd, args);

@@ -178,7 +178,11 @@ export const connectTool = async (register: (server: McpServer) => unknown) => {
   };
 };
 
-const EchoSchema = z.object({ args: z.array(z.string()).readonly(), cmd: z.string() });
+const EchoSchema = z.object({
+  args: z.array(z.string()).readonly(),
+  cmd: z.string(),
+  excludedEnv: z.array(z.string()).readonly(),
+});
 
 /*
  * Stands in for exec and execShell in unit tests. It runs nothing and answers
@@ -186,8 +190,10 @@ const EchoSchema = z.object({ args: z.array(z.string()).readonly(), cmd: z.strin
  * have run from its own result rather than from a call log that concurrent
  * tests share.
  */
-const echoExec = (cmd: string, args: readonly string[]): Promise<CallToolResult> => {
-  const echo = { args, cmd } satisfies z.input<typeof EchoSchema>;
+const echoExec = (
+  cmd: string, args: readonly string[], { excludedEnv = [] }: ExecModule.ExecOptions = {},
+): Promise<CallToolResult> => {
+  const echo = { args, cmd, excludedEnv } satisfies z.input<typeof EchoSchema>;
   return Promise.resolve({ content: [{ type: 'text', text: JSON.stringify(echo) }] });
 };
 

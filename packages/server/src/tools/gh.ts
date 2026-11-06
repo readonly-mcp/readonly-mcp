@@ -4,9 +4,12 @@ import {
   ArgsSchema, type Rejection, findBlockedFlag, findBlockedJqName, isAllowedApiPath,
   isAllowlisted, rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
-import { exec, fail } from '#src/lib/exec.js';
+import { type ExecOptions, exec, fail } from '#src/lib/exec.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
+
+// gh sends these to any host a caller names; see "gh enterprise tokens" in index.ts.
+const ghOptions: ExecOptions = { excludedEnv: ['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'] };
 
 const subcommands = new Set([
   'attestation verify',
@@ -115,6 +118,30 @@ const rejectJqFilter = (args: readonly string[]): Rejection => {
   return name === undefined ? undefined : fail(`Filter may not use ${name} for gh --jq`);
 };
 
+/*
+ * gh treats github.localhost and its subdomains as github.com: it sends
+ * GH_TOKEN there, over plain HTTP, to whatever *.localhost resolves to. Any
+ * arg naming it is rejected, wherever the host would be read from.
+ */
+const localGitHub = /github\.localhost/iv;
+
+/*
+ * gh lowercases a host with Go, which folds some non-ASCII letters into
+ * ASCII ones (İ to i) that a case-insensitive regex leaves apart. Each arg
+ * is decomposed and stripped of combining marks first, so such a letter
+ * matches its base; a spelling gh would not fold is rejected too, failing
+ * closed.
+ */
+const combiningMarks = /\p{M}/gv;
+
+const doesNameLocalGitHub = (arg: string): boolean =>
+  localGitHub.test(arg.normalize('NFKD').replaceAll(combiningMarks, ''));
+
+const rejectLocalhost = (args: readonly string[]): Rejection => {
+  const arg = args.find(doesNameLocalGitHub);
+  return arg === undefined ? undefined : fail(`gh may not reach github.localhost: ${arg}`);
+};
+
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const [, endpoint, ...apiArgs] = args;
   if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
@@ -137,8 +164,8 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   // user-supplied flags. Appending it at the end would be defeated by
   // a `--` (end-of-options marker) in user args, since everything after
   // `--` is treated as positional, making the injected flag a no-op.
-  return rejectJqFilter(args) ??
-    exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
+  return rejectLocalhost(args) ?? rejectJqFilter(args) ??
+    exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs], ghOptions);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -159,12 +186,12 @@ export const register = (server: McpServer): RegisteredTool =>
     async ({ args }) => {
       const [only, ...rest] = args;
       const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
-      if (isGlobal) return exec('gh', args);
+      if (isGlobal) return exec('gh', args, ghOptions);
 
       if (args[0] === 'api') return runApi(args);
 
       return isAllowlisted(args, subcommands)
-        ? rejectJqFilter(args) ?? exec('gh', args)
+        ? rejectLocalhost(args) ?? rejectJqFilter(args) ?? exec('gh', args, ghOptions)
         : rejectSubcommand(args, subcommands);
     },
   );

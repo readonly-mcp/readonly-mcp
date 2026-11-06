@@ -1,11 +1,54 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { errorResult, fail, maxBuffer, text } from '#src/lib/exec.js';
+import { errorResult, exec, fail, maxBuffer, text } from '#src/lib/exec.js';
 import * as build from '#test/builders.js';
 import { textOf } from '#test/helpers.js';
 
 // exec() and execShell() are integration-tested through every tool test.
-// These unit tests cover the pure helper functions.
+// These unit tests cover the pure helper functions and exec's options.
+
+/*
+ * Sets a variable no other test reads, under a generated name, and removes
+ * it once the test's `using` scope ends.
+ */
+const scopedEnv = () => {
+  const name = `READONLY_MCP_TEST_${faker.string.alphanumeric({ casing: 'upper', length: 12 })}`;
+  process.env[name] = faker.lorem.word();
+  return { name, [Symbol.dispose]: () => Reflect.deleteProperty(process.env, name) };
+};
+
+// Node args that print whether the variable `name` is set.
+const printSet = (name: string) => [
+  '-e', 'process.stdout.write(process.env[process.argv[1]] === undefined ? "unset" : "set")',
+  name,
+];
+
+describe(exec, () => {
+  it('passes the environment on by default', async ({ expect }) => {
+    using variable = scopedEnv();
+    const result = await exec(process.execPath, printSet(variable.name));
+
+    expect(textOf(result)).toBe('set');
+  });
+
+  it('drops the variables excludedEnv names, in any case', async ({ expect }) => {
+    using variable = scopedEnv();
+    const excludedEnv = [variable.name.toLowerCase()];
+    const result = await exec(process.execPath, printSet(variable.name), { excludedEnv });
+
+    expect(textOf(result)).toBe('unset');
+  });
+
+  it('keeps the variables excludedEnv does not name', async ({ expect }) => {
+    using excluded = scopedEnv();
+    using kept = scopedEnv();
+    const result = await exec(process.execPath, printSet(kept.name), {
+      excludedEnv: [excluded.name],
+    });
+
+    expect(textOf(result)).toBe('set');
+  });
+});
 
 describe('text()', () => {
   it('combines stdout and stderr', ({ expect }) => {

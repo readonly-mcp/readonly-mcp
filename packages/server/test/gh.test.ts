@@ -1,7 +1,10 @@
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
-import { type Server, assertBlocked, connectTool, textOf, useServer } from '#test/helpers.js';
+import * as build from '#test/builders.js';
+import {
+  type Server, assertBlocked, connectTool, echoed, textOf, useServer,
+} from '#test/helpers.js';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
@@ -109,6 +112,57 @@ describe.concurrent('gh tool (unit)', () => {
       { args: ['pr', 'list', '-Squery', 'env'], name: 'env after a search holding q' },
     ])('allows $name', async ({ args }, { expect }) => {
       assertAllowed(expect, await callMocked(args));
+    });
+  });
+
+  describe('environment', () => {
+    /*
+     * gh sends either one to any host outside github.com that a caller names
+     * through -R or a URL positional.
+     */
+    it.for([
+      { args: ['--version'], name: 'a global flag' },
+      { args: ['pr', 'list'], name: 'a subcommand' },
+      { args: ['api', 'user'], name: 'api' },
+    ])('runs $name without the enterprise tokens', async ({ args }, { expect }) => {
+      const { excludedEnv } = echoed(await callMocked(args));
+
+      expect(excludedEnv).toStrictEqual(['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN']);
+    });
+  });
+
+  describe('github.localhost', () => {
+    it.for([
+      { args: () => ['pr', 'list', '-R', `github.localhost/${build.repoSlug()}`], name: '-R' },
+      {
+        args: () => ['pr', 'list', `--repo=api.github.localhost/${build.repoSlug()}`],
+        name: 'a subdomain',
+      },
+      { args: () => ['pr', 'view', `http://github.localhost/${build.repoSlug()}/pull/1`], name: 'a URL' },
+      { args: () => ['repo', 'view', `GitHub.LocalHost/${build.repoSlug()}`], name: 'any case' },
+      // gh lowercases hosts with Go, which maps İ (U+0130) to a plain i.
+      { args: () => ['repo', 'view', `gİthub.localhost/${build.repoSlug()}`], name: 'a dotted İ' },
+    ])('blocks $name naming it', async ({ args }, { expect }) => {
+      const sent = args();
+      const result = await callMocked(sent);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
+    });
+
+    it('blocks api naming it', async ({ expect }) => {
+      const filter = '"github.localhost"';
+      const result = await callMocked(['api', build.prCommentsPath(), '--jq', filter]);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
+    });
+
+    it('reports a disallowed subcommand first', async ({ expect }) => {
+      const result = await callMocked(['auth', 'status', '--hostname', 'github.localhost']);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
     });
   });
 
