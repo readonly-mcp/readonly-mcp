@@ -1,22 +1,17 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it } from 'vitest';
+import { plan } from '#src/tools/tea.js';
 import * as build from '#test/builders.js';
-import { assertBlocked, connectTool, echoed, textOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
+// tea runs an allowed api call with GET injected right after the endpoint.
+const assertRunsAsGet = (expect: ExpectStatic, args: readonly string[]) => {
+  const [api, endpoint, ...rest] = args;
 
-const { register } = await import('#src/tools/tea.js');
+  expect(runOf(plan(args)).args).toStrictEqual([api, endpoint, '--method', 'GET', ...rest]);
+};
 
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
+const assertRejected = (expect: ExpectStatic, args: readonly string[]) => {
+  expect(plan(args)).toMatchObject({ kind: 'reject' });
 };
 
 describe.concurrent('tea api (unit)', () => {
@@ -36,21 +31,21 @@ describe.concurrent('tea api (unit)', () => {
     ['api', 'repos/:owner/:repo/contents/my%20file.md'],
     ['api', 'user'],
   ] as const).map(args => ({ name: args[1], args: args.map(build.template) })))(
-    'allows api $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    'runs api $name as GET', ({ args }, { expect }) => {
+      assertRunsAsGet(expect, args);
     },
   );
 
-  it('allows api endpoint with flags', async ({ expect }) => {
-    assertAllowed(expect, await callMocked(([
+  it('runs an api endpoint with flags as GET', ({ expect }) => {
+    assertRunsAsGet(expect, ([
       'api', 'repos/:owner/:repo/pulls/:number/reviews',
       '-i', '-l', ':word', '--repo', ':owner/:repo',
-    ] as const).map(build.template)));
+    ] as const).map(build.template));
   });
 
-  it('injects --method GET immediately after the endpoint', async ({ expect }) => {
+  it('injects --method GET immediately after the endpoint', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/pulls/:number/reviews');
-    const { args } = echoed(await callMocked(['api', endpoint, '--', '-i']));
+    const { args } = runOf(plan(['api', endpoint, '--', '-i']));
 
     expect(args.slice(0, 4)).toStrictEqual(['api', endpoint, '--method', 'GET']);
   });
@@ -86,8 +81,8 @@ describe.concurrent('tea api (unit)', () => {
     name: args.slice(1).join(' ') || '(bare)',
     args: args.map(build.template),
   })))(
-    'blocks api $name', async ({ args }, { expect }) => {
-      assertBlocked(expect, await callMocked(args));
+    'blocks api $name', ({ args }, { expect }) => {
+      assertRejected(expect, args);
     },
   );
 
@@ -117,9 +112,9 @@ describe.concurrent('tea api (unit)', () => {
     ['--debug'],
     ['--repo', '../other/repo'],
   ] as const).map(flags => ({ name: flags.join(' '), flags: flags.map(build.template) })))(
-    'blocks api flag $name', async ({ flags }, { expect }) => {
+    'blocks api flag $name', ({ flags }, { expect }) => {
       const endpoint = build.template('repos/:owner/:repo/pulls/:number/reviews');
-      assertBlocked(expect, await callMocked(['api', endpoint, ...flags]));
+      assertRejected(expect, ['api', endpoint, ...flags]);
     },
   );
 });
