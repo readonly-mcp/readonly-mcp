@@ -1,49 +1,25 @@
 import { faker } from '@faker-js/faker';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { describe, it } from 'vitest';
+import { plan } from '#src/tools/npm.js';
 import * as build from '#test/builders.js';
-import {
-  assertBlocked, connectTool, echoed, textOf,
-} from '#test/helpers.js';
-
-// --- Unit tests (mocked execShell) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
-
-const { register } = await import('#src/tools/npm.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
-};
+import { rejectionOf, runOf } from '#test/helpers.js';
 
 describe.concurrent('npm tool (unit)', () => {
   describe('allowed subcommands', () => {
     it.for(['audit', 'bin', 'explain', 'fund', 'ls', 'outdated', 'root', 'search', 'view'])(
-      'allows %s', async (sub, { expect }) => {
-        assertAllowed(expect, await callMocked([sub]));
+      'runs %s through the shell runner', (sub, { expect }) => {
+        const { cmd, runner } = runOf(plan([sub]));
+
+        expect({ cmd, runner }).toStrictEqual({ cmd: 'npm', runner: 'shell' });
       },
     );
   });
 
   describe('--ignore-scripts injection', () => {
-    it('injects --ignore-scripts as first arg', async ({ expect }) => {
-      const result = await callMocked(['ls']);
-      const { args } = echoed(result);
+    it('prepends --ignore-scripts before the subcommand', ({ expect }) => {
+      const name = faker.internet.domainWord();
 
-      expect(args[0]).toBe('--ignore-scripts');
-    });
-
-    it('prepends --ignore-scripts before subcommand', async ({ expect }) => {
-      const result = await callMocked(['view', 'zod']);
-      const { args } = echoed(result);
-
-      expect(args).toStrictEqual(['--ignore-scripts', 'view', 'zod']);
+      expect(runOf(plan(['view', name])).args).toStrictEqual(['--ignore-scripts', 'view', name]);
     });
   });
 
@@ -74,8 +50,10 @@ describe.concurrent('npm tool (unit)', () => {
       { name: '-userconfig <file>', args: ['view', name, '-userconfig', configFile] },
       { name: '-prefix <dir>', args: ['ls', '-prefix', directory] },
       { name: '-proxy <url>', args: ['view', name, '-proxy', url] },
-    ])('blocks $name', async ({ args }, { expect }) => {
-      assertBlocked(expect, await callMocked(args));
+    ])('blocks $name', ({ args }, { expect }) => {
+      const flag = args.find(arg => arg.startsWith('-'));
+
+      expect(rejectionOf(plan(args))).toBe(`Flag not allowed: ${flag ?? ''}`);
     });
 
     // A whole flag name is not an abbreviation of the blocked flag it prefixes.
@@ -84,8 +62,8 @@ describe.concurrent('npm tool (unit)', () => {
       { name: 'root --global (prefixes --globalconfig)', args: ['root', '--global'] },
       { name: 'ls -global (prefixes --globalconfig)', args: ['ls', '-global'] },
       { name: 'ls -g (a shorthand, not a long name)', args: ['ls', '-g'] },
-    ])('allows $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    ])('runs $name', ({ args }, { expect }) => {
+      expect(runOf(plan(args)).args).toStrictEqual(['--ignore-scripts', ...args]);
     });
   });
 });
