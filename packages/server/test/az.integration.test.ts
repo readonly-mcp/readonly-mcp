@@ -1,0 +1,167 @@
+import { describe, it } from 'vitest';
+import * as build from '#test/builders.js';
+import {
+  type Call, type Server, assertBlocked, textOf, useServer,
+} from '#test/helpers.js';
+
+/**
+ * `devops invoke` with `flags`, on the build area's builds endpoint.
+ */
+const buildsInvoke = (...flags: string[]): string[] =>
+  ['devops', 'invoke', ...flags, '--area', 'build', '--resource', 'builds'];
+
+const integration = it.extend<{ call: Call; server: Server }>({
+  call: async ({ server }, use) => use(args => server.callTool('az', { args })),
+  server: [async ({}, use) => useServer(use), { scope: 'file' }],
+});
+
+describe.concurrent('az tool (integration)', () => {
+  integration.beforeAll(({ server }) => server.initialize());
+
+  describe('blocked subcommands', () => {
+    integration.for(
+      [
+        ['devops', 'project', 'create'],
+        ['devops', 'project', 'delete'],
+        ['devops', 'team', 'create'],
+        ['devops', 'team', 'delete'],
+        ['devops', 'team', 'update'],
+        ['devops', 'wiki', 'create'],
+        ['devops', 'wiki', 'delete'],
+        ['devops', 'wiki', 'page', 'create'],
+        ['devops', 'wiki', 'page', 'update'],
+        ['devops', 'wiki', 'page', 'delete'],
+        ['devops', 'service-endpoint', 'create'],
+        ['devops', 'service-endpoint', 'delete'],
+        ['devops', 'service-endpoint', 'update'],
+        ['devops', 'extension', 'install'],
+        ['devops', 'extension', 'uninstall'],
+        ['devops', 'login'],
+        ['pipelines', 'create'],
+        ['pipelines', 'delete'],
+        ['pipelines', 'run'],
+        ['pipelines', 'update'],
+        ['pipelines', 'build', 'queue'],
+        ['pipelines', 'build', 'cancel'],
+        ['pipelines', 'build', 'tag', 'add'],
+        ['pipelines', 'build', 'tag', 'delete'],
+        ['pipelines', 'release', 'create'],
+        ['pipelines', 'release', 'definition', 'create'],
+        ['pipelines', 'runs', 'artifact', 'upload'],
+        ['pipelines', 'runs', 'artifact', 'download'],
+        ['pipelines', 'runs', 'tag', 'add'],
+        ['pipelines', 'runs', 'tag', 'delete'],
+        ['pipelines', 'variable', 'create'],
+        ['pipelines', 'variable', 'delete'],
+        ['pipelines', 'variable', 'update'],
+        ['pipelines', 'variable-group', 'create'],
+        ['pipelines', 'variable-group', 'delete'],
+        ['pipelines', 'variable-group', 'update'],
+        ['pipelines', 'folder', 'create'],
+        ['pipelines', 'folder', 'delete'],
+        ['pipelines', 'folder', 'update'],
+      ].map(args => ({ name: args.join(' '), args })),
+    )('blocks $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
+    });
+  });
+
+  describe('blocked devops invoke flags', () => {
+    integration.for(
+      [
+        { flags: ['--http-method', 'POST'], name: '--http-method POST' },
+        { flags: ['--http-method=DELETE'], name: '--http-method=DELETE' },
+        { flags: ['--in-file', build.fileName('json')], name: '--in-file <file>' },
+        { flags: [`--in-file=${build.fileName('json')}`], name: '--in-file=<file>' },
+        { flags: ['--out-file', build.fileName('json')], name: '--out-file <file>' },
+        { flags: [`--out-file=${build.fileName('json')}`], name: '--out-file=<file>' },
+      ],
+    )('blocks devops invoke $name', async ({ flags }, { call, expect }) => {
+      assertBlocked(expect, await call(buildsInvoke(...flags)));
+    });
+  });
+
+  describe('blocked devops invoke endpoints', () => {
+    integration.for(
+      [
+        ['devops', 'invoke', '--area', 'git', '--resource', 'refs'],
+        ['devops', 'invoke', '--area', 'work', '--resource', 'workitems'],
+        ['devops', 'invoke', '--area=security', '--resource=permissions'],
+        ['devops', 'invoke', '--area', 'build', '--resource', 'definitions'],
+        ['devops', 'invoke'],
+        ['devops', 'invoke', '--area', 'build'],
+        ['devops', 'invoke', '--resource', 'builds'],
+      ].map(args => ({ name: args.slice(2).join(' ') || '(bare)', args })),
+    )('blocks devops invoke endpoint $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
+    });
+  });
+
+  integration('blocks flags before checking endpoint', async ({ call, expect }) => {
+    assertBlocked(expect, await call(
+      ['devops', 'invoke', '--http-method', 'POST', '--area', 'git', '--resource', 'refs'],
+    ));
+  });
+
+  describe('blocked abbreviated flags', () => {
+    integration.for([
+      { name: '--http-m', args: buildsInvoke('--http-m', 'POST') },
+      { name: '--http-metho', args: buildsInvoke('--http-metho', 'PATCH') },
+      { name: '--in-f', args: buildsInvoke('--in-f', build.fileName('json')) },
+      { name: '--out-f', args: buildsInvoke('--out-f', build.fileName('json')) },
+      { name: '--out', args: buildsInvoke('--out', 'json') },
+      { name: '--o', args: buildsInvoke('--o', 'json') },
+      { name: '--are', args: ['devops', 'invoke', '--are', 'build', '--resource', 'builds'] },
+      { name: '--res', args: ['devops', 'invoke', '--area', 'build', '--res', 'builds'] },
+    ])('blocks abbreviated flag $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
+    });
+  });
+
+  describe('blocked single-dash flags on invoke', () => {
+    integration.for([
+      { name: '-X', args: buildsInvoke('-X', 'POST') },
+      { name: '-h', args: buildsInvoke('-h') },
+      { name: '-o', args: buildsInvoke('-o', 'json') },
+    ])('blocks single-dash flag $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
+    });
+  });
+
+  describe('missing required invoke flags', () => {
+    integration('reports missing --area', async ({ call, expect }) => {
+      const result = await call(['devops', 'invoke', '--resource', 'builds']);
+
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain('Missing required flag: --area');
+    });
+
+    integration('reports missing --resource', async ({ call, expect }) => {
+      const result = await call(['devops', 'invoke', '--area', 'build']);
+
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain('Missing required flag: --resource');
+    });
+
+    integration('reports missing --area when both absent', async ({ call, expect }) => {
+      const result = await call(['devops', 'invoke']);
+
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain('Missing required flag');
+    });
+  });
+
+  describe('blocked duplicate flags', () => {
+    integration.for(
+      [
+        ['devops', 'invoke', '--area', 'build', '--resource', 'builds', '--area', 'security'],
+        [
+          'devops', 'invoke', '--area', 'build', '--resource', 'builds',
+          '--resource', 'permissions',
+        ],
+      ].map(args => ({ name: args.slice(2).join(' '), args })),
+    )('blocks duplicate flag $name', async ({ args }, { call, expect }) => {
+      assertBlocked(expect, await call(args));
+    });
+  });
+});

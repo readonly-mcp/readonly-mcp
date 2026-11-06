@@ -176,3 +176,23 @@ export const template: Filler = text => templateFiller()(text);
  * Arbitrary https URL on an arbitrary host.
  */
 export const httpsUrl = (): string => `https://${faker.internet.domainName()}`;
+
+/**
+ * `api` on a pull request comments endpoint, then `flags`.
+ */
+export const apiArgs = (...flags: string[]): string[] => ['api', prCommentsPath(), ...flags];
+
+/**
+ * A generated `key=value` pair, as -f and --field take.
+ */
+export const field = (): string => `${faker.lorem.word()}=${faker.lorem.word()}`;
+
+/**
+ * A generated `key=@file` pair, which -F reads the file into.
+ */
+export const fileField = (): string => `${faker.lorem.word()}=@${fileName()}`;
+
+/**
+ * A generated custom header, as -H and --header take.
+ */
+export const header = (): string => `X-${faker.lorem.word()}: ${faker.lorem.word()}`;

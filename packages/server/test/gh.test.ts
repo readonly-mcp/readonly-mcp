@@ -3,8 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Server, assertBlocked, connectTool, echoed, textOf, useServer,
-} from '#test/helpers.js';
+  assertBlocked, connectTool, echoed, textOf } from '#test/helpers.js';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
@@ -186,34 +185,5 @@ describe.concurrent('gh tool (unit)', () => {
       const result = await callMocked(['--version', 'repo', 'delete']);
       assertBlocked(expect, result);
     });
-  });
-});
-
-// --- Integration tests (real MCP server) ---
-const integration = it.extend<{ server: Server }>({
-  server: [async ({}, use) => useServer(use), { scope: 'file' }],
-});
-
-describe.concurrent('gh tool (integration)', () => {
-  integration.beforeAll(({ server }) => server.initialize());
-
-  integration.for(
-    [
-      ['issue', 'create'], ['issue', 'close'], ['issue', 'delete'], ['issue', 'edit'],
-      ['pr', 'create'], ['pr', 'close'], ['pr', 'merge'], ['pr', 'edit'],
-      ['repo', 'create'], ['repo', 'delete'],
-      ['auth', 'login'],
-      ['gist', 'create'], ['gist', 'delete'], ['gist', 'edit'],
-      ['label', 'create'], ['label', 'delete'], ['label', 'edit'],
-      ['release', 'create'], ['release', 'delete'], ['release', 'edit'],
-      ['workflow', 'run'], ['workflow', 'enable'], ['workflow', 'disable'],
-      ['secret', 'set'], ['secret', 'delete'],
-      ['variable', 'get'], ['variable', 'set'], ['variable', 'delete'],
-      ['project', 'create'], ['project', 'delete'], ['project', 'edit'],
-      ['cache', 'delete'],
-      ['ruleset', 'create'],
-    ].map(args => ({ name: args.join(' '), args })),
-  )('blocks $name', async ({ args }, { expect, server }) => {
-    assertBlocked(expect, await server.callTool('gh', { args }));
   });
 });

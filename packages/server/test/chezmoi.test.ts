@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
 import * as build from '#test/builders.js';
-import { type Server, assertBlocked, connectTool, textOf, useServer } from '#test/helpers.js';
+import { connectTool, textOf } from '#test/helpers.js';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
@@ -197,24 +197,5 @@ describe.concurrent('chezmoi tool (unit)', () => {
         assertAllowed(expect, await callMocked(args));
       },
     );
-  });
-});
-
-// --- Integration tests (real MCP server) ---
-const integration = it.extend<{ server: Server }>({
-  server: [async ({}, use) => useServer(use), { scope: 'file' }],
-});
-
-describe.concurrent('chezmoi tool (integration)', () => {
-  integration.beforeAll(({ server }) => server.initialize());
-
-  integration.for(
-    [
-      ['apply'], ['add'], ['data'], ['edit'], ['forget'], ['init'],
-      ['remove'], ['re-add'], ['update'], ['destroy'], ['state', 'dump'],
-      ['cat-config'],
-    ].map(args => ({ name: args.join(' '), args })),
-  )('blocks $name', async ({ args }, { expect, server }) => {
-    assertBlocked(expect, await server.callTool('chezmoi', { args }));
   });
 });
