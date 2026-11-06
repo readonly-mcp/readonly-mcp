@@ -1,23 +1,7 @@
 import { faker } from '@faker-js/faker';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
-import { connectTool, textOf } from '#test/helpers.js';
-
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
-
-const { register } = await import('#src/tools/acli.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
-};
+import { describe, it } from 'vitest';
+import { plan } from '#src/tools/acli.js';
+import { runOf } from '#test/helpers.js';
 
 describe.concurrent('acli tool (unit)', () => {
   describe('allowed subcommands', () => {
@@ -31,14 +15,18 @@ describe.concurrent('acli tool (unit)', () => {
       ['jira', 'workitem', 'search'],
       ['jira', 'workitem', 'view'],
     ].map(args => ({ name: args.join(' '), args })))(
-      'allows $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'runs $name as given', ({ args }, { expect }) => {
+        const { args: argv, cmd } = runOf(plan(args));
+
+        expect([cmd, ...argv]).toStrictEqual(['acli', ...args]);
       },
     );
 
-    it('allows subcommand with flags', async ({ expect }) => {
+    it('runs a subcommand with flags as given', ({ expect }) => {
       const project = faker.string.alpha({ casing: 'upper', length: 3 });
-      assertAllowed(expect, await callMocked(['jira', 'workitem', 'list', '--project', project]));
+      const args = ['jira', 'workitem', 'list', '--project', project];
+
+      expect(runOf(plan(args)).args).toStrictEqual(args);
     });
   });
 });
