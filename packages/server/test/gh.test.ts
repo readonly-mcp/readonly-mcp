@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
+import * as build from '#test/builders.js';
 import {
   type Server, assertBlocked, connectTool, echoed, textOf, useServer,
 } from '#test/helpers.js';
@@ -127,6 +128,39 @@ describe.concurrent('gh tool (unit)', () => {
       const { excludedEnv } = echoed(await callMocked(args));
 
       expect(excludedEnv).toStrictEqual(['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN']);
+    });
+  });
+
+  describe('github.localhost', () => {
+    it.for([
+      { args: () => ['pr', 'list', '-R', `github.localhost/${build.repoSlug()}`], name: '-R' },
+      {
+        args: () => ['pr', 'list', `--repo=api.github.localhost/${build.repoSlug()}`],
+        name: 'a subdomain',
+      },
+      { args: () => ['pr', 'view', `http://github.localhost/${build.repoSlug()}/pull/1`], name: 'a URL' },
+      { args: () => ['repo', 'view', `GitHub.LocalHost/${build.repoSlug()}`], name: 'any case' },
+    ])('blocks $name naming it', async ({ args }, { expect }) => {
+      const sent = args();
+      const result = await callMocked(sent);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
+    });
+
+    it('blocks api naming it', async ({ expect }) => {
+      const filter = '"github.localhost"';
+      const result = await callMocked(['api', build.prCommentsPath(), '--jq', filter]);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
+    });
+
+    it('reports a disallowed subcommand first', async ({ expect }) => {
+      const result = await callMocked(['auth', 'status', '--hostname', 'github.localhost']);
+      assertBlocked(expect, result);
+
+      expect(textOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
     });
   });
 

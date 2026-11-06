@@ -118,6 +118,18 @@ const rejectJqFilter = (args: readonly string[]): Rejection => {
   return name === undefined ? undefined : fail(`Filter may not use ${name} for gh --jq`);
 };
 
+/*
+ * gh treats github.localhost and its subdomains as github.com: it sends
+ * GH_TOKEN there, over plain HTTP, to whatever *.localhost resolves to. Any
+ * arg naming it is rejected, wherever the host would be read from.
+ */
+const localGitHub = /github\.localhost/iv;
+
+const rejectLocalhost = (args: readonly string[]): Rejection => {
+  const arg = args.find(candidate => localGitHub.test(candidate));
+  return arg === undefined ? undefined : fail(`gh may not reach github.localhost: ${arg}`);
+};
+
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const [, endpoint, ...apiArgs] = args;
   if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
@@ -140,7 +152,7 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   // user-supplied flags. Appending it at the end would be defeated by
   // a `--` (end-of-options marker) in user args, since everything after
   // `--` is treated as positional, making the injected flag a no-op.
-  return rejectJqFilter(args) ??
+  return rejectLocalhost(args) ?? rejectJqFilter(args) ??
     exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs], ghOptions);
 };
 
@@ -167,7 +179,7 @@ export const register = (server: McpServer): RegisteredTool =>
       if (args[0] === 'api') return runApi(args);
 
       return isAllowlisted(args, subcommands)
-        ? rejectJqFilter(args) ?? exec('gh', args, ghOptions)
+        ? rejectLocalhost(args) ?? rejectJqFilter(args) ?? exec('gh', args, ghOptions)
         : rejectSubcommand(args, subcommands);
     },
   );

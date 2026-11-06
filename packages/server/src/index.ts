@@ -38,11 +38,18 @@
  *   on every gh command, `api` included.
  * - gh enterprise tokens: gh sends `GH_ENTERPRISE_TOKEN` (or its alias
  *   `GITHUB_ENTERPRISE_TOKEN`) to any host outside github.com, and a caller
- *   names the host through `-R HOST/OWNER/REPO` or a URL positional, so gh
- *   runs without both. Of the four token variables gh documents, these are
- *   the two it sends to hosts GitHub does not run, so dropping them by name
- *   leaves none behind. A token `gh auth login --hostname` stored is sent only
- *   to its own host.
+ *   names the host through `-R HOST/OWNER/REPO`, a URL positional or
+ *   `attestation verify --hostname`, so gh runs without both. Of the four
+ *   token variables gh documents, these are the two it sends to any host at
+ *   all, so a list of names is enough; the
+ *   other two, `GH_TOKEN` and `GITHUB_TOKEN`, are covered by the next entry
+ *   and the `*.ghe.com` accepted risk. A token `gh auth login --hostname`
+ *   stored is sent only to its own host.
+ * - gh github.localhost: gh treats `github.localhost` and its subdomains as
+ *   github.com, so it sends `GH_TOKEN` there over plain HTTP, and many
+ *   resolvers map `*.localhost` to loopback, where any local listener reads
+ *   it. A gh arg naming that host anywhere, in any case, is rejected, which
+ *   covers `-R`, URL positionals and `--hostname` without parsing any.
  * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
  *   `ls`, `git-credential`), so args are resolved to canonical names before
  *   matching and executed under those names. Unknown aliases stay unresolved

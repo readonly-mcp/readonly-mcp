@@ -73,7 +73,9 @@ Also supports `--version`, `--help`, `-h` as standalone flags.
 
 `--jq`/`-q` filters may not use `env`, `$ENV`, `import`, `include` or `modulemeta`, on `api` too: gh's embedded jq reads the server's environment through `env` and `$ENV`. As with `jq`, the check matches the word, so a string spelling one is rejected too; `.env` is a field and passes.
 
-gh runs without `GH_ENTERPRISE_TOKEN` and `GITHUB_ENTERPRISE_TOKEN`: gh sends either to any host outside github.com that `-R HOST/OWNER/REPO` or a URL positional names. To reach GitHub Enterprise Server through this tool, store a token for it with `gh auth login --hostname <host>`, which gh sends to that host only.
+gh runs without `GH_ENTERPRISE_TOKEN` and `GITHUB_ENTERPRISE_TOKEN`: gh sends either to any host outside github.com that `-R HOST/OWNER/REPO`, a URL positional or `attestation verify --hostname` names. To reach GitHub Enterprise Server through this tool, store a token for it with `gh auth login --hostname <host>`, which gh sends to that host only.
+
+Args naming `github.localhost` are rejected, in any case and at any position: gh treats that host and its subdomains as github.com, so it sends `GH_TOKEN` there over plain HTTP, to wherever `*.localhost` resolves.
 
 **Schema:** `{ args: string[] }`
 
