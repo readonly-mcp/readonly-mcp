@@ -101,6 +101,16 @@ export const exec = async (
   }
 };
 
+/*
+ * What a command the server runs for itself prints, under the same limits
+ * as exec. It rejects when the command fails, since the caller acts on the
+ * output rather than passing it on.
+ */
+export const readOutput = async (cmd: string, args: readonly string[]): Promise<string> => {
+  const { stdout } = await run(cmd, args, execOptions);
+  return stdout;
+};
+
 export const execShell = async (cmd: string, args: readonly string[]): Promise<CallToolResult> => {
   return isWindows ? exec('bash', ['-c', 'exec "$@"', '--', cmd, ...args]) : exec(cmd, args);
 };

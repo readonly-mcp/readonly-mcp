@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { errorResult, exec, fail, maxBuffer, text } from '#src/lib/exec.js';
+import { errorResult, exec, fail, maxBuffer, readOutput, text } from '#src/lib/exec.js';
 import * as build from '#test/builders.js';
 import { textOf } from '#test/helpers.js';
 
@@ -47,6 +47,22 @@ describe(exec, () => {
     });
 
     expect(textOf(result)).toBe('set');
+  });
+});
+
+describe(readOutput, () => {
+  it('resolves with what the command printed', async ({ expect }) => {
+    const word = faker.lorem.word();
+    const print = ['-e', 'process.stdout.write(process.argv[1])', word];
+    const output = await readOutput(process.execPath, print);
+
+    expect(output).toBe(word);
+  });
+
+  it('rejects when the command fails', async ({ expect }) => {
+    const output = readOutput(process.execPath, ['-e', 'process.exit(3)']);
+
+    await expect(output).rejects.toThrow('Command failed');
   });
 });
 

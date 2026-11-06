@@ -1,11 +1,10 @@
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   ArgsSchema, type Rejection, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
-import { exec, fail } from '#src/lib/exec.js';
+import { exec, fail, readOutput } from '#src/lib/exec.js';
 
 const subcommands = new Set([
   'blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree',
@@ -109,11 +108,9 @@ const isWindows = process.platform === 'win32';
 /**
  * Return resolved paths for every worktree known to this repo.
  */
-const getWorktreePaths = (): string[] => {
+const getWorktreePaths = async (): Promise<string[]> => {
   try {
-    const out = execFileSync('git', ['worktree', 'list', '--porcelain'], {
-      timeout: 5000,
-    }).toString();
+    const out = await readOutput('git', ['worktree', 'list', '--porcelain']);
     return out
       .split('\n')
       .filter(line => line.startsWith('worktree '))
@@ -123,9 +120,10 @@ const getWorktreePaths = (): string[] => {
   }
 };
 
-const isKnownWorktree = (dir: string): boolean => {
+const isKnownWorktree = async (dir: string): Promise<boolean> => {
   const target = path.resolve(dir);
-  return getWorktreePaths().some(wt =>
+  const worktrees = await getWorktreePaths();
+  return worktrees.some(wt =>
     isWindows ? wt.toLowerCase() === target.toLowerCase() : wt === target,
   );
 };
@@ -139,8 +137,8 @@ const firstPositional = (args: readonly string[]): string | undefined => {
   return args.slice(0, end === -1 ? undefined : end).find(arg => !arg.startsWith('-'));
 };
 
-const rejectCwd = (cwd: string | undefined): Rejection =>
-  cwd === undefined || isKnownWorktree(cwd)
+const rejectCwd = async (cwd: string | undefined): Promise<Rejection> =>
+  cwd === undefined || await isKnownWorktree(cwd)
     ? undefined
     : fail('cwd rejected: not a known git worktree');
 
@@ -253,7 +251,7 @@ export const register = (server: McpServer): RegisteredTool =>
         // Block --output and --no-index with prefix matching (defeats abbreviation)
         rejectBlockedFlags(args, blockedFlags) ??
         subcommandChecks[sub]?.(args) ??
-        rejectCwd(cwd);
+        await rejectCwd(cwd);
       if (rejected) return rejected;
       // Inject --no-pager to prevent interactive pager from blocking the process.
       // If a valid worktree cwd was given, inject -C <dir> to target that worktree.
