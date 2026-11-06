@@ -1,26 +1,8 @@
 import { faker } from '@faker-js/faker';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { describe, it } from 'vitest';
+import { plan } from '#src/tools/pnpm.js';
 import * as build from '#test/builders.js';
-import {
-  assertBlocked, connectTool, textOf,
-} from '#test/helpers.js';
-
-// --- Unit tests (mocked execShell) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
-
-const { register } = await import('#src/tools/pnpm.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
-};
+import { rejectionOf, runOf } from '#test/helpers.js';
 
 describe.concurrent('pnpm tool (unit)', () => {
   describe('allowed global flags', () => {
@@ -28,8 +10,8 @@ describe.concurrent('pnpm tool (unit)', () => {
       { name: '--version', args: ['--version'] },
       { name: '--help', args: ['--help'] },
       { name: '-h', args: ['-h'] },
-    ])('allows $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    ])('runs $name as given', ({ args }, { expect }) => {
+      expect(runOf(plan(args)).args).toStrictEqual(args);
     });
   });
 
@@ -44,8 +26,10 @@ describe.concurrent('pnpm tool (unit)', () => {
       { name: 'search', args: ['search', 'zod'] },
       { name: 'store status', args: ['store', 'status'] },
       { name: 'why', args: ['why', 'zod'] },
-    ])('allows $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    ])('runs $name as given, through the shell runner', ({ args }, { expect }) => {
+      const { args: argv, cmd, runner } = runOf(plan(args));
+
+      expect({ argv, cmd, runner }).toStrictEqual({ argv: args, cmd: 'pnpm', runner: 'shell' });
     });
   });
 
@@ -74,8 +58,10 @@ describe.concurrent('pnpm tool (unit)', () => {
       { name: '-registry=<url>', args: ['outdated', `-registry=${url}`] },
       { name: '-config.registry=<url>', args: ['outdated', `-config.registry=${url}`] },
       { name: '-dir <dir>', args: ['list', '-dir', directory] },
-    ])('blocks $name', async ({ args }, { expect }) => {
-      assertBlocked(expect, await callMocked(args));
+    ])('blocks $name', ({ args }, { expect }) => {
+      const flag = args.find(arg => arg.startsWith('-'));
+
+      expect(rejectionOf(plan(args))).toBe(`Flag not allowed: ${flag ?? ''}`);
     });
 
     // A whole flag name is not an abbreviation of the blocked flag it prefixes.
@@ -83,8 +69,8 @@ describe.concurrent('pnpm tool (unit)', () => {
       { name: 'list --global (prefixes --globalconfig)', args: ['list', '--global'] },
       { name: 'root --global (prefixes --globalconfig)', args: ['root', '--global'] },
       { name: 'list -g (a shorthand, not a long name)', args: ['list', '-g'] },
-    ])('allows $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    ])('runs $name as given', ({ args }, { expect }) => {
+      expect(runOf(plan(args)).args).toStrictEqual(args);
     });
   });
 });
