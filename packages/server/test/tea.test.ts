@@ -1,23 +1,16 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it } from 'vitest';
+import { plan } from '#src/tools/tea.js';
 import * as build from '#test/builders.js';
-import {
-  assertBlocked, connectTool, echoed, textOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
+const assertRunsAsGiven = (expect: ExpectStatic, args: readonly string[]) => {
+  const { args: argv, cmd } = runOf(plan(args));
 
-const { register } = await import('#src/tools/tea.js');
+  expect([cmd, ...argv]).toStrictEqual(['tea', ...args]);
+};
 
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
+const assertRejected = (expect: ExpectStatic, args: readonly string[]) => {
+  expect(plan(args)).toMatchObject({ kind: 'reject' });
 };
 
 describe.concurrent('tea tool (unit)', () => {
@@ -41,13 +34,13 @@ describe.concurrent('tea tool (unit)', () => {
       ['repos', 'search', ':word'],
       ['whoami'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
-      'allows $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'runs $name as given', ({ args }, { expect }) => {
+        assertRunsAsGiven(expect, args);
       },
     );
 
-    it('allows subcommand with flags', async ({ expect }) => {
-      assertAllowed(expect, await callMocked(['pulls', 'list', '--state', 'all', '-o', 'json']));
+    it('runs a subcommand with flags as given', ({ expect }) => {
+      assertRunsAsGiven(expect, ['pulls', 'list', '--state', 'all', '-o', 'json']);
     });
   });
 
@@ -74,8 +67,8 @@ describe.concurrent('tea tool (unit)', () => {
       const fill = build.templateFiller();
       return { args: args.map(fill), expected: expected.map(fill), name: args.join(' ') };
     }))(
-      'runs $name under its canonical names', async ({ args, expected }, { expect }) => {
-        expect(echoed(await callMocked(args)).args).toEqual(expected);
+      'runs $name under its canonical names', ({ args, expected }, { expect }) => {
+        expect(runOf(plan(args)).args).toEqual(expected);
       },
     );
   });
@@ -92,8 +85,8 @@ describe.concurrent('tea tool (unit)', () => {
       ['issues', '--state', 'closed', '-l', ':word', ':number'],
       ['milestones', 'issues', '--kind', 'pull', ':version'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
-      'allows $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'runs $name as given', ({ args }, { expect }) => {
+        assertRunsAsGiven(expect, args);
       },
     );
 
@@ -115,8 +108,8 @@ describe.concurrent('tea tool (unit)', () => {
       ['milestones', 'issues', '--kind', 'pull', 'r', ':version', ':number'],
       ['milestones', 'issues', ':version', ':word'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
-      'blocks $name', async ({ args }, { expect }) => {
-        assertBlocked(expect, await callMocked(args));
+      'blocks $name', ({ args }, { expect }) => {
+        assertRejected(expect, args);
       },
     );
   });
@@ -128,13 +121,13 @@ describe.concurrent('tea tool (unit)', () => {
       ['--help'],
       ['-h'],
     ].map(args => ({ name: args[0], args })))(
-      'allows standalone $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'runs standalone $name', ({ args }, { expect }) => {
+        assertRunsAsGiven(expect, args);
       },
     );
 
-    it('blocks --help with extra args', async ({ expect }) => {
-      assertBlocked(expect, await callMocked(['--help', 'repos', 'delete']));
+    it('blocks --help with extra args', ({ expect }) => {
+      assertRejected(expect, ['--help', 'repos', 'delete']);
     });
   });
 
@@ -145,8 +138,8 @@ describe.concurrent('tea tool (unit)', () => {
       ['pulls', 'list', '-r', ':owner/:repo'],
       ['pulls', 'list', '-repo', 'my.org/my-repo_2'],
     ] as const).map(args => ({ name: args.slice(2).join(' '), args: args.map(build.template) })))(
-      'allows repository slug $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'runs with repository slug $name', ({ args }, { expect }) => {
+        assertRunsAsGiven(expect, args);
       },
     );
 
@@ -164,8 +157,8 @@ describe.concurrent('tea tool (unit)', () => {
       ['pulls', 'list', '-repo=../other/repo'],
       ['pulls', ':number', '-r', '../other/repo'],
     ] as const).map(args => ({ name: args.slice(2).join(' '), args: args.map(build.template) })))(
-      'blocks local path $name', async ({ args }, { expect }) => {
-        assertBlocked(expect, await callMocked(args));
+      'blocks local path $name', ({ args }, { expect }) => {
+        assertRejected(expect, args);
       },
     );
   });
