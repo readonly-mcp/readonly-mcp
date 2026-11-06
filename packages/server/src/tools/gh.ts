@@ -1,8 +1,8 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import {
-  ArgsSchema, findBlockedFlag, isAllowedApiPath, isAllowlisted,
-  rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
+  ArgsSchema, type Rejection, findBlockedFlag, findBlockedJqName, isAllowedApiPath,
+  isAllowlisted, rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
 import { exec, fail } from '#src/lib/exec.js';
 
@@ -89,6 +89,32 @@ const headerFlags = new Set(['-H', '--header']);
 const rawContentsHint = 'contents endpoints already return raw file content, ' +
   'so no Accept header is needed';
 
+const jqShortFlag = new Set(['q']);
+
+/*
+ * The filters --jq/-q hold. In a short group, q takes the rest of the group
+ * as its filter (-q., -wq.), or the next arg when nothing follows it (-wq .).
+ * A q inside another flag's attached value (-Rorg/aqua) is read the same
+ * way, which checks more than gh reads and fails closed.
+ */
+const jqFilters = (args: readonly string[]): string[] => args.flatMap((arg, index) => {
+  const next = args[index + 1] ?? '';
+  if (arg === '--jq') return next;
+  if (arg.startsWith('--jq=')) return arg.slice('--jq='.length);
+  const { flags, value } = shortFlags(arg, jqShortFlag);
+  if (!flags.includes('q')) return [];
+  return value === '' ? next : value;
+});
+
+/*
+ * gh evaluates --jq with an embedded jq whose env and $ENV return the
+ * server's environment, GH_TOKEN included when it is set there.
+ */
+const rejectJqFilter = (args: readonly string[]): Rejection => {
+  const name = jqFilters(args).map(findBlockedJqName).find(used => used !== undefined);
+  return name === undefined ? undefined : fail(`Filter may not use ${name} for gh --jq`);
+};
+
 const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResult => {
   const [, endpoint, ...apiArgs] = args;
   if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
@@ -111,7 +137,8 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   // user-supplied flags. Appending it at the end would be defeated by
   // a `--` (end-of-options marker) in user args, since everything after
   // `--` is treated as positional, making the injected flag a no-op.
-  return exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
+  return rejectJqFilter(args) ??
+    exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -136,8 +163,8 @@ export const register = (server: McpServer): RegisteredTool =>
 
       if (args[0] === 'api') return runApi(args);
 
-      if (!isAllowlisted(args, subcommands))
-        return rejectSubcommand(args, subcommands);
-      return exec('gh', args);
+      return isAllowlisted(args, subcommands)
+        ? rejectJqFilter(args) ?? exec('gh', args)
+        : rejectSubcommand(args, subcommands);
     },
   );
