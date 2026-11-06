@@ -13,7 +13,7 @@ import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol
 import type { ExpectStatic } from 'vitest';
 import { z } from 'zod';
 import type * as ExecModule from '#src/lib/exec.js';
-import type { Plan } from '#src/lib/plan.js';
+import type { Plan, Run } from '#src/lib/plan.js';
 
 const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
 
@@ -297,4 +297,21 @@ export const assertNotBlocked = (
   message = `expected not blocked, ${describeRequest(result)}`,
 ) => {
   expect(result.isError, message).toBeFalsy();
+};
+
+/**
+ * The command a plan runs. A rejection fails the test with its reason.
+ */
+export const runOf = (plan: Plan): Run => {
+  if (plan.kind === 'reject') throw new Error(`Expected a run, got a rejection: ${plan.reason}`);
+  return plan;
+};
+
+/**
+ * Why a plan rejects. A run fails the test with the command it would run.
+ */
+export const rejectionOf = (plan: Plan): string => {
+  if (plan.kind === 'run')
+    throw new Error(`Expected a rejection, got a run: ${plan.cmd} ${plan.args.join(' ')}`);
+  return plan.reason;
 };
