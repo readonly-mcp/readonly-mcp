@@ -1,20 +1,10 @@
 import { faker } from '@faker-js/faker';
-import { describe, it, vi } from 'vitest';
+import { describe, it } from 'vitest';
+import { plan } from '#src/tools/git.js';
 import * as build from '#test/builders.js';
-import {
-  connectTool, echoed, textOf } from '#test/helpers.js';
+import { rejectionOf, runOf } from '#test/helpers.js';
 
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
-
-const { register } = await import('#src/tools/git.js');
-
-const callTool = await connectTool(register);
-
-const callBlame = (args: readonly string[]) => callTool({ args: ['blame', ...args] });
+const planBlame = async (args: readonly string[]) => plan(['blame', ...args]);
 
 describe.concurrent('git blame option allowlist (unit)', () => {
   /*
@@ -41,9 +31,9 @@ describe.concurrent('git blame option allowlist (unit)', () => {
     { flag: '-wx', name: 'a short flag outside the allowlist, grouped', rest: [] },
     { flag: '--porcelain=1', name: 'a value on an option that takes none', rest: [] },
   ])('rejects $name', async ({ flag, rest }, { expect }) => {
-    const result = await callBlame([flag, ...rest, build.fileName('md')]);
+    const result = await planBlame([flag, ...rest, build.fileName('md')]);
 
-    expect(textOf(result)).toBe(`Flag not allowed for git blame: ${flag}`);
+    expect(rejectionOf(result)).toBe(`Flag not allowed for git blame: ${flag}`);
   });
 
   /*
@@ -55,9 +45,9 @@ describe.concurrent('git blame option allowlist (unit)', () => {
     { args: ['-L1,2L'], name: '-L<range> ending in L' },
     { args: ['--ignore-rev', faker.git.commitSha()], name: '--ignore-rev <rev>' },
   ])('checks the option after $name', async ({ args }, { expect }) => {
-    const result = await callBlame([...args, '--stdin', build.fileName('md')]);
+    const result = await planBlame([...args, '--stdin', build.fileName('md')]);
 
-    expect(textOf(result)).toBe('Flag not allowed for git blame: --stdin');
+    expect(rejectionOf(result)).toBe('Flag not allowed for git blame: --stdin');
   });
 
   it.for([
@@ -89,8 +79,8 @@ describe.concurrent('git blame option allowlist (unit)', () => {
     { args: ['--', `-${build.fileName('md')}`], name: 'a dash-led path after --' },
   ])('passes $name to git', async ({ args }, { expect }) => {
     const file = build.fileName('md');
-    const result = await callBlame([...args, file]);
+    const result = await planBlame([...args, file]);
 
-    expect(echoed(result).args).toStrictEqual(['--no-pager', 'blame', ...args, file]);
+    expect(runOf(result).args).toStrictEqual(['--no-pager', 'blame', ...args, file]);
   });
 });
