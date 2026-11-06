@@ -1,24 +1,16 @@
 import { faker } from '@faker-js/faker';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type ExpectStatic, describe, it, vi } from 'vitest';
+import { type ExpectStatic, describe, it } from 'vitest';
+import type { Plan } from '#src/lib/plan.js';
+import { plan } from '#src/tools/gh.js';
 import * as build from '#test/builders.js';
-import {
-  assertBlocked, connectTool, echoed, textOf } from '#test/helpers.js';
+import { rejectionOf, runOf } from '#test/helpers.js';
 
-// --- Unit tests (mocked exec) ---
-vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
-  const { withEchoExec } = await import('#test/helpers.js');
-  return withEchoExec(importOriginal);
-});
+const assertRuns = (expect: ExpectStatic, args: readonly string[]) => {
+  expect(plan(args)).toMatchObject({ cmd: 'gh', kind: 'run' });
+};
 
-const { register } = await import('#src/tools/gh.js');
-
-const callTool = await connectTool(register);
-
-const callMocked = (args: readonly string[]) => callTool({ args });
-
-const assertAllowed = (expect: ExpectStatic, result: CallToolResult) => {
-  expect(result.isError, `expected allowed, got: ${textOf(result)}`).toBeFalsy();
+const assertRejected = (expect: ExpectStatic, result: Plan) => {
+  expect(result).toMatchObject({ kind: 'reject' });
 };
 
 describe.concurrent('gh tool (unit)', () => {
@@ -61,14 +53,14 @@ describe.concurrent('gh tool (unit)', () => {
       ['workflow', 'list'],
       ['workflow', 'view'],
     ].map(args => ({ name: args.join(' '), args })))(
-      'allows $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'allows $name', ({ args }, { expect }) => {
+        assertRuns(expect, args);
       },
     );
 
-    it('allows subcommand with flags', async ({ expect }) => {
+    it('allows subcommand with flags', ({ expect }) => {
       const args = ['pr', 'list', '--state', 'open', '--json', 'number'];
-      assertAllowed(expect, await callMocked(args));
+      assertRuns(expect, args);
     });
   });
 
@@ -90,11 +82,11 @@ describe.concurrent('gh tool (unit)', () => {
         name: '--jq import', used: 'import',
       },
       { args: ['pr', 'list', ...json(), '--jq', '"env"'], name: 'a string', used: 'env' },
-    ])('blocks a filter using $name', async ({ args, used }, { expect }) => {
-      const result = await callMocked(args);
-      assertBlocked(expect, result);
+    ])('blocks a filter using $name', ({ args, used }, { expect }) => {
+      const result = plan(args);
+      assertRejected(expect, result);
 
-      expect(textOf(result)).toBe(`Filter may not use ${used} for gh --jq`);
+      expect(rejectionOf(result)).toBe(`Filter may not use ${used} for gh --jq`);
     });
 
     it.for([
@@ -109,8 +101,8 @@ describe.concurrent('gh tool (unit)', () => {
       { args: ['repo', 'view', ...json(), '-q.', 'env'], name: 'env after an attached filter' },
       { args: ['search', 'issues', '-Rorg/aqua', 'env'], name: 'env after a value holding q' },
       { args: ['pr', 'list', '-Squery', 'env'], name: 'env after a search holding q' },
-    ])('allows $name', async ({ args }, { expect }) => {
-      assertAllowed(expect, await callMocked(args));
+    ])('allows $name', ({ args }, { expect }) => {
+      assertRuns(expect, args);
     });
   });
 
@@ -123,8 +115,8 @@ describe.concurrent('gh tool (unit)', () => {
       { args: ['--version'], name: 'a global flag' },
       { args: ['pr', 'list'], name: 'a subcommand' },
       { args: ['api', 'user'], name: 'api' },
-    ])('runs $name without the enterprise tokens', async ({ args }, { expect }) => {
-      const { excludedEnv } = echoed(await callMocked(args));
+    ])('runs $name without the enterprise tokens', ({ args }, { expect }) => {
+      const { excludedEnv } = runOf(plan(args)).options;
 
       expect(excludedEnv).toStrictEqual(['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN']);
     });
@@ -141,27 +133,27 @@ describe.concurrent('gh tool (unit)', () => {
       { args: () => ['repo', 'view', `GitHub.LocalHost/${build.repoSlug()}`], name: 'any case' },
       // gh lowercases hosts with Go, which maps İ (U+0130) to a plain i.
       { args: () => ['repo', 'view', `gİthub.localhost/${build.repoSlug()}`], name: 'a dotted İ' },
-    ])('blocks $name naming it', async ({ args }, { expect }) => {
+    ])('blocks $name naming it', ({ args }, { expect }) => {
       const sent = args();
-      const result = await callMocked(sent);
-      assertBlocked(expect, result);
+      const result = plan(sent);
+      assertRejected(expect, result);
 
-      expect(textOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
+      expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
     });
 
-    it('blocks api naming it', async ({ expect }) => {
+    it('blocks api naming it', ({ expect }) => {
       const filter = '"github.localhost"';
-      const result = await callMocked(['api', build.prCommentsPath(), '--jq', filter]);
-      assertBlocked(expect, result);
+      const result = plan(['api', build.prCommentsPath(), '--jq', filter]);
+      assertRejected(expect, result);
 
-      expect(textOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
+      expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
     });
 
-    it('reports a disallowed subcommand first', async ({ expect }) => {
-      const result = await callMocked(['auth', 'status', '--hostname', 'github.localhost']);
-      assertBlocked(expect, result);
+    it('reports a disallowed subcommand first', ({ expect }) => {
+      const result = plan(['auth', 'status', '--hostname', 'github.localhost']);
+      assertRejected(expect, result);
 
-      expect(textOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
+      expect(rejectionOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
     });
   });
 
@@ -171,19 +163,19 @@ describe.concurrent('gh tool (unit)', () => {
       ['--help'],
       ['-h'],
     ].map(args => ({ name: args[0], args })))(
-      'allows standalone $name', async ({ args }, { expect }) => {
-        assertAllowed(expect, await callMocked(args));
+      'allows standalone $name', ({ args }, { expect }) => {
+        assertRuns(expect, args);
       },
     );
 
-    it('blocks --help with extra args', async ({ expect }) => {
-      const result = await callMocked(['--help', 'repo', 'delete']);
-      assertBlocked(expect, result);
+    it('blocks --help with extra args', ({ expect }) => {
+      const result = plan(['--help', 'repo', 'delete']);
+      assertRejected(expect, result);
     });
 
-    it('blocks --version with extra args', async ({ expect }) => {
-      const result = await callMocked(['--version', 'repo', 'delete']);
-      assertBlocked(expect, result);
+    it('blocks --version with extra args', ({ expect }) => {
+      const result = plan(['--version', 'repo', 'delete']);
+      assertRejected(expect, result);
     });
   });
 });
