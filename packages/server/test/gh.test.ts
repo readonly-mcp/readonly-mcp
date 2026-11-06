@@ -1,7 +1,9 @@
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { type ExpectStatic, describe, it, vi } from 'vitest';
-import { type Server, assertBlocked, connectTool, textOf, useServer } from '#test/helpers.js';
+import {
+  type Server, assertBlocked, connectTool, echoed, textOf, useServer,
+} from '#test/helpers.js';
 
 // --- Unit tests (mocked exec) ---
 vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
@@ -109,6 +111,22 @@ describe.concurrent('gh tool (unit)', () => {
       { args: ['pr', 'list', '-Squery', 'env'], name: 'env after a search holding q' },
     ])('allows $name', async ({ args }, { expect }) => {
       assertAllowed(expect, await callMocked(args));
+    });
+  });
+
+  describe('environment', () => {
+    /*
+     * gh sends either one to any host outside github.com that a caller names
+     * through -R or a URL positional.
+     */
+    it.for([
+      { args: ['--version'], name: 'a global flag' },
+      { args: ['pr', 'list'], name: 'a subcommand' },
+      { args: ['api', 'user'], name: 'api' },
+    ])('runs $name without the enterprise tokens', async ({ args }, { expect }) => {
+      const { excludedEnv } = echoed(await callMocked(args));
+
+      expect(excludedEnv).toStrictEqual(['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN']);
     });
   });
 

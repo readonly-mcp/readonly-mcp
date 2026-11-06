@@ -4,9 +4,12 @@ import {
   ArgsSchema, type Rejection, findBlockedFlag, findBlockedJqName, isAllowedApiPath,
   isAllowlisted, rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
-import { exec, fail } from '#src/lib/exec.js';
+import { type ExecOptions, exec, fail } from '#src/lib/exec.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
+
+// gh sends these to any host a caller names; see "gh enterprise tokens" in index.ts.
+const ghOptions: ExecOptions = { excludedEnv: ['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'] };
 
 const subcommands = new Set([
   'attestation verify',
@@ -138,7 +141,7 @@ const runApi = (args: readonly string[]): Promise<CallToolResult> | CallToolResu
   // a `--` (end-of-options marker) in user args, since everything after
   // `--` is treated as positional, making the injected flag a no-op.
   return rejectJqFilter(args) ??
-    exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs]);
+    exec('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs], ghOptions);
 };
 
 export const register = (server: McpServer): RegisteredTool =>
@@ -159,12 +162,12 @@ export const register = (server: McpServer): RegisteredTool =>
     async ({ args }) => {
       const [only, ...rest] = args;
       const isGlobal = only !== undefined && rest.length === 0 && globalFlags.has(only);
-      if (isGlobal) return exec('gh', args);
+      if (isGlobal) return exec('gh', args, ghOptions);
 
       if (args[0] === 'api') return runApi(args);
 
       return isAllowlisted(args, subcommands)
-        ? rejectJqFilter(args) ?? exec('gh', args)
+        ? rejectJqFilter(args) ?? exec('gh', args, ghOptions)
         : rejectSubcommand(args, subcommands);
     },
   );

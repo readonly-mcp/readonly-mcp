@@ -36,6 +36,13 @@
  *   and `$ENV` return the server's environment, `GH_TOKEN` included when it
  *   is set there. Filters are held to the same names check as the jq tool,
  *   on every gh command, `api` included.
+ * - gh enterprise tokens: gh sends `GH_ENTERPRISE_TOKEN` (or its alias
+ *   `GITHUB_ENTERPRISE_TOKEN`) to any host outside github.com, and a caller
+ *   names the host through `-R HOST/OWNER/REPO` or a URL positional, so gh
+ *   runs without both. Of the four token variables gh documents, these are
+ *   the two it sends to hosts GitHub does not run, so dropping them by name
+ *   leaves none behind. A token `gh auth login --hostname` stored is sent only
+ *   to its own host.
  * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
  *   `ls`, `git-credential`), so args are resolved to canonical names before
  *   matching and executed under those names. Unknown aliases stay unresolved
@@ -104,6 +111,9 @@
  *   systematic file enumeration at any depth. Error messages include the full
  *   pattern list (aids agent correction but doubles as adversary reconnaissance;
  *   accepted because the patterns are already published in agent instructions).
+ * - gh `GH_TOKEN` on `*.ghe.com`: gh sends `GH_TOKEN`/`GITHUB_TOKEN` to any
+ *   GHE.com tenant a caller names. Every such host is one GitHub runs, so the
+ *   token reaches GitHub for a tenant it does not belong to, and is refused.
  * - `az` non-invoke subcommands: no flag filtering is applied. The allowlisted
  *   commands (`list`, `show`) are inherently read-only. If future az CLI versions
  *   add mutating flags to these commands, they would pass through unchecked.
