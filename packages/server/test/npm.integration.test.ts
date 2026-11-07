@@ -1,3 +1,5 @@
+// @module-tag integration
+// @module-tag slow
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
@@ -9,7 +11,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => usePackageServer('npm', use), { scope: 'file' }],
 });
 
-describe.concurrent('npm tool (integration)', { tags: ['slow'] }, () => {
+describe.concurrent('npm tool (integration)', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked subcommands', () => {

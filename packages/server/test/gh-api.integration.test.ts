@@ -1,3 +1,4 @@
+// @module-tag integration
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';

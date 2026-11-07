@@ -1,3 +1,5 @@
+// @module-tag integration
+// @module-tag slow
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import { type Call, type Server, assertBlocked, assertNotBlocked } from '#test/helpers.js';
@@ -8,7 +10,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => usePackageServer('pnpm', use), { scope: 'file' }],
 });
 
-describe.concurrent('pnpm tool (integration)', { tags: ['slow'] }, () => {
+describe.concurrent('pnpm tool (integration)', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('allowed global flags', () => {
