@@ -27,7 +27,7 @@ minimum_release_age_excludes = ["npm:@gtbuchanan/*", "npm:@readonly-mcp/*"]
 includes = ["mise.tasks.toml"]
 
 [tools]
-hk = "2.11.0"
+hk = "2.11.1"
 # The hk jactionlint step.
 jactionlint = "v2.4.0"
 node = "26.13.0"
