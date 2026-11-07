@@ -11,7 +11,7 @@ const assertRunsAsGiven = (expect: ExpectStatic, args: readonly string[]) => {
   expect([cmd, ...argv]).toStrictEqual(['chezmoi', ...args]);
 };
 
-describe.concurrent('chezmoi tool (unit)', () => {
+describe.concurrent('chezmoi tool', () => {
   describe('allowed subcommands', () => {
     it.for(['diff', 'doctor', 'managed', 'source-path', 'status', 'target-path', 'verify'])(
       'runs %s', (sub, { expect }) => {

@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { plan } from '#src/tools/shell.js';
 import { runOf } from '#test/helpers.js';
 
-describe.concurrent('shell tool (unit)', () => {
+describe.concurrent('shell tool', () => {
   describe('allowed commands', () => {
     it.for([
       'basename', 'date', 'dirname', 'eza', 'file', 'jq', 'ls', 'pwd',

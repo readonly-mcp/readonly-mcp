@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { plan } from '#src/tools/git.js';
 import { runOf } from '#test/helpers.js';
 
-describe.concurrent('git tool (unit)', () => {
+describe.concurrent('git tool', () => {
   describe('allowed subcommands', () => {
     it.for([
       'blame', 'describe', 'diff', 'log', 'ls-files', 'ls-tree', 'merge-base',

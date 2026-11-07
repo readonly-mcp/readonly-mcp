@@ -8,7 +8,7 @@ const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('shell tool (integration)', () => {
+describe.concurrent('shell tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked commands', () => {

@@ -4,7 +4,7 @@ import { plan } from '#src/tools/pnpm.js';
 import * as build from '#test/builders.js';
 import { rejectionOf, runOf } from '#test/helpers.js';
 
-describe.concurrent('pnpm tool (unit)', () => {
+describe.concurrent('pnpm tool', () => {
   describe('allowed global flags', () => {
     it.for([
       { name: '--version', args: ['--version'] },
