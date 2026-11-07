@@ -1,3 +1,4 @@
+// @module-tag integration
 import { describe, it } from 'vitest';
 import {
   type Server, assertBlocked, useServer,
@@ -7,7 +8,7 @@ const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('gh tool (integration)', () => {
+describe.concurrent('gh tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration.for(

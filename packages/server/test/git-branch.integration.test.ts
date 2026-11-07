@@ -1,3 +1,4 @@
+// @module-tag integration
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -61,7 +62,7 @@ const integration = it.extend<{ call: Call; repo: Repo; server: Server }>({
 });
 
 // Sequential: each test compares the shared repository before and after.
-describe('git branch list mode (integration)', () => {
+describe('git branch list mode', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration.for<{ attack: (side: string) => string[]; name: string }>([

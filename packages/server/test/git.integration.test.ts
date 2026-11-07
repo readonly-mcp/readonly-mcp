@@ -1,3 +1,4 @@
+// @module-tag integration
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
@@ -9,7 +10,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('git tool (integration)', () => {
+describe.concurrent('git tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked subcommands', () => {

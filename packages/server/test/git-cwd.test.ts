@@ -6,7 +6,7 @@ import { rejectionOf, runOf } from '#test/helpers.js';
 
 const rejected = 'cwd rejected: not a known git worktree';
 
-describe.concurrent('git tool cwd (unit)', () => {
+describe.concurrent('git tool cwd', () => {
   const toplevel = execFileSync('git', ['rev-parse', '--show-toplevel'], {
     timeout: 5000,
   }).toString().trim();

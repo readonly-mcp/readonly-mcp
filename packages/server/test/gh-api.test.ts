@@ -13,7 +13,7 @@ const assertRejected = (expect: ExpectStatic, result: Plan) => {
   expect(result).toMatchObject({ kind: 'reject' });
 };
 
-describe.concurrent('gh api (unit)', () => {
+describe.concurrent('gh api', () => {
   it.for(([
     'repos/:owner/:repo/pulls/:number/comments',
     'repos/:owner/:repo/pulls/:number/comments/:number',

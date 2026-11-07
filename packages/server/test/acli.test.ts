@@ -3,7 +3,7 @@ import { describe, it } from 'vitest';
 import { plan } from '#src/tools/acli.js';
 import { runOf } from '#test/helpers.js';
 
-describe.concurrent('acli tool (unit)', () => {
+describe.concurrent('acli tool', () => {
   describe('allowed subcommands', () => {
     it.for([
       ['jira', 'board', 'list'],

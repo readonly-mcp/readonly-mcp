@@ -1,3 +1,4 @@
+// @module-tag integration
 import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -63,7 +64,7 @@ const integration = it.extend<{ call: GitCall; server: Server; worktree: LinkedW
   }, { scope: 'file' }],
 });
 
-describe.concurrent('git tool cwd (integration)', () => {
+describe.concurrent('git tool cwd', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('cwd parameter', () => {

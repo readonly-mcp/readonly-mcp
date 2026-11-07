@@ -1,3 +1,4 @@
+// @module-tag integration
 import { describe, it } from 'vitest';
 import { type Server, assertBlocked, useServer } from '#test/helpers.js';
 
@@ -5,7 +6,7 @@ const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('chezmoi tool (integration)', () => {
+describe.concurrent('chezmoi tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration.for(

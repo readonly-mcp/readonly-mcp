@@ -13,7 +13,7 @@ const assertRejected = (expect: ExpectStatic, args: readonly string[]) => {
   expect(plan(args)).toMatchObject({ kind: 'reject' });
 };
 
-describe.concurrent('tea tool (unit)', () => {
+describe.concurrent('tea tool', () => {
   describe('allowed subcommands', () => {
     it.for(([
       ['branches', 'list'],

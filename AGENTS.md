@@ -19,9 +19,9 @@ src/
     index.ts        Tool registry (barrel export)
     <tool>.ts       One file per CLI tool (git, gh, az, npm, pnpm, chezmoi, acli, shell, tea)
 test/
-  <tool>.test.ts    Per-tool security + functionality tests, against a mocked exec
-  <tool>.integration.test.ts  The same tool against real binaries, exec unmocked
-  shell-injection.test.ts   Cross-tool injection attack tests
+  <tool>.test.ts    Per-tool security + functionality tests of the pure plan()
+  <tool>.integration.test.ts  The same tool through a server, against real binaries
+  shell-injection.integration.test.ts  Cross-tool injection attack tests
   builders.ts       Arbitrary test-data builders (faker)
   canary.ts         Per-test file that injection tests prove untouched
   helpers.ts        Shared test utilities
@@ -76,6 +76,12 @@ pnpm run build
 Tests in `test/` run against source, and they are where the security boundary
 is tested. `e2e/` only checks that the published package installs and starts,
 so put a new restriction's tests in `test/`.
+
+A test file that calls tools through a server is named
+`*.integration.test.ts` and opens with `// @module-tag integration`, which
+gives its tests the longer timeout `vitest.config.ts` sets for that tag. Add
+`// @module-tag slow` as well for a suite that belongs in the slow run rather
+than the fast one.
 
 Tests validate the security boundary, not just functionality. Every blocked
 flag, blocked subcommand, and injection vector has a corresponding test.

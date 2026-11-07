@@ -1,3 +1,4 @@
+// @module-tag integration
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
@@ -9,7 +10,7 @@ const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('gh api (integration)', () => {
+describe.concurrent('gh api', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked api endpoints', () => {
