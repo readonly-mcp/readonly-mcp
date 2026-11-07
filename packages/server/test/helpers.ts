@@ -12,7 +12,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { ExpectStatic } from 'vitest';
 import { z } from 'zod';
-import type * as ExecModule from '#src/lib/exec.js';
 import type { Plan, Run } from '#src/lib/plan.js';
 
 const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
@@ -198,80 +197,6 @@ export const useServer = async (
     await server.close();
   }
 };
-
-/**
- * Registers one tool on a real McpServer and connects a client to it in
- * memory, so unit tests reach the handler the way production does: through
- * the protocol and the tool's input schema.
- */
-export const connectTool = async (register: (server: McpServer) => unknown) => {
-  const server = new McpServer({ name: 'test', version: '0.0.0' });
-  register(server);
-  const client = new Client({ name: 'test', version: '0.0.0' });
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
-  const { tools } = await client.listTools();
-  const [tool, ...others] = tools;
-  if (tool === undefined || others.length > 0) {
-    const names = tools.map(listed => listed.name).join(', ');
-    throw new Error(`Expected one registered tool, got: ${names}`);
-  }
-  return async (args: Record<string, unknown>): Promise<CallToolResult> => {
-    const result = await client.callTool({ arguments: args, name: tool.name });
-    return remember(args, CallToolResultSchema.parse(result));
-  };
-};
-
-const EchoSchema = z.object({
-  args: z.array(z.string()).readonly(),
-  cmd: z.string(),
-  excludedEnv: z.array(z.string()).readonly(),
-});
-
-/*
- * Stands in for exec and execShell in unit tests. It runs nothing and answers
- * with the command it was handed, so each test reads what its own call would
- * have run from its own result rather than from a call log that concurrent
- * tests share.
- */
-const echoExec = (
-  cmd: string, args: readonly string[], { excludedEnv = [] }: ExecModule.ExecOptions = {},
-): Promise<CallToolResult> => {
-  const echo = { args, cmd, excludedEnv } satisfies z.input<typeof EchoSchema>;
-  return Promise.resolve({ content: [{ type: 'text', text: JSON.stringify(echo) }] });
-};
-
-/**
- * A `vi.mock` factory for `lib/exec.ts` that keeps the real module but
- * replaces both runners and `runPlan` with `echoExec`, so a tool reaching
- * for any of them spawns nothing:
- *
- * ```ts
- * vi.mock(import('#src/lib/exec.js'), async (importOriginal) => {
- *   const { withEchoExec } = await import('#test/helpers.js');
- *   return withEchoExec(importOriginal);
- * });
- * ```
- *
- * The factory is hoisted above the file's imports, hence the dynamic import.
- */
-export const withEchoExec = async (importOriginal: () => Promise<typeof ExecModule>) => {
-  const original = await importOriginal();
-  return {
-    ...original,
-    exec: echoExec,
-    execShell: echoExec,
-    // runPlan calls the module's own exec, which the overrides above do not reach.
-    runPlan: async (plan: Plan): Promise<CallToolResult> => plan.kind === 'reject'
-      ? original.fail(plan.reason)
-      : echoExec(plan.cmd, plan.args, plan.options),
-  };
-};
-
-/**
- * The command an `echoExec` result says the tool would have run.
- */
-export const echoed = (result: CallToolResult) => EchoSchema.parse(JSON.parse(textOf(result)));
 
 /**
  * The text of a result's first content item, which must be text.
