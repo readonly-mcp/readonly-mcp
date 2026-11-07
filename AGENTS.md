@@ -21,7 +21,7 @@ src/
 test/
   <tool>.test.ts    Per-tool security + functionality tests, against a mocked exec
   <tool>.integration.test.ts  The same tool against real binaries, exec unmocked
-  shell-injection.test.ts   Cross-tool injection attack tests
+  shell-injection.integration.test.ts  Cross-tool injection attack tests
   builders.ts       Arbitrary test-data builders (faker)
   canary.ts         Per-test file that injection tests prove untouched
   helpers.ts        Shared test utilities
