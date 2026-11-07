@@ -6,7 +6,7 @@ import { rejectionOf, runOf } from '#test/helpers.js';
 
 const planBlame = async (args: readonly string[]) => plan(['blame', ...args]);
 
-describe.concurrent('git blame option allowlist (unit)', () => {
+describe.concurrent('git blame option allowlist', () => {
   /*
    * Each asserts the allowlist's own message: git rejects some of these
    * itself, and its error would pass for a block.

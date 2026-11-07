@@ -62,7 +62,7 @@ const integration = it.extend<{ call: Call; repo: Repo; server: Server }>({
 });
 
 // Sequential: each test compares the shared repository before and after.
-describe('git branch list mode (integration)', () => {
+describe('git branch list mode', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration.for<{ attack: (side: string) => string[]; name: string }>([

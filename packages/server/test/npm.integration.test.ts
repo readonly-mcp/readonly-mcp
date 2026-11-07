@@ -11,7 +11,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => usePackageServer('npm', use), { scope: 'file' }],
 });
 
-describe.concurrent('npm tool (integration)', () => {
+describe.concurrent('npm tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked subcommands', () => {

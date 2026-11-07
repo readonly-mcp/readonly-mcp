@@ -64,7 +64,7 @@ const integration = it.extend<{ call: GitCall; server: Server; worktree: LinkedW
   }, { scope: 'file' }],
 });
 
-describe.concurrent('git tool cwd (integration)', () => {
+describe.concurrent('git tool cwd', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('cwd parameter', () => {

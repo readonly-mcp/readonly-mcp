@@ -14,7 +14,7 @@ const assertRejected = (expect: ExpectStatic, args: readonly string[]) => {
   expect(plan(args)).toMatchObject({ kind: 'reject' });
 };
 
-describe.concurrent('tea api (unit)', () => {
+describe.concurrent('tea api', () => {
   it.for(([
     ['api', 'repos/:owner/:repo/pulls/:number/reviews'],
     ['api', 'repos/:owner/:repo/pulls/:number/reviews/:number/comments'],

@@ -10,7 +10,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => usePackageServer('pnpm', use), { scope: 'file' }],
 });
 
-describe.concurrent('pnpm tool (integration)', () => {
+describe.concurrent('pnpm tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('allowed global flags', () => {

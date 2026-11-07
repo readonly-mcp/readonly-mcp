@@ -13,7 +13,7 @@ const assertRejected = (expect: ExpectStatic, result: Plan) => {
   expect(result).toMatchObject({ kind: 'reject' });
 };
 
-describe.concurrent('gh tool (unit)', () => {
+describe.concurrent('gh tool', () => {
   describe('allowed subcommands', () => {
     it.for([
       ['attestation', 'verify'],

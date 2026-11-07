@@ -4,7 +4,7 @@ import { plan } from '#src/tools/npm.js';
 import * as build from '#test/builders.js';
 import { rejectionOf, runOf } from '#test/helpers.js';
 
-describe.concurrent('npm tool (unit)', () => {
+describe.concurrent('npm tool', () => {
   describe('allowed subcommands', () => {
     it.for(['audit', 'bin', 'explain', 'fund', 'ls', 'outdated', 'root', 'search', 'view'])(
       'runs %s through the shell runner', (sub, { expect }) => {

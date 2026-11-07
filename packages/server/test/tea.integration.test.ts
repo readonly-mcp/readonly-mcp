@@ -9,7 +9,7 @@ const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('tea tool (integration)', () => {
+describe.concurrent('tea tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration.for(

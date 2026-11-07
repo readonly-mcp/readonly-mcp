@@ -3,7 +3,7 @@ import { plan } from '#src/tools/az.js';
 import * as build from '#test/builders.js';
 import { runOf } from '#test/helpers.js';
 
-describe.concurrent('az tool (unit)', () => {
+describe.concurrent('az tool', () => {
   describe('allowed subcommands', () => {
     it.for([
       { args: ['devops', 'project', 'list'], name: 'devops project list' },

@@ -10,7 +10,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('git blame option allowlist (integration)', () => {
+describe.concurrent('git blame option allowlist', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration('rejects a file reader before git runs', async ({ call, expect }) => {

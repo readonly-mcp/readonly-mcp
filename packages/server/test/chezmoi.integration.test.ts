@@ -6,7 +6,7 @@ const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('chezmoi tool (integration)', () => {
+describe.concurrent('chezmoi tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   integration.for(

@@ -16,7 +16,7 @@ const integration = it.extend<{ call: Call; server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
 });
 
-describe.concurrent('az tool (integration)', () => {
+describe.concurrent('az tool', () => {
   integration.beforeAll(({ server }) => server.initialize());
 
   describe('blocked subcommands', () => {
