@@ -1,3 +1,4 @@
+// @module-tag integration
 import { describe, it } from 'vitest';
 import { type Canary, assertCanaryIntact, useCanary } from '#test/canary.js';
 import { type Server, assertBlocked, useServer } from '#test/helpers.js';

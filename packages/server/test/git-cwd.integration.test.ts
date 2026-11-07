@@ -1,3 +1,4 @@
+// @module-tag integration
 import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
