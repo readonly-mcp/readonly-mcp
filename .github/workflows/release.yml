@@ -15,13 +15,13 @@ jobs:
     # organization or account.
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-    uses: gtbuchanan/tooling/.github/workflows/cd.yml@v1.0.0
+    uses: gtbuchanan/tooling/.github/workflows/cd.yml@cc8db05d356667bcff53d990ecee5a96a527f03c # v1.0.0
 
   ci:
     name: CI
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    uses: gtbuchanan/tooling/.github/workflows/ci.yml@v1.0.0
+    uses: gtbuchanan/tooling/.github/workflows/ci.yml@cc8db05d356667bcff53d990ecee5a96a527f03c # v1.0.0
     with:
       # The npm and pnpm integration suites carry the slow tag.
       run-slow-tests: true
