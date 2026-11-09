@@ -144,6 +144,67 @@ const rejectLocalhost = (args: readonly string[]): Rejection => {
   return arg === undefined ? undefined : reject(`gh may not reach github.localhost: ${arg}`);
 };
 
+// gh api's flags that take a value, by long name and short letter.
+const apiValueFlags = new Set([
+  'cache', 'field', 'header', 'hostname', 'input', 'jq', 'method', 'preview', 'raw-field',
+  'template',
+]);
+const apiShortValueFlags = new Map([
+  ['F', 'field'], ['H', 'header'], ['X', 'method'], ['f', 'raw-field'], ['p', 'preview'],
+  ['q', 'jq'], ['t', 'template'],
+]);
+
+const apiShortValuePattern = new RegExp(`[${apiShortValueFlags.keys().toArray().join('')}]`, 'v');
+
+interface ApiFlag {
+  // The value flag the arg names, or undefined when it names none.
+  readonly name: string | undefined;
+  readonly isValueNext: boolean;
+}
+
+const readLongFlag = (arg: string): ApiFlag => {
+  const [name = ''] = arg.slice('--'.length).split('=', 1);
+  return { isValueNext: !arg.includes('=') && apiValueFlags.has(name), name };
+};
+
+/*
+ * In a short group the first value flag ends it, taking the rest of the
+ * group as its value, or the next arg when nothing follows it.
+ */
+const readShortGroup = (arg: string): ApiFlag => {
+  const group = arg.slice('-'.length);
+  const valueAt = group.search(apiShortValuePattern);
+  return {
+    isValueNext: valueAt === group.length - 1,
+    name: apiShortValueFlags.get(group.charAt(valueAt)),
+  };
+};
+
+const notFlag: ApiFlag = { isValueNext: false, name: undefined };
+
+const readFlag = (arg: string): ApiFlag => {
+  if (arg.startsWith('--')) return readLongFlag(arg);
+  if (arg === '-' || !arg.startsWith('-')) return notFlag;
+  return readShortGroup(arg);
+};
+
+/*
+ * The value flags gh api reads from its args, as pflag parses them: a value
+ * flag takes the next arg whatever it holds, and `--` ends the flags. Unlike
+ * jqFilters, which fails closed for a security check, this reads only what
+ * gh reads.
+ */
+const apiFlagNames = (args: readonly string[]): readonly string[] => {
+  const [arg, ...rest] = args;
+  if (arg === undefined || arg === '--') return [];
+  const { isValueNext, name } = readFlag(arg);
+  const names = apiFlagNames(isValueNext ? rest.slice(1) : rest);
+  return name === undefined ? names : [name, ...names];
+};
+
+// Flags that make gh parse the response as JSON, which a raw body is not.
+const jsonOutputFlags = new Set(['jq', 'template']);
+
 const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...apiArgs] = args;
   if (!endpoint) return rejectApiEndpoint(endpoint, apiPaths);
@@ -155,11 +216,16 @@ const planApi = (args: readonly string[]): Plan => {
     return reject(`gh api endpoint must come first, before any flags: got ${endpoint}`);
   if (!isAllowedApiPath(endpoint, apiPaths))
     return rejectApiEndpoint(endpoint, apiPaths);
-  // Auto-inject raw Accept header for contents endpoints so file
-  // responses return plain text instead of base64-encoded JSON.
-  // Directory listings are unaffected — GitHub ignores the media type
-  // for directory responses and still returns JSON.
-  const rawAccept = isAllowedApiPath(endpoint, contentsPaths)
+  /*
+   * Auto-inject raw Accept header for contents endpoints so file
+   * responses return plain text instead of base64-encoded JSON.
+   * Directory listings are unaffected — GitHub ignores the media type
+   * for directory responses and still returns JSON. --jq and --template
+   * parse the response as JSON, so a call using either gets the JSON object.
+   */
+  const isRaw = isAllowedApiPath(endpoint, contentsPaths) &&
+    apiFlagNames(apiArgs).every(name => !jsonOutputFlags.has(name));
+  const rawAccept = isRaw
     ? ['-H', 'Accept: application/vnd.github.raw+json']
     : [];
   // Inject --method GET immediately after the endpoint, before any
@@ -194,6 +260,8 @@ export const register = (server: McpServer): RegisteredTool =>
         'api GET: pulls/reviews+reviewers, deployments+environments, check-runs+suites, ' +
         'commits+statuses, compare, contents, user). api contents/<path> returns a ' +
         'file\'s raw body, not base64 JSON; a directory still returns its JSON listing. ' +
+        'With --jq or --template it returns the JSON object instead; decode a file with ' +
+        '--jq \'.content | @base64d\'. ' +
         'The endpoint comes before any flags.',
       inputSchema: ArgsSchema,
     },

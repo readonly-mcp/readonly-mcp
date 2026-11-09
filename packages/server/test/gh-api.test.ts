@@ -231,6 +231,44 @@ describe.concurrent('gh api (unit)', () => {
     expect(args[hIdx + 1]).toBe('Accept: application/vnd.github.raw+json');
   });
 
+  /*
+   * --jq and --template read the response as JSON, which a raw file body is
+   * not, so a contents call that formats keeps GitHub's JSON object.
+   */
+  it.for([
+    { flags: ['--jq', '.content'], name: '--jq with a separate filter' },
+    { flags: ['--jq=.content'], name: '--jq= with an attached filter' },
+    { flags: ['-q', '.content'], name: '-q with a separate filter' },
+    { flags: ['-q.content'], name: '-q with an attached filter' },
+    { flags: ['-iq', '.content'], name: '-q grouped after a boolean flag' },
+    { flags: ['--template', '{{.sha}}'], name: '--template with a separate template' },
+    { flags: ['--template={{.sha}}'], name: '--template= with an attached template' },
+    { flags: ['-t', '{{.sha}}'], name: '-t with a separate template' },
+    { flags: ['-t{{.sha}}'], name: '-t with an attached template' },
+  ])('does not inject Accept header for contents with $name', ({ flags }, { expect }) => {
+    const endpoint = build.template('repos/:owner/:repo/contents/:file');
+    const { args } = runOf(plan(['api', endpoint, ...flags]));
+
+    expect(args.indexOf('-H')).toBe(-1);
+  });
+
+  /*
+   * A q or t that gh reads as another flag's value is not --jq or
+   * --template, so the call still gets the raw body.
+   */
+  it.for([
+    { flags: ['-psquirrel-girl'], name: 'q in an attached --preview value' },
+    { flags: ['-p', '-q'], name: '-q as a separate --preview value' },
+    { flags: ['--preview', '-t'], name: '-t as a separate --preview value' },
+    { flags: ['--preview=-q'], name: '-q in an attached --preview= value' },
+  ])('injects raw Accept header for contents with $name', ({ flags }, { expect }) => {
+    const endpoint = build.template('repos/:owner/:repo/contents/:file');
+    const { args } = runOf(plan(['api', endpoint, ...flags]));
+    const hIdx = args.indexOf('-H');
+
+    expect(args[hIdx + 1]).toBe('Accept: application/vnd.github.raw+json');
+  });
+
   it('does not inject Accept header for non-contents endpoint', ({ expect }) => {
     const result = plan(build.apiArgs());
     const { args } = runOf(result);
