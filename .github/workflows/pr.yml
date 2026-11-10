@@ -2,7 +2,7 @@
 jobs:
   changeset:
     name: Changeset
-    uses: gtbuchanan/tooling/.github/workflows/changeset-check.yml@cc8db05d356667bcff53d990ecee5a96a527f03c # v1.0.0
+    uses: gtbuchanan/tooling/.github/workflows/changeset-check.yml@0f6d2cedc85218b1e98c0b796576a64d10373883 # v1.1.0
 
   ci:
     name: CI
@@ -10,7 +10,7 @@ jobs:
     # organization or account.
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    uses: gtbuchanan/tooling/.github/workflows/ci.yml@cc8db05d356667bcff53d990ecee5a96a527f03c # v1.0.0
+    uses: gtbuchanan/tooling/.github/workflows/ci.yml@0f6d2cedc85218b1e98c0b796576a64d10373883 # v1.1.0
     with:
       # The npm and pnpm integration suites carry the slow tag.
       run-slow-tests: true
@@ -21,11 +21,11 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: gtbuchanan/tooling/.github/workflows/dependency-review.yml@cc8db05d356667bcff53d990ecee5a96a527f03c # v1.0.0
+    uses: gtbuchanan/tooling/.github/workflows/dependency-review.yml@0f6d2cedc85218b1e98c0b796576a64d10373883 # v1.1.0
 
   pre-commit:
     name: Pre-Commit
-    uses: gtbuchanan/tooling/.github/workflows/pre-commit.yml@cc8db05d356667bcff53d990ecee5a96a527f03c # v1.0.0
+    uses: gtbuchanan/tooling/.github/workflows/pre-commit.yml@0f6d2cedc85218b1e98c0b796576a64d10373883 # v1.1.0
     with:
       # The eslint and gtb-verify steps run through `pnpm exec`.
       use-pnpm: true
