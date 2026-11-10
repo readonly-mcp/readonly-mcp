@@ -175,7 +175,7 @@ catalogs:
       version: 2.0.0
     '@gtbuchanan/eslint-config':
       specifier: ^0.6.0
-      version: 0.6.0
+      version: 0.6.1
     '@gtbuchanan/tsconfig':
       specifier: ^0.2.0
       version: 0.2.0
@@ -234,7 +234,7 @@ importers:
         version: 2.0.0(skills@1.7.6)(turbo@2.11.10)(typescript@6.0.3)
       '@gtbuchanan/eslint-config':
         specifier: 'catalog:'
-        version: 0.6.0(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)
+        version: 0.6.1(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)
       '@gtbuchanan/tsconfig':
         specifier: 'catalog:'
         version: 0.2.0(typescript@6.0.3)
@@ -271,7 +271,7 @@ importers:
         version: 10.6.0
       '@gtbuchanan/eslint-config':
         specifier: 'catalog:'
-        version: 0.6.0(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)
+        version: 0.6.1(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)
       '@gtbuchanan/vitest-config':
         specifier: 'catalog:'
         version: 0.3.0(vitest@5.1.0)
@@ -518,8 +518,8 @@ packages:
       turbo:
         optional: true
 
-  '@gtbuchanan/eslint-config@0.6.0':
-    resolution: {integrity: sha512-NaE9/gSYUsYsN9dQT0g2DWyNTU9pgYHuBRYGXrBEJaMO627PYnK04FKHWWWEApIA3Cof3IH1as0h00RO1pGMaw==}
+  '@gtbuchanan/eslint-config@0.6.1':
+    resolution: {integrity: sha512-DOGcY4AKsi9yAsL4N9fbrpUk2GF8cuJ6F5qDuCP0KZqxMzqoF8DlyG7vC9kchin5ha6mSl1LFEFf0VlZX2jySA==}
     engines: {node: '>=24.0.0'}
     peerDependencies:
       eslint: ^10.0.0
@@ -3405,7 +3405,7 @@ snapshots:
     optionalDependencies:
       turbo: 2.11.10
 
-  '@gtbuchanan/eslint-config@0.6.0(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)':
+  '@gtbuchanan/eslint-config@0.6.1(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(postcss@8.5.32)(typescript@6.0.3)(vitest@5.1.0)':
     dependencies:
       '@eslint-community/eslint-plugin-eslint-comments': 4.8.1(eslint@10.14.0(jiti@2.7.0))
       '@eslint/json': 2.1.1
