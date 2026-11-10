@@ -13,12 +13,7 @@ local allSteps = new Mapping<String, Step> {
     check = "pnpm exec eslint \(eslintArgs)"
     fix = "pnpm exec eslint --fix \(eslintArgs)"
   }
-  // Regenerates the gtb-owned config on commit and fails on drift in CI. It
-  // reads the whole workspace, so it takes no glob.
-  ["gtb-verify"] {
-    check = "pnpm exec gtb verify"
-    fix = "pnpm exec gtb sync"
-  }
+  ...Defaults.gtbCliSteps("pnpm exec")
 }
 
 hooks = Defaults.hooksFor(allSteps)
