@@ -30,7 +30,7 @@ includes = ["mise.tasks.toml"]
 hk = "2.12.0"
 # The hk jactionlint step.
 jactionlint = "v2.5.0"
-node = "26.13.0"
+node = "26.13.1"
 # renovate-config-validator, for the hk renovate-config step. The exemption
 # opts one transitive dependency out of the no-downgrade trust policy:
 # @yarnpkg/libzip 3.2.2 is a manual publish without the provenance 3.2.1 had.
