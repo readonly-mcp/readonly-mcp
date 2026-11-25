@@ -72,6 +72,34 @@ export const isAllowedApiPath = (
   });
 };
 
+/*
+ * A `**` pattern accepts any depth, so a `.` or `..` segment, plain or
+ * percent-encoded, could resolve to an endpoint the allowlist never named.
+ * Undecodable segments are rejected rather than guessed at, and so is a dot
+ * or separator still encoded after one decode (%252e), which a second decode
+ * anywhere downstream would resolve.
+ */
+const isPlainSegment = (segment: string): boolean => {
+  try {
+    const decoded = decodeURIComponent(segment);
+    return !/^\.+$/v.test(decoded) && !/[\/\\]/v.test(decoded) &&
+      !/%(?:2e|2f|5c)/iv.test(decoded);
+  } catch {
+    return false;
+  }
+};
+
+/*
+ * isAllowedApiPath, hardened for CLIs that resolve the endpoint as a URL. The
+ * URL parser cuts the path at `#`, so a fragment inside a wildcard segment
+ * (repos/admin#/x/contents/y) would request a truncated endpoint the
+ * allowlist never named.
+ */
+export const isAllowedApiEndpoint = (endpoint: string, patterns: readonly string[]): boolean =>
+  !endpoint.includes('#') &&
+  isAllowedApiPath(endpoint, patterns) &&
+  normalizeApiPath(endpoint).split('/').every(isPlainSegment);
+
 export const rejectApiEndpoint = (
   endpoint: string | undefined, patterns: readonly string[],
 ): Reject => {

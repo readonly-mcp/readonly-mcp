@@ -1,6 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, isAllowedApiPath, normalizeApiPath,
+  ArgsSchema, isAllowedApiEndpoint,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
@@ -231,32 +231,9 @@ const apiBlockedFlags = new Set([
   '--output', '-o',
 ]);
 
-// contents/** and raw/** accept any depth, so a `.` or `..` segment, plain or
-// percent-encoded, could resolve to an endpoint the allowlist never named.
-// Undecodable segments are rejected rather than guessed at, and so is a dot or
-// separator still encoded after one decode (%252e), which a second decode
-// anywhere downstream would resolve.
-const isPlainSegment = (segment: string): boolean => {
-  try {
-    const decoded = decodeURIComponent(segment);
-    return !/^\.+$/v.test(decoded) && !/[\/\\]/v.test(decoded) &&
-      !/%(?:2e|2f|5c)/iv.test(decoded);
-  } catch {
-    return false;
-  }
-};
-
-// The URL parser cuts the path at `#`, so a fragment inside a wildcard
-// segment (repos/admin#/x/contents/y) would request a truncated endpoint the
-// allowlist never named.
-const isAllowedEndpoint = (endpoint: string): boolean =>
-  !endpoint.includes('#') &&
-  isAllowedApiPath(endpoint, apiPaths) &&
-  normalizeApiPath(endpoint).split('/').every(isPlainSegment);
-
 const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...rest] = args;
-  if (!endpoint || endpoint.startsWith('-') || !isAllowedEndpoint(endpoint))
+  if (!endpoint || endpoint.startsWith('-') || !isAllowedApiEndpoint(endpoint, apiPaths))
     return rejectApiEndpoint(endpoint, apiPaths);
   const rejected =
     rejectFlags(args, blockedFlags) ??
