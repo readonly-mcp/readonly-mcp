@@ -213,7 +213,7 @@ export const assertBlocked = (
   result: CallToolResult,
   message = `expected blocked, ${describeRequest(result)}`,
 ) => {
-  expect(result.isError || textOf(result).includes('not allowed'), message).toBe(true);
+  expect(result.isError, message).toBe(true);
 };
 
 export const assertNotBlocked = (
