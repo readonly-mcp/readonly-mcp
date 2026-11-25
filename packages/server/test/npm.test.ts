@@ -19,7 +19,7 @@ describe.concurrent('npm tool', () => {
     it('prepends --ignore-scripts before the subcommand', ({ expect }) => {
       const name = faker.internet.domainWord();
 
-      expect(runOf(plan(['view', name])).args).toStrictEqual(['--ignore-scripts', 'view', name]);
+      expect(plan(['view', name])).toRun('npm', ['--ignore-scripts', 'view', name]);
     });
   });
 
@@ -63,7 +63,7 @@ describe.concurrent('npm tool', () => {
       { name: 'ls -global (prefixes --globalconfig)', args: ['ls', '-global'] },
       { name: 'ls -g (a shorthand, not a long name)', args: ['ls', '-g'] },
     ])('runs $name', ({ args }, { expect }) => {
-      expect(runOf(plan(args)).args).toStrictEqual(['--ignore-scripts', ...args]);
+      expect(plan(args)).toRun('npm', ['--ignore-scripts', ...args]);
     });
   });
 });

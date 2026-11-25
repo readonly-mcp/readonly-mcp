@@ -31,7 +31,7 @@ describe.concurrent('az tool', () => {
     ])('runs --area $area --resource $resource as GET', ({ area, resource }, { expect }) => {
       const args = ['devops', 'invoke', '--area', area, '--resource', resource];
 
-      expect(runOf(plan(args)).args).toStrictEqual([...args, '--http-method', 'GET']);
+      expect(plan(args)).toRun('az', [...args, '--http-method', 'GET']);
     });
 
     it('runs with extra safe flags', ({ expect }) => {
@@ -42,13 +42,13 @@ describe.concurrent('az tool', () => {
         '--output', 'json',
       ];
 
-      expect(runOf(plan(args)).args).toStrictEqual([...args, '--http-method', 'GET']);
+      expect(plan(args)).toRun('az', [...args, '--http-method', 'GET']);
     });
 
     it('runs the --area=value --resource=value form', ({ expect }) => {
       const args = ['devops', 'invoke', '--area=build', '--resource=builds'];
 
-      expect(runOf(plan(args)).args).toStrictEqual([...args, '--http-method', 'GET']);
+      expect(plan(args)).toRun('az', [...args, '--http-method', 'GET']);
     });
   });
 });

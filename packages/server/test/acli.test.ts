@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/acli.js';
-import { runOf } from '#test/helpers.js';
 
 describe.concurrent('acli tool', () => {
   describe('allowed subcommands', () => {
@@ -16,9 +15,7 @@ describe.concurrent('acli tool', () => {
       ['jira', 'workitem', 'view'],
     ].map(args => ({ name: args.join(' '), args })))(
       'runs $name as given', ({ args }, { expect }) => {
-        const { args: argv, cmd } = runOf(plan(args));
-
-        expect([cmd, ...argv]).toStrictEqual(['acli', ...args]);
+        expect(plan(args)).toRun('acli', args);
       },
     );
 
@@ -26,7 +23,7 @@ describe.concurrent('acli tool', () => {
       const project = faker.string.alpha({ casing: 'upper', length: 3 });
       const args = ['jira', 'workitem', 'list', '--project', project];
 
-      expect(runOf(plan(args)).args).toStrictEqual(args);
+      expect(plan(args)).toRun('acli', args);
     });
   });
 });

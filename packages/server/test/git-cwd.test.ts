@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/git.js';
 import * as build from '#test/builders.js';
-import { runOf } from '#test/helpers.js';
 
 const rejected = 'cwd rejected: not a known git worktree';
 
@@ -18,13 +17,13 @@ describe.concurrent('git tool cwd', () => {
   });
 
   it('prepends -C for valid worktree cwd', async ({ expect }) => {
-    const { args } = runOf(await plan(['status'], toplevel));
+    const args = ['--no-pager', '-C', toplevel, 'status'];
 
-    expect(args).toStrictEqual(['--no-pager', '-C', toplevel, 'status']);
+    await expect(plan(['status'], toplevel)).resolves.toRun('git', args);
   });
 
   it('omits -C when cwd is not provided', async ({ expect }) => {
-    expect(runOf(await plan(['status'])).args).toStrictEqual(['--no-pager', 'status']);
+    await expect(plan(['status'])).resolves.toRun('git', ['--no-pager', 'status']);
   });
 
   it('rejects path traversal from valid worktree', async ({ expect }) => {
@@ -34,7 +33,7 @@ describe.concurrent('git tool cwd', () => {
   it('accepts trailing slash (resolve normalizes it)', async ({ expect }) => {
     const cwd = toplevel + '/';
 
-    expect(runOf(await plan(['status'], cwd)).args).toStrictEqual(
+    await expect(plan(['status'], cwd)).resolves.toRun('git',
       ['--no-pager', '-C', cwd, 'status'],
     );
   });
@@ -47,7 +46,7 @@ describe.concurrent('git tool cwd', () => {
         (first === first.toUpperCase() ? first.toLowerCase() : first.toUpperCase()) +
         toplevel.slice(1);
 
-      expect(runOf(await plan(['status'], swapped)).args).toStrictEqual(
+      await expect(plan(['status'], swapped)).resolves.toRun('git',
         ['--no-pager', '-C', swapped, 'status'],
       );
     },
@@ -58,7 +57,7 @@ describe.concurrent('git tool cwd', () => {
     async ({ expect }) => {
       const cwd = toplevel.replaceAll('\\', '/');
 
-      expect(runOf(await plan(['status'], cwd)).args).toStrictEqual(
+      await expect(plan(['status'], cwd)).resolves.toRun('git',
         ['--no-pager', '-C', cwd, 'status'],
       );
     },

@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/git.js';
 import * as build from '#test/builders.js';
-import { runOf } from '#test/helpers.js';
 
 const planBlame = async (args: readonly string[]) => plan(['blame', ...args]);
 
@@ -81,6 +80,6 @@ describe.concurrent('git blame option allowlist', () => {
     const file = build.fileName('md');
     const result = await planBlame([...args, file]);
 
-    expect(runOf(result).args).toStrictEqual(['--no-pager', 'blame', ...args, file]);
+    expect(result).toRun('git', ['--no-pager', 'blame', ...args, file]);
   });
 });

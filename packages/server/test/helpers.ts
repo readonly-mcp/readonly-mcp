@@ -194,7 +194,9 @@ export const textOf = (result: CallToolResult | undefined): string => {
 };
 
 /**
- * The command a plan runs. A rejection fails the test with its reason.
+ * The command a plan runs, for a test that reads what toRun does not check:
+ * its runner, its options, or part of its args. A rejection fails the test
+ * with its reason.
  */
 export const runOf = (plan: Plan): Run => {
   if (plan.kind === 'reject') throw new Error(`Expected a run, got a rejection: ${plan.reason}`);

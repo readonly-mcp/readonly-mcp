@@ -11,7 +11,7 @@ describe.concurrent('pnpm tool', () => {
       { name: '--help', args: ['--help'] },
       { name: '-h', args: ['-h'] },
     ])('runs $name as given', ({ args }, { expect }) => {
-      expect(runOf(plan(args)).args).toStrictEqual(args);
+      expect(plan(args)).toRun('pnpm', args);
     });
   });
 
@@ -70,7 +70,7 @@ describe.concurrent('pnpm tool', () => {
       { name: 'root --global (prefixes --globalconfig)', args: ['root', '--global'] },
       { name: 'list -g (a shorthand, not a long name)', args: ['list', '-g'] },
     ])('runs $name as given', ({ args }, { expect }) => {
-      expect(runOf(plan(args)).args).toStrictEqual(args);
+      expect(plan(args)).toRun('pnpm', args);
     });
   });
 });
