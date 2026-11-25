@@ -1,5 +1,23 @@
 # @readonly-mcp/server
 
+## 2.0.0
+
+### Major Changes
+
+- 1ca1bb6: Remove the `tea` tool. Gitea replaced `tea` with `gt`, which the new `gt` tool covers: use `gt` for the same reads, and `gt api` for the API paths `tea api` allowed. `tea api` in earlier releases passed query keys unchecked, so with an administrator token `?sudo=` sent a request as another user, and an empty path segment (`repos/acme//raw/hooks`) reached a repository the allowlist never named; upgrading removes both.
+
+### Minor Changes
+
+- b04d042: `gh api` now allows GET on `repos/{owner}/{repo}/dependabot/alerts` and `repos/{owner}/{repo}/dependabot/alerts/{number}`. Secret scanning and code scanning alerts stay blocked.
+- afff7e7: `gt api` runs GET requests against an allowlist of paths: pull request reviews, commit statuses, file contents, `user`, and Forgejo's `actions/runs`, `actions/runs/*/jobs` and `actions/jobs/*/logs`, which read a run where `gt run view` fails on Forgejo. The endpoint must come first. Dot segments, encoded separators, empty segments, `#` and query keys the paths do not read, such as `sudo`, are rejected, each with a message naming the check. Its flags are allowlisted, leaving out `-X`, `-f`, `-F`, `--input`, `-H`, `--output-file`, `--verbose` and `--dry-run`.
+- 9d894f1: Add a `gt` tool for read-only Gitea and Forgejo access through `gt`, the CLI that replaces `tea`. It allows the listing and viewing commands of `pr`, `issue`, `run`, `workflow`, `repo`, `release`, `commit` and the like, plus `auth status`, `schema` and `version`. `auth token` and `auth git-credential`, which print the token, are rejected with every other command outside the allowlist. Flags are allowlisted per command from its `--help`, leaving out `--cwd`, `--sudo`, `--debug`, `--web`, `--select` and the polling and download flags.
+
+### Patch Changes
+
+- f9cfdb5: `gh api` rejects an endpoint with an empty segment. Servers collapse `//`, so `repos/acme//raw/hooks` matched `repos/*/*/raw/**` but requested `repos/acme/raw/hooks`, the webhooks of the repository `acme/raw`.
+- 75fc662: `gh api` rejects `.` and `..` segments and encoded separators, whether plain, percent-encoded or double-encoded, and any `#`, as `gt api` does. `contents/**` takes any depth, so `repos/acme/app/contents/../../../../user/keys` matched it while naming a different endpoint, and the URL parser cuts a path at `#`. Each rejection names the check that refused it.
+- e742779: A call the allowlist refuses now carries `_meta: { "io.github.readonly-mcp/rejected": true }` beside `isError`, so a client can tell a refusal from a command that ran and failed, which sets `isError` too.
+
 ## 1.0.1
 
 ### Patch Changes

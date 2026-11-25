@@ -1,6 +1,6 @@
 {
   "name": "@readonly-mcp/server",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Security-hardened MCP server providing read-only CLI access for AI agents",
   "type": "module",
   "imports": {
