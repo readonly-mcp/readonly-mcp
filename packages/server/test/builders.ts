@@ -144,12 +144,11 @@ const generators: Readonly<Partial<Record<string, () => string>>> = placeholders
 /**
  * A filler for `:key` placeholders in a route or argument template, e.g.
  * `repos/:owner/:repo/pulls/:number` → `repos/octo-org/widget/pulls/42`.
- * Every occurrence of a key across the filler's calls gets the same value,
- * so an alias's args and its expected canonical args agree. The template
- * doubles as a stable test name. `:key` rather than `{key}`, which tea
- * expands itself. Unknown keys fail to compile.
+ * Every occurrence of a key across the filler's calls gets the same value.
+ * The template doubles as a stable test name. `:key` rather than `{key}`,
+ * which gt expands itself. Unknown keys fail to compile.
  */
-export const templateFiller = (): Filler => {
+const templateFiller = (): Filler => {
   const values = new Map<string, string>();
   const valueOf = (placeholder: string, key: string): string => {
     const known = values.get(key);

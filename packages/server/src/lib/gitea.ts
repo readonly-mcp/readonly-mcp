@@ -1,6 +1,6 @@
 /*
- * The query keys that the Gitea and Forgejo API paths tea api and gt api
- * allow read, from both projects' swagger specs. Any other key is refused:
+ * The query keys that the Gitea and Forgejo API paths gt api allows read,
+ * from both projects' swagger specs. Any other key is refused:
  * sudo above all, which Gitea reads as it reads the Sudo header, sending an
  * administrator's request as another user, and token and access_token,
  * which authenticate as whoever the caller names.

@@ -67,34 +67,21 @@
  *   `GITEA_INSTANCE_URL` names. So neither needs blocking, unlike gh's.
  * - gt --jq filters: held to the jq names check, as for gh, since gt's
  *   embedded jq reads the server's environment through `env` and `$ENV`.
- * - gt api path allowlisting: the tea api checks, with `--method GET`
- *   injected after the endpoint. Left out of its flags: `--method`/`-X`, the body
- *   flags `-f`/`--raw-field`, `-F`/`--field` and `--input` (which switch the
- *   method to POST, and `-F`/`--input` read a file or stdin),
- *   `-H`/`--header`, `--output-file` (writes the response to a file) and
- *   `--verbose` (prints request headers; a token login's `Authorization` is
- *   not yet shown redacted) and `--dry-run` (prints the request unsent).
- * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
- *   `ls`, `git-credential`), so args are resolved to canonical names before
- *   matching and executed under those names. Unknown aliases stay unresolved
- *   and are rejected. Commands that act without a verb (`tea pulls 2`) but
- *   have children dispatch to any positional naming a child, even after flags,
- *   so they accept only flags of known arity and validate every positional.
- *   tea treats `-name` like `--name`, so blocked flags are matched in both forms.
- *   `--repo` is restricted to `owner/name` slugs: it also accepts a local path,
- *   which would act as a `cwd` parameter.
- * - tea api path allowlisting: same segment matching as gh api, with `--method
- *   GET` injected after the endpoint. Blocked flags: `--method`/`-X`, body
- *   flags `-f`/`--field`, `-F`/`--Field` and `-d`/`--data` (which default the
- *   method to POST, and `-F`/`-d` read @file), `-H`/`--header`, and
- *   `-o`/`--output` (writes the response to a path). `.` and `..` segments,
- *   plain or percent-encoded, are rejected: `contents/**` and `raw/**` take
- *   any depth, so a dot segment could climb out to an unlisted endpoint.
- *   Endpoints containing `#` are rejected: the URL parser cuts the path at
- *   the fragment, so `repos/admin#/x/contents/y` would request `repos/admin`.
- *   Query keys are allowlisted to those the allowed paths read: Gitea reads
- *   a `sudo` query parameter as the Sudo header, which would send an
- *   administrator token's request as another user.
+ * - gt api path allowlisting: same segment matching as gh api, with
+ *   `--method GET` injected after the endpoint. Left out of its flags:
+ *   `--method`/`-X`, the body flags `-f`/`--raw-field`, `-F`/`--field` and
+ *   `--input` (which switch the method to POST, and `-F`/`--input` read a
+ *   file or stdin), `-H`/`--header`, `--output-file` (writes the response to
+ *   a file), `--verbose` (prints request headers; a token login's
+ *   `Authorization` is not yet shown redacted) and `--dry-run` (prints the
+ *   request unsent). `.` and `..` segments, plain or percent-encoded, are
+ *   rejected: `contents/**` and `raw/**` take any depth, so a dot segment
+ *   could climb out to an unlisted endpoint. Endpoints containing `#` are
+ *   rejected: the URL parser cuts the path at the fragment, so
+ *   `repos/admin#/x/contents/y` would request `repos/admin`. Query keys are
+ *   allowlisted to those the allowed paths read: Gitea reads a `sudo` query
+ *   parameter as the Sudo header, which would send an administrator token's
+ *   request as another user.
  * - --registry blocked: prevents SSRF / data exfiltration to attacker-controlled registries.
  *   Uses prefix matching because npm/pnpm expand abbreviated flags internally
  *   (e.g., `--reg` resolves to `--registry`). Exact matching would be bypassable.
@@ -154,10 +141,10 @@
  * - `az` non-invoke subcommands: no flag filtering is applied. The allowlisted
  *   commands (`list`, `show`) are inherently read-only. If future az CLI versions
  *   add mutating flags to these commands, they would pass through unchecked.
- * - `tea api`: Forgejo echoes a rejected token in its error body (`access
- *   token does not exist [sha: …]`), so a call made with a revoked token
- *   prints the credential. No flag causes it, so no flag check can stop it.
- *   The same holds for any gt call that reaches a Forgejo instance.
+ * - gt on Forgejo: Forgejo echoes a rejected token in its error body
+ *   (`access token does not exist [sha: …]`), so a call made with a revoked
+ *   token prints the credential. No flag causes it, so no flag check can
+ *   stop it.
  * - `jq --jsonargs` / `--args`: not handled by the file-path validator, which
  *   may false-positive on legitimate uses. The error direction is safe (blocks
  *   rather than allows). These flags are uncommon in MCP agent usage.
@@ -193,10 +180,6 @@
  *   `--web`/`-w` (opens a browser), `--select` (an interactive picker that
  *   acts on its pick), `pr checks --watch` and `run logs --follow` (poll
  *   until CI finishes), and `run logs --output`/`--dir` (write a file).
- * - `tea logins helper` (alias `git-credential`): a git credential helper,
- *   whose protocol answers with the token on stdout.
- * - `tea --debug` / `--vvv`: may print the Authorization header.
- * - `tea labels --save`: writes the label set to a file.
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';

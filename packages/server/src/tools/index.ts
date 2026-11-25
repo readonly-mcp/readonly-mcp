@@ -7,4 +7,3 @@ export { register as gt } from '#src/tools/gt.js';
 export { register as npm } from '#src/tools/npm.js';
 export { register as pnpm } from '#src/tools/pnpm.js';
 export { register as shell } from '#src/tools/shell.js';
-export { register as tea } from '#src/tools/tea.js';

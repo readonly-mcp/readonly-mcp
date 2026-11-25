@@ -35,7 +35,7 @@ describe.concurrent('packed package', () => {
     const names = tools.map(tool => tool.name).toSorted((left, right) => left.localeCompare(right));
 
     expect(names).toStrictEqual([
-      'acli', 'az', 'chezmoi', 'gh', 'git', 'gt', 'npm', 'pnpm', 'shell', 'tea',
+      'acli', 'az', 'chezmoi', 'gh', 'git', 'gt', 'npm', 'pnpm', 'shell',
     ]);
   });
 

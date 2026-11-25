@@ -37,8 +37,6 @@ The goal is to make auto-allow safe for read-only tools. Without enforcement at 
 | `gt auth token`                               | Prints the active account's access token                                                             |
 | `gt auth git-credential`                      | Git credential helper protocol answers with the token on stdout; absent from `gt auth --help`        |
 | `gt notification`                             | Not yet confirmed that listing or viewing leaves read state untouched                                |
-| `tea logins helper` / `git-credential`        | Git credential helper protocol answers with the token on stdout                                      |
-| `tea notifications`                           | Not yet confirmed that listing leaves read state untouched                                           |
 
 ## Tools
 
@@ -84,7 +82,7 @@ Args naming `github.localhost` are rejected, in any case, at any position, and i
 
 ### `gt`
 
-Read-only Gitea and Forgejo commands through `gt`, the CLI that replaces `tea`: `auth status`, `branch list`, `commit compare/diff/list/pr/status/view`, `issue list/view`, `label list`, `milestone list`, `pr checks/diff/list/status/timeline/view`, `pr review comments/list/view`, `release list/view`, `repo list/view`, `run jobs/list/logs/view`, `schema`, `search issue/pr/repo`, `version`, `workflow list/view`
+Read-only Gitea and Forgejo commands through `gt`, Gitea's CLI: `auth status`, `branch list`, `commit compare/diff/list/pr/status/view`, `issue list/view`, `label list`, `milestone list`, `pr checks/diff/list/status/timeline/view`, `pr review comments/list/view`, `release list/view`, `repo list/view`, `run jobs/list/logs/view`, `schema`, `search issue/pr/repo`, `version`, `workflow list/view`
 
 Also supports `--version`, `--help`, `-h` as standalone flags. Only canonical command names are accepted, not aliases such as `ls`.
 
@@ -104,31 +102,11 @@ Additional restrictions:
 
 A URL in `--repo` or as a positional selects its instance, which gt refuses unless it holds an account for it, and gt sends `GITEA_TOKEN` only to the instance `GITEA_CLI_HOST` or `GITEA_INSTANCE_URL` names. Neither reaches a host the caller picks, so both are allowed.
 
-`api` is restricted to GET requests against `repos/*/*/actions/runs`, `repos/*/*/actions/runs/*/jobs`, `repos/*/*/actions/jobs/*/logs`, `repos/*/*/pulls/*/reviews`, `repos/*/*/pulls/*/reviews/*/comments`, `repos/*/*/commits/*/status`, `repos/*/*/commits/*/statuses`, `repos/*/*/contents[/**]`, `repos/*/*/raw/**` and `user`, with the endpoint first. `{owner}` and `{repo}` placeholders are accepted. `--method GET` is injected after the endpoint. Its flags are allowlisted too, leaving out `-X`, the request-body flags `-f`, `-F` and `--input` (which switch the method to POST and read a file or stdin), `-H`, `--output-file` (writes the response to a new file), `--verbose` (prints request headers, not yet shown to redact a token login's `Authorization`) and `--dry-run` (prints the request instead of sending it). `.`/`..` segments, encoded separators, `#` and unlisted query keys such as `sudo` are rejected as for `tea api`.
+`api` is restricted to GET requests against `repos/*/*/actions/runs`, `repos/*/*/actions/runs/*/jobs`, `repos/*/*/actions/jobs/*/logs`, `repos/*/*/pulls/*/reviews`, `repos/*/*/pulls/*/reviews/*/comments`, `repos/*/*/commits/*/status`, `repos/*/*/commits/*/statuses`, `repos/*/*/contents[/**]`, `repos/*/*/raw/**` and `user`, with the endpoint first. `{owner}` and `{repo}` placeholders are accepted. `--method GET` is injected after the endpoint. Its flags are allowlisted too, leaving out `-X`, the request-body flags `-f`, `-F` and `--input` (which switch the method to POST and read a file or stdin), `-H`, `--output-file` (writes the response to a new file), `--verbose` (prints request headers, not yet shown to redact a token login's `Authorization`) and `--dry-run` (prints the request instead of sending it). `.`/`..` segments and encoded separators are rejected, whether plain, percent-encoded or double-encoded, as are empty segments (servers collapse `//`) and any `#` (the URL parser would cut the path there). Query keys are limited to those the allowed paths read (`ref`, `page`, `limit` and the like), since Gitea reads a `sudo` query parameter as the Sudo header and would send an administrator token's request as another user. Use `raw/**` for file contents: `contents/**` returns them base64-encoded in JSON.
 
 On Forgejo, `gt run view` fails, since Forgejo returns a run's jobs as a bare array that gt cannot parse. Read the run through `api` instead: `actions/runs` maps the web UI's run number (`index_in_repo`) to the API id, `actions/runs/*/jobs` lists its jobs, and `actions/jobs/*/logs` returns a job's log as plain text.
 
-**Token exposure the tool cannot block:** Forgejo echoes a rejected token in its error body, as described for `tea`, so a `gt` call made with a revoked token prints it.
-
-**Schema:** `{ args: string[] }`
-
-### `tea`
-
-Read-only Gitea and Forgejo CLI commands: `branches list`, `comments list`, `issues [index]/list`, `labels list`, `logins list`, `milestones issues/list`, `pulls [index]/list/review-comments`, `releases list`, `repos list/search`, `whoami`
-
-Also supports `--version`, `-v`, `--help`, `-h` as standalone flags. Noun and verb aliases (`pr`, `ms`, `ls`, …) are accepted and run under their canonical names.
-
-Additional restrictions:
-
-- Viewing by bare index (`pulls 2`, `issues 5`) accepts only known flags and a single numeric index, because tea dispatches to any positional naming a child command (`pulls --state all merge 2`)
-- `milestones issues` rejects its `add`/`remove` children, by name or alias, anywhere in the args
-- `--repo` accepts only an `owner/name` slug; local repository paths are rejected
-- `--debug`/`--vvv` blocked; `labels --save` blocked (writes a file)
-- `logins helper` (alias `git-credential`) excluded: it is a git credential helper that prints the token
-
-`api` is restricted to GET requests against `repos/*/*/pulls/*/reviews`, `repos/*/*/pulls/*/reviews/*/comments`, `repos/*/*/commits/*/status`, `repos/*/*/commits/*/statuses`, `repos/*/*/contents[/**]`, `repos/*/*/raw/**` and `user`. `{owner}` and `{repo}` placeholders are accepted. `--method GET` is injected after the endpoint; request-body flags (`-f`, `-F`, `-d`), `-X`, `-H` and `-o` (writes the response to a file) are blocked, and `.`/`..` segments and encoded separators are rejected, whether plain, percent-encoded or double-encoded, as is any `#` (the URL parser would cut the path there). Query keys are limited to those the allowed paths read (`ref`, `page`, `limit` and the like), since Gitea reads a `sudo` query parameter as the Sudo header and would send an administrator token's request as another user. Use `raw/**` for file contents: `contents/**` returns them base64-encoded in JSON.
-
-**Token exposure the tool cannot block:** Forgejo echoes a rejected token in its error body (`access token does not exist [sha: …]`), so any `tea api` call made with a revoked token prints the credential. No flag causes it.
+**Token exposure the tool cannot block:** Forgejo echoes a rejected token in its error body (`access token does not exist [sha: …]`), so any `gt` call made with a revoked token prints the credential. No flag causes it.
 
 **Schema:** `{ args: string[] }`
 
@@ -236,10 +214,9 @@ src/
     chezmoi.ts      Chezmoi tool
     gh.ts           GitHub CLI tool
     git.ts          Git tool
-    gt.ts           Gitea/Forgejo CLI (gt) tool
+    gt.ts           Gitea/Forgejo CLI tool
     npm.ts          npm tool
     pnpm.ts         pnpm tool
     shell.ts        Shell utilities tool
-    tea.ts          Gitea/Forgejo CLI tool
 test/               Unit and integration tests (vitest)
 ```
