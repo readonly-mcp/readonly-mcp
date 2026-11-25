@@ -18,7 +18,7 @@ catalog:
   jiti: ^2.7.0
   skills: ^1.7.4
   turbo: ^2.11.10
-  typescript: ^6.0.3
+  typescript: ^7.0.0
   vitest: ^5.0.5
   zod: ^4.6.7
 
