@@ -38,6 +38,10 @@ The goal is to make auto-allow safe for read-only tools. Without enforcement at 
 | `gt auth git-credential`                      | Git credential helper protocol answers with the token on stdout; absent from `gt auth --help`        |
 | `gt notification`                             | Not yet confirmed that listing or viewing leaves read state untouched                                |
 
+## Rejected calls
+
+A call the allowlist refuses answers with `isError` set and `_meta: { "io.github.readonly-mcp/rejected": true }`. A command that ran and failed sets `isError` too, so the marker is how a client tells that the server refused the call rather than ran it. Arguments that fail a tool's input schema are refused by the MCP SDK before the server sees them, and that result carries no marker.
+
 ## Tools
 
 ### `shell`

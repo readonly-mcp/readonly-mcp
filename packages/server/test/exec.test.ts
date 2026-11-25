@@ -1,6 +1,9 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { errorResult, exec, fail, maxBuffer, readOutput, text } from '#src/lib/exec.js';
+import {
+  errorResult, exec, fail, maxBuffer, readOutput, runPlan, text,
+} from '#src/lib/exec.js';
+import { reject, run } from '#src/lib/plan.js';
 import * as build from '#test/builders.js';
 import { textOf } from '#test/helpers.js';
 
@@ -63,6 +66,21 @@ describe(readOutput, () => {
     const output = readOutput(process.execPath, ['-e', 'process.exit(3)']);
 
     await expect(output).rejects.toThrow('Command failed');
+  });
+});
+
+describe(runPlan, () => {
+  it('marks a rejection in _meta', async ({ expect }) => {
+    const result = await runPlan(reject(faker.lorem.sentence()));
+
+    expect(result._meta).toStrictEqual({ 'io.github.readonly-mcp/rejected': true });
+  });
+
+  it('leaves unmarked a command that failed without output', async ({ expect }) => {
+    const result = await runPlan(run(process.execPath, ['-e', 'process.exit(3)']));
+
+    expect(result).toMatchObject({ isError: true });
+    expect(result._meta).toBeUndefined();
   });
 });
 

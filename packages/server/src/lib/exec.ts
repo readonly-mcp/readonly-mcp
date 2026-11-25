@@ -118,9 +118,21 @@ export const execShell = async (
   ? exec('bash', ['-c', 'exec "$@"', '--', cmd, ...args], options)
   : exec(cmd, args, options);
 
+/*
+ * The _meta key a rejection carries, so a client can tell a call the server
+ * refused from a command that ran and failed: both set isError. The prefix is
+ * github.com/readonly-mcp in the reverse-DNS form MCP asks custom keys to use.
+ */
+export const rejectedMetaKey = 'io.github.readonly-mcp/rejected';
+
+const rejection = (reason: string): CallToolResult => ({
+  ...fail(reason),
+  _meta: { [rejectedMetaKey]: true },
+});
+
 // Carries out a tool's plan: runs its command, or answers with its rejection.
 export const runPlan = async (plan: Plan): Promise<CallToolResult> => {
-  if (plan.kind === 'reject') return fail(plan.reason);
+  if (plan.kind === 'reject') return rejection(plan.reason);
   const runner = plan.runner === 'shell' ? execShell : exec;
   return runner(plan.cmd, plan.args, plan.options);
 };
