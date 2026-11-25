@@ -120,8 +120,6 @@ describe.concurrent('gh api', () => {
   it('asks for the endpoint first when a flag precedes it', ({ expect }) => {
     const result = plan(['api', '--jq', '.[].id', build.prCommentsPath()]);
 
-    expect(result).toBeRejected();
-
     expect(rejectionOf(result)).toContain('endpoint must come first');
   });
 

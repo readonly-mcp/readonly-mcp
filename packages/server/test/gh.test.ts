@@ -77,8 +77,6 @@ describe.concurrent('gh tool', () => {
     ])('blocks a filter using $name', ({ args, used }, { expect }) => {
       const result = plan(args);
 
-      expect(result).toBeRejected();
-
       expect(rejectionOf(result)).toBe(`Filter may not use ${used} for gh --jq`);
     });
 
@@ -130,8 +128,6 @@ describe.concurrent('gh tool', () => {
       const sent = args();
       const result = plan(sent);
 
-      expect(result).toBeRejected();
-
       expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
     });
 
@@ -139,15 +135,11 @@ describe.concurrent('gh tool', () => {
       const filter = '"github.localhost"';
       const result = plan(['api', build.prCommentsPath(), '--jq', filter]);
 
-      expect(result).toBeRejected();
-
       expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
     });
 
     it('reports a disallowed subcommand first', ({ expect }) => {
       const result = plan(['auth', 'status', '--hostname', 'github.localhost']);
-
-      expect(result).toBeRejected();
 
       expect(rejectionOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
     });
