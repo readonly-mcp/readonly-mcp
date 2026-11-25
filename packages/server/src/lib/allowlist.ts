@@ -109,14 +109,6 @@ export const rejectApiEndpoint = (
 const rejectIf = (shouldReject: boolean, reason: string): Rejection =>
   shouldReject ? reject(reason) : undefined;
 
-/*
- * isAllowedApiPath, hardened for CLIs that resolve the endpoint as a URL,
- * with each check giving its own reason. The URL parser cuts the path at
- * `#`, so a fragment inside a wildcard segment (repos/admin#/x/contents/y)
- * would request a truncated endpoint the allowlist never named. The query
- * reaches the server too, so its keys must be in `queryKeys`: the path
- * allowlist says nothing about them.
- */
 const segmentsOf = (endpoint: string): string[] => {
   const normalized = normalizeApiPath(endpoint);
   return normalized === '' ? [] : normalized.split('/');
@@ -132,20 +124,36 @@ const rejectEndpointShape = (endpoint: string, patterns: readonly string[]): Rej
       `API endpoint may not contain an empty segment: ${endpoint}`);
 };
 
-const rejectEndpointParts = (endpoint: string, queryKeys: ReadonlySet<string>): Rejection => {
+const rejectSegments = (endpoint: string): Rejection => {
   const segment = segmentsOf(endpoint).find(part => !isPlainSegment(part));
-  const key = queryKeysOf(endpoint).find(name => !queryKeys.has(name));
-  return rejectIf(segment !== undefined, `API endpoint segment not allowed: ${segment ?? ''}`) ??
-    rejectIf(key !== undefined,
-      `API query key not allowed: ${key ?? ''}. Allowed: ${[...queryKeys].join(', ')}`);
+  return rejectIf(segment !== undefined, `API endpoint segment not allowed: ${segment ?? ''}`);
 };
 
-export const checkApiEndpoint = (
-  endpoint: string, patterns: readonly string[], queryKeys: ReadonlySet<string>,
-): Rejection =>
+const rejectQueryKeys = (endpoint: string, queryKeys: ReadonlySet<string>): Rejection => {
+  const key = queryKeysOf(endpoint).find(name => !queryKeys.has(name));
+  return rejectIf(key !== undefined,
+    `API query key not allowed: ${key ?? ''}. Allowed: ${[...queryKeys].join(', ')}`);
+};
+
+/*
+ * isAllowedApiPath, hardened for CLIs that resolve the endpoint as a URL,
+ * with each check giving its own reason. The URL parser cuts the path at
+ * `#`, so a fragment inside a wildcard segment (repos/admin#/x/contents/y)
+ * would request a truncated endpoint the allowlist never named.
+ */
+export const checkApiPath = (endpoint: string, patterns: readonly string[]): Rejection =>
   rejectEndpointShape(endpoint, patterns) ??
   (isAllowedApiPath(endpoint, patterns) ? undefined : rejectApiEndpoint(endpoint, patterns)) ??
-  rejectEndpointParts(endpoint, queryKeys);
+  rejectSegments(endpoint);
+
+/*
+ * checkApiPath for an API whose query can change who a request acts as, as
+ * Gitea's sudo does: the query reaches the server too, so its keys must be
+ * in `queryKeys`, since the path allowlist says nothing about them.
+ */
+export const checkApiEndpoint = (
+  endpoint: string, patterns: readonly string[], queryKeys: ReadonlySet<string>,
+): Rejection => checkApiPath(endpoint, patterns) ?? rejectQueryKeys(endpoint, queryKeys);
 
 /*
  * Names a jq filter must not use: env and $ENV print the server's
