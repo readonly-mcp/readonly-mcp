@@ -39,6 +39,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { registerTool } from '#src/lib/register.js';
 import * as tools from '#src/tools/index.js';
 import packageJson from '../package.json' with { type: 'json' };
 
@@ -46,7 +47,7 @@ const { version } = packageJson;
 
 const server = new McpServer({ name: 'readonly', version });
 
-for (const tool of Object.values(tools)) tool.register(server);
+for (const tool of Object.values(tools)) registerTool(server, tool);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

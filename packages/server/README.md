@@ -212,7 +212,8 @@ src/
     allowlist.ts    Allowlist matching and validation
     exec.ts         Sandboxed command execution
     plan.ts         What a tool decides: run a command, or reject the call
-    tool.ts         defineTool: a tool's name, schema and plan, registered by the server
+    register.ts     registerTool: registers a tool and carries out its plans
+    tool.ts         defineTool: a tool's name, schema and plan, as data the server registers
   tools/            One file per tool, its security rationale in its header comment
     index.ts        Tool registry
     acli.ts         Atlassian CLI tool

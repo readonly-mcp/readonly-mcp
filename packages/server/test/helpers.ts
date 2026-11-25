@@ -14,6 +14,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { Plan, Run } from '#src/lib/plan.js';
+import { registerTool } from '#src/lib/register.js';
 import type { Tool } from '#src/lib/tool.js';
 import { remember } from '#test/requests.js';
 
@@ -129,7 +130,7 @@ export const connectServer = (tools?: readonly Tool[]): InProcessServer => {
 
   const initialize = async () => {
     const registered = tools ?? Object.values(await import('#src/tools/index.js'));
-    for (const tool of registered) tool.register(server);
+    for (const tool of registered) registerTool(server, tool);
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
   };

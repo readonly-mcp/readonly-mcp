@@ -4,6 +4,7 @@ import { describe, it } from 'vitest';
 import { z } from 'zod';
 import { ArgsSchema } from '#src/lib/allowlist.js';
 import { type Plan, reject, run } from '#src/lib/plan.js';
+import { registerTool } from '#src/lib/register.js';
 import { type Tool, defineTool } from '#src/lib/tool.js';
 import { connectServer, textOf } from '#test/helpers.js';
 
@@ -25,7 +26,7 @@ const connect = async (tool: Tool) => {
 // Node args that print the args after them, space-separated.
 const echo = ['-e', 'process.stdout.write(process.argv.slice(1).join(" "))'];
 
-describe(defineTool, () => {
+describe(registerTool, () => {
   it('lists the tool under its name and description', async ({ expect }) => {
     const definition = definitionPlanning(() => reject(faker.lorem.sentence()));
     await using server = await connect(defineTool(definition));

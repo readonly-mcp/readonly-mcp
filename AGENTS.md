@@ -15,7 +15,8 @@ src/
     allowlist.ts    Allowlist matching, flag blocking, JSON array coercion
     exec.ts         Sandboxed command execution (execFile, no shell); runPlan
     plan.ts         What a tool decides: run a command, or reject the call
-    tool.ts         defineTool: a tool's name, schema and plan, registered by the server
+    register.ts     registerTool: registers a tool and carries out its plans with runPlan
+    tool.ts         defineTool: a tool's name, schema and plan, as data the server registers
   tools/
     index.ts        Tool registry (barrel export)
     <tool>.ts       One file per CLI tool, its security rationale in its header comment
