@@ -37,7 +37,7 @@ node = "26.13.1"
 # It names the reviewed version, so a later one without provenance still fails.
 "npm:renovate" = { trust_policy_excludes = [
   "@yarnpkg/libzip@3.2.2",
-], version = "44.198.3" }
+], version = "44.262.2" }
 # Duplicates `packageManager` in package.json, which turbo requires.
 pnpm = "12.22.0"
 # Lets jactionlint lint workflow run scripts.
