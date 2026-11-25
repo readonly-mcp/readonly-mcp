@@ -34,6 +34,8 @@ describe.concurrent('gh api', () => {
     'repos/:owner/:repo/contents',
     'repos/:owner/:repo/contents/:file',
     'repos/:owner/:repo/contents/:path',
+    'repos/:owner/:repo/dependabot/alerts',
+    'repos/:owner/:repo/dependabot/alerts/:number',
     'user',
   ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
     'allows api $name', ({ args }, { expect }) => {
@@ -88,6 +90,21 @@ describe.concurrent('gh api', () => {
     const result = plan(['api', build.template('repos/:owner/:repo/git/refs')]);
     assertRejected(expect, result);
   });
+
+  /*
+   * Secret scanning alerts carry the leaked secret itself, so allowing
+   * Dependabot alerts must not widen to the other alert endpoints.
+   */
+  it.for(([
+    'repos/:owner/:repo/secret-scanning/alerts',
+    'repos/:owner/:repo/secret-scanning/alerts/:number',
+    'repos/:owner/:repo/code-scanning/alerts',
+    'repos/:owner/:repo/dependabot/secrets',
+  ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
+    'blocks api $name', ({ args }, { expect }) => {
+      assertRejected(expect, plan(args));
+    },
+  );
 
   it('reports a disallowed endpoint before a blocked filter', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/git/refs');

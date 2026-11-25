@@ -114,8 +114,11 @@
  * - `gh api`: exposes read-only data from allowlisted REST endpoint paths. The
  *   wildcard segments accept any value, so an agent can read review comments,
  *   deployments, environments, check annotations/suites, commit statuses,
- *   ref comparisons, requested reviewers, and file contents from any
- *   repo the authenticated user can access. The `contents/**` pattern enables
+ *   ref comparisons, requested reviewers, Dependabot alerts, and file
+ *   contents from any repo the authenticated user can access. Dependabot
+ *   alerts name a repo's unpatched vulnerable dependencies, which is
+ *   reconnaissance for an attacker; accepted because reviewing them is the
+ *   point of reading them. The `contents/**` pattern enables
  *   systematic file enumeration at any depth. Error messages include the full
  *   pattern list (aids agent correction but doubles as adversary reconnaissance;
  *   accepted because the patterns are already published in agent instructions).
