@@ -1,7 +1,6 @@
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gt.js';
 import * as build from '#test/builders.js';
-import { rejectionOf } from '#test/helpers.js';
 
 describe.concurrent('gt tool', () => {
   describe('allowed subcommands', () => {
@@ -211,7 +210,8 @@ describe.concurrent('gt tool', () => {
       ['-qenv'],
     ].map(flags => ({ name: flags.join(' '), flags })))(
       'blocks $name', ({ flags }, { expect }) => {
-        expect(rejectionOf(plan(['issue', 'list', ...flags]))).toMatch(/for gt --jq$/v);
+        expect(plan(['issue', 'list', ...flags]))
+          .toBeRejected(expect.stringMatching(/for gt --jq$/v));
       },
     );
   });

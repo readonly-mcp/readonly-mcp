@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/git.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
 const planBlame = async (args: readonly string[]) => plan(['blame', ...args]);
 
@@ -33,7 +33,7 @@ describe.concurrent('git blame option allowlist', () => {
   ])('rejects $name', async ({ flag, rest }, { expect }) => {
     const result = await planBlame([flag, ...rest, build.fileName('md')]);
 
-    expect(rejectionOf(result)).toBe(`Flag not allowed for git blame: ${flag}`);
+    expect(result).toBeRejected(`Flag not allowed for git blame: ${flag}`);
   });
 
   /*
@@ -47,7 +47,7 @@ describe.concurrent('git blame option allowlist', () => {
   ])('checks the option after $name', async ({ args }, { expect }) => {
     const result = await planBlame([...args, '--stdin', build.fileName('md')]);
 
-    expect(rejectionOf(result)).toBe('Flag not allowed for git blame: --stdin');
+    expect(result).toBeRejected('Flag not allowed for git blame: --stdin');
   });
 
   it.for([

@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/chezmoi.js';
 import * as build from '#test/builders.js';
-import { rejectionOf } from '#test/helpers.js';
 
 describe.concurrent('chezmoi tool', () => {
   describe('allowed subcommands', () => {
@@ -127,7 +126,7 @@ describe.concurrent('chezmoi tool', () => {
         name: '--reverse under target-path',
       },
     ])('rejects $name', ({ args, flag }, { expect }) => {
-      expect(rejectionOf(plan(args))).toBe(`Flag not allowed for chezmoi: ${flag}`);
+      expect(plan(args)).toBeRejected(`Flag not allowed for chezmoi: ${flag}`);
     });
 
     it.for([

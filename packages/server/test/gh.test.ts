@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gh.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
 describe.concurrent('gh tool', () => {
   describe('allowed subcommands', () => {
@@ -77,7 +77,7 @@ describe.concurrent('gh tool', () => {
     ])('blocks a filter using $name', ({ args, used }, { expect }) => {
       const result = plan(args);
 
-      expect(rejectionOf(result)).toBe(`Filter may not use ${used} for gh --jq`);
+      expect(result).toBeRejected(`Filter may not use ${used} for gh --jq`);
     });
 
     it.for([
@@ -128,20 +128,20 @@ describe.concurrent('gh tool', () => {
       const sent = args();
       const result = plan(sent);
 
-      expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
+      expect(result).toBeRejected(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
     });
 
     it('blocks api naming it', ({ expect }) => {
       const filter = '"github.localhost"';
       const result = plan(['api', build.prCommentsPath(), '--jq', filter]);
 
-      expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
+      expect(result).toBeRejected(`gh may not reach github.localhost: ${filter}`);
     });
 
     it('reports a disallowed subcommand first', ({ expect }) => {
       const result = plan(['auth', 'status', '--hostname', 'github.localhost']);
 
-      expect(rejectionOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
+      expect(result).toBeRejected(expect.stringMatching(/^Subcommand not allowed: auth status\./v));
     });
   });
 

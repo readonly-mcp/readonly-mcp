@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/git.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
 const rejected = 'cwd rejected: not a known git worktree';
 
@@ -14,7 +14,7 @@ describe.concurrent('git tool cwd', () => {
   it('rejects cwd that is not a known worktree', async ({ expect }) => {
     const cwd = build.absolutePath();
 
-    expect(rejectionOf(await plan(['status'], cwd))).toBe(rejected);
+    await expect(plan(['status'], cwd)).resolves.toBeRejected(rejected);
   });
 
   it('prepends -C for valid worktree cwd', async ({ expect }) => {
@@ -28,7 +28,7 @@ describe.concurrent('git tool cwd', () => {
   });
 
   it('rejects path traversal from valid worktree', async ({ expect }) => {
-    expect(rejectionOf(await plan(['status'], toplevel + '/../../../tmp'))).toBe(rejected);
+    await expect(plan(['status'], toplevel + '/../../../tmp')).resolves.toBeRejected(rejected);
   });
 
   it('accepts trailing slash (resolve normalizes it)', async ({ expect }) => {

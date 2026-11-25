@@ -54,8 +54,12 @@ declare module 'vitest' {
     toBeBlocked: () => R;
     // Passes when a canary file still holds the content it was created with.
     toBeIntact: () => Promise<void>;
-    // Passes when a plan rejects its call.
-    toBeRejected: () => R;
+    /*
+     * Passes when a plan rejects its call, for `reason` when it is given: a
+     * string, or an asymmetric matcher such as expect.stringContaining. Those
+     * are typed any, which only an unknown parameter takes without a lint error.
+     */
+    toBeRejected: (reason?: unknown) => R;
     // Passes when a plan runs `cmd`, with exactly `args` when they are given.
     toRun: (cmd: string, args?: readonly string[]) => R;
     // Passes when the call ran its command and the command succeeded.
@@ -101,12 +105,14 @@ expect.extend({
       pass: now === content,
     };
   },
-  toBeRejected(this: MatcherState, received: unknown) {
-    const { isNot } = this;
+  toBeRejected(this: MatcherState, received: unknown, reason?: unknown) {
+    const { isNot, utils } = this;
     const plan = parsePlan(received);
+    const expected = reason === undefined ? '' : ` with ${utils.stringify(reason)}`;
     return {
-      message: () => `expected the plan ${negation(isNot)}to be rejected, ${describePlan(plan)}`,
-      pass: plan.kind === 'reject',
+      message: () =>
+        `expected the plan ${negation(isNot)}to be rejected${expected}, ${describePlan(plan)}`,
+      pass: plan.kind === 'reject' && (reason === undefined || this.equals(plan.reason, reason)),
     };
   },
   toRun(this: MatcherState, received: unknown, cmd: string, args?: readonly string[]) {

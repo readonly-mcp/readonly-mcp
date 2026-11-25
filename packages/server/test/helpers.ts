@@ -12,7 +12,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { Plan, Run } from '#src/lib/plan.js';
-import { commandLine } from '#test/command-line.js';
 import { remember } from '#test/requests.js';
 
 const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
@@ -200,13 +199,4 @@ export const textOf = (result: CallToolResult | undefined): string => {
 export const runOf = (plan: Plan): Run => {
   if (plan.kind === 'reject') throw new Error(`Expected a run, got a rejection: ${plan.reason}`);
   return plan;
-};
-
-/**
- * Why a plan rejects. A run fails the test with the command it would run.
- */
-export const rejectionOf = (plan: Plan): string => {
-  if (plan.kind === 'run')
-    throw new Error(`Expected a rejection, got a run: ${commandLine(plan.cmd, plan.args)}`);
-  return plan.reason;
 };

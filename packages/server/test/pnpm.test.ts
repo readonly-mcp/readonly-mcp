@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/pnpm.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
 describe.concurrent('pnpm tool', () => {
   describe('allowed global flags', () => {
@@ -61,7 +61,7 @@ describe.concurrent('pnpm tool', () => {
     ])('blocks $name', ({ args }, { expect }) => {
       const flag = args.find(arg => arg.startsWith('-'));
 
-      expect(rejectionOf(plan(args))).toBe(`Flag not allowed: ${flag ?? ''}`);
+      expect(plan(args)).toBeRejected(`Flag not allowed: ${flag ?? ''}`);
     });
 
     // A whole flag name is not an abbreviation of the blocked flag it prefixes.

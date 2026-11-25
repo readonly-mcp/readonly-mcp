@@ -209,6 +209,27 @@ describe.concurrent('toBeRejected', () => {
     }).toThrow(`expected the plan not to be rejected, it rejects: ${reason}`);
   });
 
+  it('passes for a rejection with the expected reason', ({ expect }) => {
+    const reason = faker.lorem.sentence();
+
+    expect(reject(reason)).toBeRejected(reason);
+  });
+
+  it('passes for a rejection whose reason an asymmetric matcher accepts', ({ expect }) => {
+    const word = faker.lorem.word();
+
+    expect(reject(`${word} ${faker.lorem.sentence()}`)).toBeRejected(expect.stringContaining(word));
+  });
+
+  it('quotes both reasons in its failure for another reason', ({ expect }) => {
+    const expected = faker.lorem.word();
+    const actual = `${expected}-${faker.lorem.word()}`;
+
+    expect(() => {
+      expect(reject(actual)).toBeRejected(expected);
+    }).toThrow(`expected the plan to be rejected with "${expected}", it rejects: ${actual}`);
+  });
+
   it('names the command in its failure for a run', ({ expect }) => {
     const cmd = faker.lorem.word();
     const args = build.words(2);

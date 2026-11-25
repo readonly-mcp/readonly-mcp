@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gt.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
 // gt runs an allowed api call with GET injected right after the endpoint.
 const asGet = ([api = '', endpoint = '', ...rest]: readonly string[]): string[] =>
@@ -71,7 +71,7 @@ describe.concurrent('gt api', () => {
     args: args.map(build.template),
   })))(
     'blocks api $name as an unlisted endpoint', ({ args }, { expect }) => {
-      expect(rejectionOf(plan(args))).toContain('API endpoint not allowed: ');
+      expect(plan(args)).toBeRejected(expect.stringContaining('API endpoint not allowed: '));
     },
   );
 
@@ -91,7 +91,7 @@ describe.concurrent('gt api', () => {
     name: endpoint, endpoint: build.template(endpoint), reason,
   })))(
     'blocks api $name for its own reason', ({ endpoint, reason }, { expect }) => {
-      expect(rejectionOf(plan(['api', endpoint]))).toContain(`API ${reason}`);
+      expect(plan(['api', endpoint])).toBeRejected(expect.stringContaining(`API ${reason}`));
     },
   );
 
@@ -128,13 +128,13 @@ describe.concurrent('gt api', () => {
     'blocks api flag $name', ({ flags }, { expect }) => {
       const args = ['api', build.template('repos/:owner/:repo/actions/runs'), ...flags];
 
-      expect(rejectionOf(plan(args))).toContain('Flag not allowed: ');
+      expect(plan(args)).toBeRejected(expect.stringContaining('Flag not allowed: '));
     },
   );
 
   it('blocks a jq filter reading the environment', ({ expect }) => {
     const args = ['api', 'user', '--jq', '$ENV.GITEA_TOKEN'];
 
-    expect(rejectionOf(plan(args))).toMatch(/for gt --jq$/v);
+    expect(plan(args)).toBeRejected(expect.stringMatching(/for gt --jq$/v));
   });
 });

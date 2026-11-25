@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gh.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
+import { runOf } from '#test/helpers.js';
 
 describe.concurrent('gh api', () => {
   it.for(([
@@ -116,14 +116,14 @@ describe.concurrent('gh api', () => {
   ] as const).map(([endpoint, reason]) => ({
     name: endpoint, endpoint: build.template(endpoint), reason,
   })))('blocks api $name for its own reason', ({ endpoint, reason }, { expect }) => {
-    expect(rejectionOf(plan(['api', endpoint]))).toContain(`API ${reason}`);
+    expect(plan(['api', endpoint])).toBeRejected(expect.stringContaining(`API ${reason}`));
   });
 
   it('reports a disallowed endpoint before a blocked filter', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/git/refs');
     const result = plan(['api', endpoint, '--jq', 'env']);
 
-    expect(rejectionOf(result)).toContain(`API endpoint not allowed: ${endpoint}`);
+    expect(result).toBeRejected(expect.stringContaining(`API endpoint not allowed: ${endpoint}`));
   });
 
   it('blocks bare api (no endpoint)', ({ expect }) => {
@@ -141,7 +141,7 @@ describe.concurrent('gh api', () => {
   it('asks for the endpoint first when a flag precedes it', ({ expect }) => {
     const result = plan(['api', '--jq', '.[].id', build.prCommentsPath()]);
 
-    expect(rejectionOf(result)).toContain('endpoint must come first');
+    expect(result).toBeRejected(expect.stringContaining('endpoint must come first'));
   });
 
   it('reports a blocked flag before the endpoint as a blocked flag', ({ expect }) => {
@@ -149,7 +149,7 @@ describe.concurrent('gh api', () => {
       'api', '-H', 'Accept: text/plain', build.template('repos/:owner/:repo/contents/:file'),
     ]);
 
-    expect(rejectionOf(result)).toContain('Flag not allowed: -H');
+    expect(result).toBeRejected(expect.stringContaining('Flag not allowed: -H'));
   });
 
   it.for([
@@ -157,7 +157,8 @@ describe.concurrent('gh api', () => {
     { name: '--header', args: build.apiArgs('--header', build.header()) },
     { name: '-HAccept:... (concatenated)', args: build.apiArgs('-HAccept:text/plain') },
   ])('says contents are already raw when $name is blocked', ({ args }, { expect }) => {
-    expect(rejectionOf(plan(args))).toContain('contents endpoints already return raw');
+    expect(plan(args))
+      .toBeRejected(expect.stringContaining('contents endpoints already return raw'));
   });
 
   it('blocks --method flag', ({ expect }) => {
