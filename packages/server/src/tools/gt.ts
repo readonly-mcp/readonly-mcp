@@ -1,11 +1,10 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ArgsSchema, checkApiEndpoint, rejectApiEndpoint, rejectJqFilter, rejectSubcommand,
   rejectUnlistedFlags,
 } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { giteaQueryKeys } from '#src/lib/gitea.js';
 import { type Plan, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const standaloneFlags = new Set(['--help', '--version', '-h']);
 
@@ -196,20 +195,17 @@ export const plan = (args: readonly string[]): Plan => {
     : planCommand(args, command);
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'gt',
-    {
-      description: 'Run read-only Gitea/Forgejo CLI (gt) commands (--version, --help, auth ' +
-        'status, branch list, commit compare/diff/list/pr/status/view, issue list/view, label ' +
-        'list, milestone list, pr checks/diff/list/status/timeline/view, pr review ' +
-        'comments/list/view, release list/view, repo list/view, run jobs/list/logs/view, ' +
-        'schema, search issue/pr/repo, version, workflow list/view, api GET: actions ' +
-        'runs+jobs+job logs, pulls/reviews, commits/status+statuses, contents, raw, user). ' +
-        'The command, and the api endpoint, come before any flags. Flags are allowlisted ' +
-        'per command from its --help. On Forgejo, where gt run view fails, read runs through ' +
-        'api actions/runs.',
-      inputSchema: ArgsSchema,
-    },
-    async ({ args }) => runPlan(plan(args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only Gitea/Forgejo CLI (gt) commands (--version, --help, auth ' +
+    'status, branch list, commit compare/diff/list/pr/status/view, issue list/view, label ' +
+    'list, milestone list, pr checks/diff/list/status/timeline/view, pr review ' +
+    'comments/list/view, release list/view, repo list/view, run jobs/list/logs/view, ' +
+    'schema, search issue/pr/repo, version, workflow list/view, api GET: actions ' +
+    'runs+jobs+job logs, pulls/reviews, commits/status+statuses, contents, raw, user). ' +
+    'The command, and the api endpoint, come before any flags. Flags are allowlisted ' +
+    'per command from its --help. On Forgejo, where gt run view fails, read runs through ' +
+    'api actions/runs.',
+  inputSchema: ArgsSchema,
+  name: 'gt',
+  plan: ({ args }) => plan(args),
+});

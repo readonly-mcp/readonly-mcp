@@ -1,11 +1,11 @@
 import path from 'node:path';
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   ArgsSchema, rejectBlockedFlags, rejectSubcommand, shortFlags,
 } from '#src/lib/allowlist.js';
-import { readOutput, runPlan } from '#src/lib/exec.js';
+import { readOutput } from '#src/lib/exec.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const subcommands = new Set([
   'blame', 'branch', 'describe', 'diff', 'log', 'ls-files', 'ls-tree',
@@ -249,14 +249,11 @@ const GitSchema = {
       'a linked worktree.'),
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'git',
-    {
-      description: 'Run read-only git commands (blame, branch, describe, diff, log, ls-files, ' +
-        'ls-tree, merge-base, reflog, remote, rev-parse, shortlog, show, stash, status, ' +
-        'worktree). Pass cwd when operating from a linked worktree.',
-      inputSchema: GitSchema,
-    },
-    async ({ args, cwd }) => runPlan(await plan(args, cwd)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only git commands (blame, branch, describe, diff, log, ls-files, ' +
+    'ls-tree, merge-base, reflog, remote, rev-parse, shortlog, show, stash, status, ' +
+    'worktree). Pass cwd when operating from a linked worktree.',
+  inputSchema: GitSchema,
+  name: 'git',
+  plan: ({ args, cwd }) => plan(args, cwd),
+});

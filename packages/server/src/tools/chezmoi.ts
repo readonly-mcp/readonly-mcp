@@ -1,7 +1,6 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, rejectSubcommand, shortFlags } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 interface Options {
   readonly long: ReadonlySet<string>;
@@ -96,13 +95,10 @@ export const plan = (args: readonly string[]): Plan => {
     : rejectSubcommand(args, subcommands);
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'chezmoi',
-    {
-      description: 'Run read-only chezmoi commands (diff, doctor, managed, source-path, status, ' +
-        'target-path, verify)',
-      inputSchema: ArgsSchema,
-    },
-    async ({ args }) => runPlan(plan(args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only chezmoi commands (diff, doctor, managed, source-path, status, ' +
+    'target-path, verify)',
+  inputSchema: ArgsSchema,
+  name: 'chezmoi',
+  plan: ({ args }) => plan(args),
+});

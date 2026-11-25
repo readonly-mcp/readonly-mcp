@@ -1,9 +1,8 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ArgsSchema, type BlockedFlagOptions, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { type Plan, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const subcommands = new Set([
   'audit', 'bin', 'explain', 'fund', 'ls', 'outdated', 'root', 'search', 'view',
@@ -35,13 +34,10 @@ export const plan = (args: readonly string[]): Plan =>
     run('npm', ['--ignore-scripts', ...args], { runner: 'shell' })
     : rejectSubcommand(args, subcommands);
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'npm',
-    {
-      description: 'Run read-only npm commands (audit, bin, explain, fund, ls, outdated, root, ' +
-        'search, view)',
-      inputSchema: ArgsSchema,
-    },
-    async ({ args }) => runPlan(plan(args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only npm commands (audit, bin, explain, fund, ls, outdated, root, ' +
+    'search, view)',
+  inputSchema: ArgsSchema,
+  name: 'npm',
+  plan: ({ args }) => plan(args),
+});

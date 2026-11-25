@@ -15,6 +15,7 @@ src/
     allowlist.ts    Allowlist matching, flag blocking, JSON array coercion
     exec.ts         Sandboxed command execution (execFile, no shell); runPlan
     plan.ts         What a tool decides: run a command, or reject the call
+    tool.ts         defineTool: a tool's name, schema and plan, registered by the server
   tools/
     index.ts        Tool registry (barrel export)
     <tool>.ts       One file per CLI tool (git, gh, gt, az, npm, pnpm, chezmoi, acli, shell)
@@ -43,16 +44,17 @@ These are non-negotiable. Every change must preserve them:
 
 ## Adding a New Tool
 
-1. Create `src/tools/<name>.ts` — export a function that takes a `McpServer` and
-   registers the tool via `server.registerTool()`
+1. Create `src/tools/<name>.ts`
 1. Define a `subcommands` set of allowed subcommands
 1. Define `blockedFlags` for any flags that could mutate state, leak secrets,
    or enable SSRF
 1. Use `rejectSubcommand()` and `rejectBlockedFlags()` from `src/lib/allowlist.ts`
 1. Export a pure `plan(args)` that returns `run()` or `reject()` from
-   `src/lib/plan.ts`, and have the handler return `runPlan(plan(args))` from
-   `src/lib/exec.ts` — never `child_process` directly
-1. Re-export from `src/tools/index.ts`
+   `src/lib/plan.ts` — never `child_process` directly
+1. Export `tool = defineTool({ description, inputSchema, name, plan })` from
+   `src/lib/tool.ts`, whose `plan` maps the parsed input onto your `plan()`.
+   The server carries the plan out through `runPlan`
+1. Re-export `tool` under the tool's name from `src/tools/index.ts`
 1. Add tests in `test/<name>.test.ts` covering allowed commands, blocked
    subcommands, blocked flags, and injection attempts.
 

@@ -1,8 +1,7 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ArgsSchema, findBlockedJqName } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const commands = new Set([
   'basename', 'date', 'dirname', 'eza', 'file', 'jq', 'ls', 'pwd',
@@ -82,16 +81,13 @@ export const plan = (command: string, args: readonly string[]): Plan => {
     run(command, args, { runner: 'shell' });
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'shell',
-    {
-      description: 'Run read-only shell utilities (basename, date, dirname, eza, file, jq, ls, ' +
-        'pwd, readlink, realpath, stat, wc, which, whoami)',
-      inputSchema: {
-        command: z.string().describe('Command name from the allowlist'),
-        ...ArgsSchema,
-      },
-    },
-    async ({ command, args }) => runPlan(plan(command, args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only shell utilities (basename, date, dirname, eza, file, jq, ls, ' +
+    'pwd, readlink, realpath, stat, wc, which, whoami)',
+  inputSchema: {
+    command: z.string().describe('Command name from the allowlist'),
+    ...ArgsSchema,
+  },
+  name: 'shell',
+  plan: ({ command, args }) => plan(command, args),
+});

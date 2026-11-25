@@ -1,10 +1,9 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ArgsSchema, checkApiPath, findBlockedFlag, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectJqFilter, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { type Plan, type Rejection, type RunOptions, reject, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
@@ -228,23 +227,20 @@ export const plan = (args: readonly string[]): Plan => {
     : rejectSubcommand(args, subcommands);
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'gh',
-    {
-      description: 'Run read-only GitHub CLI commands (--version, --help, attestation verify, ' +
-        'cache list, gist list/view, issue list/status/view, label list, pr ' +
-        'checks/diff/list/status/view, project field-list/item-list/list/view, release ' +
-        'list/view, repo list/view, ruleset check/list/view, run list/view, search ' +
-        'code/commits/issues/prs/repos, secret list, status, variable list, workflow list/view, ' +
-        'api GET: pulls/reviews+reviewers, deployments+environments, check-runs+suites, ' +
-        'commits+statuses, compare, contents, dependabot/alerts, user). ' +
-        'api contents/<path> returns a file\'s raw body, not base64 JSON; ' +
-        'a directory still returns its JSON listing. ' +
-        'With --jq or --template it returns the JSON object instead; decode a file with ' +
-        '--jq \'.content | @base64d\'. ' +
-        'The endpoint comes before any flags.',
-      inputSchema: ArgsSchema,
-    },
-    async ({ args }) => runPlan(plan(args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only GitHub CLI commands (--version, --help, attestation verify, ' +
+    'cache list, gist list/view, issue list/status/view, label list, pr ' +
+    'checks/diff/list/status/view, project field-list/item-list/list/view, release ' +
+    'list/view, repo list/view, ruleset check/list/view, run list/view, search ' +
+    'code/commits/issues/prs/repos, secret list, status, variable list, workflow list/view, ' +
+    'api GET: pulls/reviews+reviewers, deployments+environments, check-runs+suites, ' +
+    'commits+statuses, compare, contents, dependabot/alerts, user). ' +
+    'api contents/<path> returns a file\'s raw body, not base64 JSON; ' +
+    'a directory still returns its JSON listing. ' +
+    'With --jq or --template it returns the JSON object instead; decode a file with ' +
+    '--jq \'.content | @base64d\'. ' +
+    'The endpoint comes before any flags.',
+  inputSchema: ArgsSchema,
+  name: 'gh',
+  plan: ({ args }) => plan(args),
+});

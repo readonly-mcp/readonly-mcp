@@ -1,7 +1,6 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ArgsSchema, isAllowlisted, rejectSubcommand } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const subcommands = new Set([
   // devops
@@ -94,17 +93,14 @@ export const plan = (args: readonly string[]): Plan => {
       run('az', [...args, '--http-method', 'GET'], { runner: 'shell' });
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'az',
-    {
-      description: 'Run read-only Azure DevOps CLI commands (devops invoke for GET-only REST API ' +
-        'limited to build-debugging endpoints, devops ' +
-        'project/team/extension/service-endpoint/wiki, pipelines ' +
-        'list/show/build/release/runs/pool/agent). Prefer dedicated subcommands when available; ' +
-        'use devops invoke only for endpoints without a CLI equivalent (e.g., build ' +
-        'logs/timeline).',
-      inputSchema: ArgsSchema,
-    },
-    async ({ args }) => runPlan(plan(args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only Azure DevOps CLI commands (devops invoke for GET-only REST API ' +
+    'limited to build-debugging endpoints, devops ' +
+    'project/team/extension/service-endpoint/wiki, pipelines ' +
+    'list/show/build/release/runs/pool/agent). Prefer dedicated subcommands when available; ' +
+    'use devops invoke only for endpoints without a CLI equivalent (e.g., build ' +
+    'logs/timeline).',
+  inputSchema: ArgsSchema,
+  name: 'az',
+  plan: ({ args }) => plan(args),
+});

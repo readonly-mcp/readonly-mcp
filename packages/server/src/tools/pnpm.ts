@@ -1,12 +1,11 @@
-import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 // Uses execShell instead of exec for Windows compatibility: pnpm installed via
 // npm or corepack ships as a .cmd wrapper that execFile cannot invoke directly.
 // execShell is a no-op on non-Windows and wraps with bash on Windows.
 import {
   ArgsSchema, type BlockedFlagOptions, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
-import { runPlan } from '#src/lib/exec.js';
 import { type Plan, run } from '#src/lib/plan.js';
+import { defineTool } from '#src/lib/tool.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
@@ -47,13 +46,10 @@ export const plan = (args: readonly string[]): Plan => {
     : rejectSubcommand(args, subcommands);
 };
 
-export const register = (server: McpServer): RegisteredTool =>
-  server.registerTool(
-    'pnpm',
-    {
-      description: 'Run read-only pnpm commands (--version, --help, audit, bin, licenses list, ' +
-        'list, outdated, root, search, store status, why)',
-      inputSchema: ArgsSchema,
-    },
-    async ({ args }) => runPlan(plan(args)),
-  );
+export const tool = defineTool({
+  description: 'Run read-only pnpm commands (--version, --help, audit, bin, licenses list, ' +
+    'list, outdated, root, search, store status, why)',
+  inputSchema: ArgsSchema,
+  name: 'pnpm',
+  plan: ({ args }) => plan(args),
+});

@@ -9,9 +9,12 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  type CallToolResult, CallToolResultSchema, type ListToolsResult,
+} from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { Plan, Run } from '#src/lib/plan.js';
+import type { Tool } from '#src/lib/tool.js';
 import { remember } from '#test/requests.js';
 
 const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
@@ -107,18 +110,26 @@ export interface Server {
 }
 
 /**
- * Every tool registered on one McpServer, as `src/index.ts` registers them,
- * connected to a client in memory. Tools run real commands in the test's own
- * process, so coverage counts them; a suite that needs another working
- * directory spawns the server with `startServer` instead.
+ * An in-process server, which also lists the tools registered on it.
  */
-export const connectServer = (): Server => {
+export interface InProcessServer extends Server {
+  readonly listTools: () => Promise<ListToolsResult['tools']>;
+}
+
+/**
+ * `tools` registered on one McpServer, by default every tool as
+ * `src/index.ts` registers them, connected to a client in memory. Tools run
+ * real commands in the test's own process, so coverage counts them; a suite
+ * that needs another working directory spawns the server with `startServer`
+ * instead.
+ */
+export const connectServer = (tools?: readonly Tool[]): InProcessServer => {
   const server = new McpServer({ name: 'test', version: '0.0.0' });
   const client = new Client({ name: 'test', version: '0.0.0' });
 
   const initialize = async () => {
-    const tools = await import('#src/tools/index.js');
-    for (const register of Object.values(tools)) register(server);
+    const registered = tools ?? Object.values(await import('#src/tools/index.js'));
+    for (const tool of registered) tool.register(server);
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
   };
@@ -139,7 +150,12 @@ export const connectServer = (): Server => {
     await server.close();
   };
 
-  return { callTool, close, initialize };
+  const listTools = async () => {
+    const { tools: listed } = await client.listTools();
+    return listed;
+  };
+
+  return { callTool, close, initialize, listTools };
 };
 
 /**
