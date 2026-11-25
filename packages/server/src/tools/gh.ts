@@ -1,6 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, findBlockedFlag, isAllowedApiPath, isAllowlisted,
+  ArgsSchema, checkApiPath, findBlockedFlag, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectJqFilter, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
@@ -194,8 +194,8 @@ const planApi = (args: readonly string[]): Plan => {
   if (rejected) return rejected;
   if (endpoint.startsWith('-'))
     return reject(`gh api endpoint must come first, before any flags: got ${endpoint}`);
-  if (!isAllowedApiPath(endpoint, apiPaths))
-    return rejectApiEndpoint(endpoint, apiPaths);
+  const endpointRejection = checkApiPath(endpoint, apiPaths);
+  if (endpointRejection) return endpointRejection;
   /*
    * Auto-inject raw Accept header for contents endpoints so file
    * responses return plain text instead of base64-encoded JSON.

@@ -98,6 +98,27 @@ describe.concurrent('gh api', () => {
     },
   );
 
+  it.for(([
+    /*
+     * contents/** takes any depth, so a dot segment, plain or encoded, could
+     * climb out to an endpoint the allowlist never named.
+     */
+    ['repos/:owner/:repo/contents/../../../../user/keys', 'endpoint segment not allowed: ..'],
+    ['repos/:owner/:repo/contents/%2e%2e/%2E%2E/%2e%2e/user', 'endpoint segment not allowed: '],
+    ['repos/:owner/:repo/contents/..%2f..%2f..%2f..%2fuser', 'endpoint segment not allowed: '],
+    ['repos/:owner/:repo/contents/%252e%252e/%252e%252e/user', 'endpoint segment not allowed: '],
+    ['repos/:owner/:repo/contents/%zz', 'endpoint segment not allowed: '],
+    // The URL parser cuts the path at `#`.
+    ['repos/admin#/x/contents/:file', 'endpoint may not contain #'],
+    ['repos/:owner/:repo/contents/:file#L1', 'endpoint may not contain #'],
+    // Servers collapse `//`, shifting every segment after it.
+    ['repos/:owner//contents/:file', 'endpoint may not contain an empty segment'],
+  ] as const).map(([endpoint, reason]) => ({
+    name: endpoint, endpoint: build.template(endpoint), reason,
+  })))('blocks api $name for its own reason', ({ endpoint, reason }, { expect }) => {
+    expect(rejectionOf(plan(['api', endpoint]))).toContain(`API ${reason}`);
+  });
+
   it('reports a disallowed endpoint before a blocked filter', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/git/refs');
     const result = plan(['api', endpoint, '--jq', 'env']);

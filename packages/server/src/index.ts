@@ -30,6 +30,10 @@
  *   `--method GET` is injected immediately after the endpoint (before user flags)
  *   so a `--` end-of-options marker in user args cannot defeat it.
  *   Full URLs (http/https) are rejected — only relative paths accepted.
+ *   `.`/`..` segments and encoded separators, plain, percent-encoded or
+ *   double-encoded, are rejected: `contents/**` takes any depth, so a dot
+ *   segment could climb out to an unlisted endpoint. So are empty segments,
+ *   which servers collapse, and `#`, where the URL parser cuts the path.
  *   Short-flag concatenation (-XPOST) is caught by the prefix matcher's
  *   short-flag rule.
  * - gh --jq filters: gh evaluates `--jq`/`-q` with an embedded jq whose `env`
@@ -67,7 +71,7 @@
  *   `GITEA_INSTANCE_URL` names. So neither needs blocking, unlike gh's.
  * - gt --jq filters: held to the jq names check, as for gh, since gt's
  *   embedded jq reads the server's environment through `env` and `$ENV`.
- * - gt api path allowlisting: same segment matching as gh api, with
+ * - gt api path allowlisting: the same checks as gh api, with
  *   `--method GET` injected after the endpoint. Left out of its flags:
  *   `--method`/`-X`, the body flags `-f`/`--raw-field`, `-F`/`--field` and
  *   `--input` (which switch the method to POST, and `-F`/`--input` read a
