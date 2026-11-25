@@ -5,7 +5,11 @@
 
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { type MatcherState, expect } from 'vitest';
+import { z } from 'zod';
+import { readCanary } from '#test/canary.js';
 import { describeRequest } from '#test/requests.js';
+
+const CanarySchema = z.object({ content: z.string(), file: z.string() });
 
 declare module 'vitest' {
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars --
@@ -17,6 +21,8 @@ declare module 'vitest' {
      * installed, so a pass does not yet prove the server refused the call.
      */
     toBeBlocked: () => R;
+    // Passes when a canary file still holds the content it was created with.
+    toBeIntact: () => Promise<void>;
   }
 }
 
@@ -37,6 +43,16 @@ expect.extend({
         `received: ${output.join('\n')}`,
       ].join('\n'),
       pass: isError === true,
+    };
+  },
+  async toBeIntact(received: unknown) {
+    const parsed = CanarySchema.safeParse(received);
+    if (!parsed.success) throw new TypeError(`expected a canary, got: ${JSON.stringify(received)}`);
+    const { content, file } = parsed.data;
+    const now = await readCanary(file);
+    return {
+      message: () => `expected the canary to be intact, ${file} now holds: ${now}`,
+      pass: now === content,
     };
   },
 });

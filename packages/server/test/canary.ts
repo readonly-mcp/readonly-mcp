@@ -8,7 +8,6 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { faker } from '@faker-js/faker';
-import type { ExpectStatic } from 'vitest';
 
 export interface Canary extends AsyncDisposable {
   readonly content: string;
@@ -42,17 +41,13 @@ export const useCanary = async (use: (canary: Canary) => Promise<void>) => {
   await use(canary);
 };
 
-const readCanary = async (canary: Canary) => {
+/**
+ * What a canary's file holds now, or why it cannot be read.
+ */
+export const readCanary = async (file: string) => {
   try {
-    return await readFile(canary.file, 'utf8');
+    return await readFile(file, 'utf8');
   } catch (error) {
     return `unreadable: ${String(error)}`;
   }
-};
-
-/**
- * Fails when the canary was rewritten or deleted, naming the attack `label`.
- */
-export const assertCanaryIntact = async (expect: ExpectStatic, canary: Canary, label: string) => {
-  expect(await readCanary(canary), `canary modified by ${label}`).toBe(canary.content);
 };

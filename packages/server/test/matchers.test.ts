@@ -1,6 +1,8 @@
+import { rm, writeFile } from 'node:fs/promises';
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { describe, it } from 'vitest';
+import { createCanary } from '#test/canary.js';
 
 const rejected = (text: string): CallToolResult => ({
   content: [{ text, type: 'text' }],
@@ -49,5 +51,39 @@ describe.concurrent('toBeBlocked', () => {
     expect(() => {
       expect(faker.lorem.word()).toBeBlocked();
     }).toThrow('expected a tool result');
+  });
+});
+
+describe.concurrent('toBeIntact', () => {
+  it('passes for an untouched canary', async ({ expect }) => {
+    await using canary = await createCanary();
+
+    await expect(canary).toBeIntact();
+  });
+
+  it('fails for a rewritten canary', async ({ expect }) => {
+    await using canary = await createCanary();
+    await writeFile(canary.file, faker.lorem.sentence(), 'utf8');
+
+    await expect(expect(canary).toBeIntact()).rejects.toThrow('expected the canary to be intact');
+  });
+
+  it('quotes the rewritten content in its failure', async ({ expect }) => {
+    await using canary = await createCanary();
+    const content = faker.lorem.sentence();
+    await writeFile(canary.file, content, 'utf8');
+
+    await expect(expect(canary).toBeIntact()).rejects.toThrow(content);
+  });
+
+  it('fails for a deleted canary', async ({ expect }) => {
+    await using canary = await createCanary();
+    await rm(canary.file);
+
+    await expect(expect(canary).toBeIntact()).rejects.toThrow('unreadable');
+  });
+
+  it('rejects a value that is not a canary', async ({ expect }) => {
+    await expect(expect(faker.lorem.word()).toBeIntact()).rejects.toThrow('expected a canary');
   });
 });

@@ -1,6 +1,6 @@
 // @module-tag integration
 import { describe, it } from 'vitest';
-import { type Canary, assertCanaryIntact, useCanary } from '#test/canary.js';
+import { type Canary, useCanary } from '#test/canary.js';
 import { type Server, useServer } from '#test/helpers.js';
 
 const integration = it.extend<{ canary: Canary; server: Server }>({
@@ -24,10 +24,11 @@ describe.concurrent('shell injection', () => {
         label: argv.map(arg => arg.replace('{f}', 'CANARY')).join(' '),
         template: argv,
       })),
-    )('prevents: git $label', async ({ label, template }, { canary, expect, server }) => {
+    )('prevents: git $label', async ({ template }, { canary, expect, server }) => {
       const realArgs = template.map(arg => arg.replace('{f}', () => canary.file));
       await server.callTool('git', { args: realArgs });
-      await assertCanaryIntact(expect, canary, `git ${label}`);
+
+      await expect(canary).toBeIntact();
     });
   });
 
@@ -52,13 +53,14 @@ describe.concurrent('shell injection', () => {
         const shown = attack.args.map(arg => JSON.stringify(arg.replace('{f}', 'CANARY')));
         return { label: `${attack.command} ${shown.join(' ')}`, template: attack };
       }),
-    )('prevents: $label', async ({ label, template }, { canary, expect, server }) => {
+    )('prevents: $label', async ({ template }, { canary, expect, server }) => {
       const call = {
         command: template.command,
         args: template.args.map(arg => arg.replace('{f}', () => canary.file)),
       };
       await server.callTool('shell', call);
-      await assertCanaryIntact(expect, canary, label);
+
+      await expect(canary).toBeIntact();
     });
   });
 
@@ -68,7 +70,7 @@ describe.concurrent('shell injection', () => {
 
       expect(result).toBeBlocked();
 
-      await assertCanaryIntact(expect, canary, 'shell rm');
+      await expect(canary).toBeIntact();
     });
   });
 });
