@@ -6,6 +6,7 @@
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { type MatcherState, expect } from 'vitest';
 import { z } from 'zod';
+import { rejectedMetaKey } from '#src/lib/exec.js';
 import type { Reject, Run } from '#src/lib/plan.js';
 import { readCanary } from '#test/canary.js';
 import { commandLine } from '#test/command-line.js';
@@ -46,9 +47,9 @@ declare module 'vitest' {
      Merging requires the same type parameters as vitest's declaration */
   interface Matchers<R extends void | Promise<void> = void | Promise<void>, T = unknown> {
     /*
-     * Passes when the result is an error. Every refusal is one, but so is a
-     * command that ran and failed without output, timed out, or was not
-     * installed, so a pass does not yet prove the server refused the call.
+     * Passes when the server refused the call: its result carries the marker
+     * runPlan adds to a rejection. A command that ran and failed is not
+     * blocked, though it also sets isError.
      */
     toBeBlocked: () => R;
     // Passes when a canary file still holds the content it was created with.
@@ -87,7 +88,7 @@ expect.extend({
     return {
       message: () =>
         `expected the call ${negation(isNot)}to be blocked, ${describeResult(received, result)}`,
-      pass: result.isError === true,
+      pass: result._meta?.[rejectedMetaKey] === true,
     };
   },
   async toBeIntact(received: unknown) {

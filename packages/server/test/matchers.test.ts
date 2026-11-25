@@ -2,11 +2,20 @@ import { rm, writeFile } from 'node:fs/promises';
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { describe, it } from 'vitest';
+import { rejectedMetaKey } from '#src/lib/exec.js';
 import { reject, run } from '#src/lib/plan.js';
 import * as build from '#test/builders.js';
 import { createCanary } from '#test/canary.js';
 
+// A call the server refused, as runPlan reports it.
 const rejected = (text: string): CallToolResult => ({
+  _meta: { [rejectedMetaKey]: true },
+  content: [{ text, type: 'text' }],
+  isError: true,
+});
+
+// A command that ran and failed without output, timed out, or was not installed.
+const failed = (text: string): CallToolResult => ({
   content: [{ text, type: 'text' }],
   isError: true,
 });
@@ -22,6 +31,12 @@ describe.concurrent('toBeBlocked', () => {
   it('fails for a call that ran', ({ expect }) => {
     expect(() => {
       expect(ran(faker.lorem.sentence())).toBeBlocked();
+    }).toThrow('expected the call to be blocked');
+  });
+
+  it('fails for a call that ran and failed', ({ expect }) => {
+    expect(() => {
+      expect(failed(faker.lorem.sentence())).toBeBlocked();
     }).toThrow('expected the call to be blocked');
   });
 
@@ -61,9 +76,9 @@ describe.concurrent('toSucceed', () => {
     expect(ran(faker.lorem.sentence())).toSucceed();
   });
 
-  it('fails for an error result', ({ expect }) => {
+  it('fails for a call that ran and failed', ({ expect }) => {
     expect(() => {
-      expect(rejected(faker.lorem.sentence())).toSucceed();
+      expect(failed(faker.lorem.sentence())).toSucceed();
     }).toThrow('expected the call to succeed');
   });
 

@@ -82,8 +82,7 @@ describe.concurrent('git tool cwd', () => {
     integration('rejects an empty cwd at the input schema', async ({ call, expect }) => {
       const result = await call(['status'], '');
 
-      expect(result).toBeBlocked();
-
+      // The SDK refuses the call before the tool runs, so no rejection marker is set.
       expect(textOf(result)).toMatch(/Input validation error[\s\S]+\bcwd\b/v);
     });
 

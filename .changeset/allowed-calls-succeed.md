@@ -1,4 +1,4 @@
 ---
 ---
 
-Assert that allowed tool calls succeed rather than only that they were not blocked
+Make toBeBlocked prove a refusal by checking the rejection marker, and assert that allowed tool calls succeed
