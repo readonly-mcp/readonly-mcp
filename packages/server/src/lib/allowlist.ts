@@ -89,15 +89,26 @@ const isPlainSegment = (segment: string): boolean => {
   }
 };
 
+// URLSearchParams decodes each key, so `%73udo` is read as `sudo`.
+const hasOnlyQueryKeys = (endpoint: string, queryKeys: ReadonlySet<string>): boolean => {
+  const query = endpoint.slice(endpoint.indexOf('?') + 1);
+  return !endpoint.includes('?') ||
+    new URLSearchParams(query).keys().every(key => queryKeys.has(key));
+};
+
 /*
  * isAllowedApiPath, hardened for CLIs that resolve the endpoint as a URL. The
  * URL parser cuts the path at `#`, so a fragment inside a wildcard segment
  * (repos/admin#/x/contents/y) would request a truncated endpoint the
- * allowlist never named.
+ * allowlist never named. The query reaches the server too, so its keys must
+ * be in `queryKeys`: the path allowlist says nothing about them.
  */
-export const isAllowedApiEndpoint = (endpoint: string, patterns: readonly string[]): boolean =>
+export const isAllowedApiEndpoint = (
+  endpoint: string, patterns: readonly string[], queryKeys: ReadonlySet<string>,
+): boolean =>
   !endpoint.includes('#') &&
   isAllowedApiPath(endpoint, patterns) &&
+  hasOnlyQueryKeys(endpoint, queryKeys) &&
   normalizeApiPath(endpoint).split('/').every(isPlainSegment);
 
 export const rejectApiEndpoint = (

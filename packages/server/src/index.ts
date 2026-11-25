@@ -69,6 +69,9 @@
  *   any depth, so a dot segment could climb out to an unlisted endpoint.
  *   Endpoints containing `#` are rejected: the URL parser cuts the path at
  *   the fragment, so `repos/admin#/x/contents/y` would request `repos/admin`.
+ *   Query keys are allowlisted to those the allowed paths read: Gitea reads
+ *   a `sudo` query parameter as the Sudo header, which would send an
+ *   administrator token's request as another user.
  * - --registry blocked: prevents SSRF / data exfiltration to attacker-controlled registries.
  *   Uses prefix matching because npm/pnpm expand abbreviated flags internally
  *   (e.g., `--reg` resolves to `--registry`). Exact matching would be bypassable.

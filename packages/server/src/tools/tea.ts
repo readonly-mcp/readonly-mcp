@@ -4,6 +4,7 @@ import {
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
+import { giteaQueryKeys } from '#src/lib/gitea.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 
 const globalFlags = new Set(['--help', '--version', '-h', '-v']);
@@ -231,9 +232,12 @@ const apiBlockedFlags = new Set([
   '--output', '-o',
 ]);
 
+const isAllowedEndpoint = (endpoint: string): boolean =>
+  isAllowedApiEndpoint(endpoint, apiPaths, giteaQueryKeys);
+
 const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...rest] = args;
-  if (!endpoint || endpoint.startsWith('-') || !isAllowedApiEndpoint(endpoint, apiPaths))
+  if (!endpoint || endpoint.startsWith('-') || !isAllowedEndpoint(endpoint))
     return rejectApiEndpoint(endpoint, apiPaths);
   const rejected =
     rejectFlags(args, blockedFlags) ??

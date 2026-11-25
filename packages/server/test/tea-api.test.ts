@@ -77,6 +77,9 @@ describe.concurrent('tea api', () => {
     // wildcard segment would send the request to a truncated endpoint.
     ['api', 'repos/admin#/x/contents/y'],
     ['api', 'repos/:owner/:repo/contents/:file#L1'],
+    // Gitea reads a sudo query parameter as the Sudo header.
+    ['api', 'repos/:owner/:repo/raw/:file?sudo=:word'],
+    ['api', 'repos/:owner/:repo/contents/:file?ref=:branch&sudo=:word'],
   ] as const).map(args => ({
     name: args.slice(1).join(' ') || '(bare)',
     args: args.map(build.template),

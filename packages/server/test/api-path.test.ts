@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { isAllowedApiPath, rejectApiEndpoint } from '#src/lib/allowlist.js';
+import { isAllowedApiEndpoint, isAllowedApiPath, rejectApiEndpoint } from '#src/lib/allowlist.js';
 import * as build from '#test/builders.js';
 
 describe('isAllowedApiPath', () => {
@@ -138,6 +138,33 @@ describe('isAllowedApiPath', () => {
       // as the repo root. The `**` glob accepts any content after the prefix.
       expect(isAllowedApiPath(`${build.repoApiPath()}/contents/.`, patterns)).toBe(true);
     });
+  });
+});
+
+describe('isAllowedApiEndpoint query keys', () => {
+  const patterns = ['repos/*/*/contents/**'];
+  const queryKeys = new Set(['limit', 'ref']);
+  const endpoint = `${build.repoApiPath()}/contents/${build.fileName()}`;
+
+  it.for([
+    { name: 'no query', query: '' },
+    { name: 'a listed key', query: `?ref=${faker.git.branch()}` },
+    { name: 'several listed keys', query: '?ref=main&limit=5' },
+  ])('allows $name', ({ query }, { expect }) => {
+    expect(isAllowedApiEndpoint(`${endpoint}${query}`, patterns, queryKeys)).toBe(true);
+  });
+
+  /*
+   * Gitea reads a sudo query parameter as the Sudo header, so an
+   * administrator's token would request as another user.
+   */
+  it.for([
+    { name: 'an unlisted key', query: '?sudo=admin' },
+    { name: 'an unlisted key after a listed one', query: '?ref=main&sudo=admin' },
+    { name: 'an unlisted key without a value', query: '?sudo' },
+    { name: 'a percent-encoded unlisted key', query: '?%73udo=admin' },
+  ])('rejects $name', ({ query }, { expect }) => {
+    expect(isAllowedApiEndpoint(`${endpoint}${query}`, patterns, queryKeys)).toBe(false);
   });
 });
 
