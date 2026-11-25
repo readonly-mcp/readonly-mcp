@@ -1,7 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, findBlockedFlag, findBlockedJqName, isAllowedApiPath,
-  isAllowlisted, rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand, shortFlags,
+  ArgsSchema, findBlockedFlag, isAllowedApiPath, isAllowlisted,
+  rejectApiEndpoint, rejectBlockedFlags, rejectJqFilter, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
 import { type Plan, type Rejection, type RunOptions, reject, run } from '#src/lib/plan.js';
@@ -99,32 +99,6 @@ const headerFlags = new Set(['-H', '--header']);
  */
 const rawContentsHint = 'contents endpoints already return raw file content, ' +
   'so no Accept header is needed';
-
-const jqShortFlag = new Set(['q']);
-
-/*
- * The filters --jq/-q hold. In a short group, q takes the rest of the group
- * as its filter (-q., -wq.), or the next arg when nothing follows it (-wq .).
- * A q inside another flag's attached value (-Rorg/aqua) is read the same
- * way, which checks more than gh reads and fails closed.
- */
-const jqFilters = (args: readonly string[]): string[] => args.flatMap((arg, index) => {
-  const next = args[index + 1] ?? '';
-  if (arg === '--jq') return next;
-  if (arg.startsWith('--jq=')) return arg.slice('--jq='.length);
-  const { flags, value } = shortFlags(arg, jqShortFlag);
-  if (!flags.includes('q')) return [];
-  return value === '' ? next : value;
-});
-
-/*
- * gh evaluates --jq with an embedded jq whose env and $ENV return the
- * server's environment, GH_TOKEN included when it is set there.
- */
-const rejectJqFilter = (args: readonly string[]): Rejection => {
-  const name = jqFilters(args).map(findBlockedJqName).find(used => used !== undefined);
-  return name === undefined ? undefined : reject(`Filter may not use ${name} for gh --jq`);
-};
 
 /*
  * gh treats github.localhost and its subdomains as github.com: it sends
@@ -238,7 +212,7 @@ const planApi = (args: readonly string[]): Plan => {
   // user-supplied flags. Appending it at the end would be defeated by
   // a `--` (end-of-options marker) in user args, since everything after
   // `--` is treated as positional, making the injected flag a no-op.
-  return rejectLocalhost(args) ?? rejectJqFilter(args) ??
+  return rejectLocalhost(args) ?? rejectJqFilter(args, 'gh') ??
     run('gh', ['api', endpoint, '--method', 'GET', ...rawAccept, ...apiArgs], ghRun);
 };
 
@@ -250,7 +224,7 @@ export const plan = (args: readonly string[]): Plan => {
   if (args[0] === 'api') return planApi(args);
 
   return isAllowlisted(args, subcommands)
-    ? rejectLocalhost(args) ?? rejectJqFilter(args) ?? run('gh', args, ghRun)
+    ? rejectLocalhost(args) ?? rejectJqFilter(args, 'gh') ?? run('gh', args, ghRun)
     : rejectSubcommand(args, subcommands);
 };
 

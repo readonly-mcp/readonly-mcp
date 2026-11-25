@@ -133,6 +133,32 @@ const jqBlockedNames = /(?<!\.)\b(?:env|ENV|import|include|modulemeta)\b/v;
 export const findBlockedJqName = (filter: string): string | undefined =>
   jqBlockedNames.exec(filter)?.[0];
 
+const jqShortFlag = new Set(['q']);
+
+/*
+ * The filters --jq/-q hold. In a short group, q takes the rest of the group
+ * as its filter (-q., -wq.), or the next arg when nothing follows it (-wq .).
+ * A q inside another flag's attached value (-Rorg/aqua) is read the same
+ * way, which checks more than the CLI reads and fails closed.
+ */
+const jqFilters = (args: readonly string[]): string[] => args.flatMap((arg, index) => {
+  const next = args[index + 1] ?? '';
+  if (arg === '--jq') return next;
+  if (arg.startsWith('--jq=')) return arg.slice('--jq='.length);
+  const { flags, value } = shortFlags(arg, jqShortFlag);
+  if (!flags.includes('q')) return [];
+  return value === '' ? next : value;
+});
+
+/*
+ * For CLIs that evaluate --jq/-q with an embedded jq, whose env and $ENV
+ * return the server's environment, tokens included.
+ */
+export const rejectJqFilter = (args: readonly string[], tool: string): Rejection => {
+  const name = jqFilters(args).map(findBlockedJqName).find(used => used !== undefined);
+  return name === undefined ? undefined : reject(`Filter may not use ${name} for ${tool} --jq`);
+};
+
 interface ShortFlagGroup {
   readonly flags: readonly string[];
   // What follows the flag that ended the group, or '' when nothing does.
