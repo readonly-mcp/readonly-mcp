@@ -42,10 +42,15 @@ export const rejectSubcommand = (
 export const normalizeApiPath = (endpoint: string | undefined): string =>
   endpoint?.replace(/^\//v, '').split('?', 1)[0]?.replace(/\/$/v, '') || '';
 
-// Matches a GitHub API endpoint path against a list of segment patterns.
-// `*` matches exactly one segment; trailing `**` matches one or more remaining
-// segments (for variable-depth paths like repos/*/*/contents/**).
-// Rejects full URLs (http:// / https://) to prevent targeting arbitrary hosts.
+/*
+ * Matches a GitHub API endpoint path against a list of segment patterns.
+ * `*` matches exactly one segment; trailing `**` matches one or more remaining
+ * segments (for variable-depth paths like a repository's contents/**).
+ * Rejects full URLs (http:// / https://) to prevent targeting arbitrary hosts.
+ * Rejects empty segments: servers collapse `//`, so `repos/acme//raw/hooks`
+ * would match the raw/** pattern with an empty repo and request
+ * `repos/acme/raw/hooks`.
+ */
 export const isAllowedApiPath = (
   endpoint: string | undefined, patterns: readonly string[],
 ): boolean => {
@@ -53,6 +58,7 @@ export const isAllowedApiPath = (
   const normalized = normalizeApiPath(endpoint);
   if (!normalized) return false;
   const segments = normalized.split('/');
+  if (segments.includes('')) return false;
   return patterns.some((pattern) => {
     const pSegments = pattern.split('/');
     const last = pSegments.at(-1);

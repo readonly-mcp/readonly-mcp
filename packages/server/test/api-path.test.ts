@@ -106,6 +106,22 @@ describe('isAllowedApiPath', () => {
     it('rejects bare slash', ({ expect }) => {
       expect(isAllowedApiPath('/', patterns)).toBe(false);
     });
+
+    /*
+     * Servers collapse `//`, so an empty segment matched by `*` shifts every
+     * segment after it: repos/acme//raw/hooks requests repos/acme/raw/hooks.
+     */
+    it('rejects an empty segment matched by a wildcard', ({ expect }) => {
+      const endpoint = `repos/${build.ownerName()}//pulls/${build.resourceId()}/comments`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(false);
+    });
+
+    it('rejects an empty segment inside a trailing ** glob', ({ expect }) => {
+      const endpoint = `${build.repoApiPath()}/contents/${build.fileName()}//${build.fileName()}`;
+
+      expect(isAllowedApiPath(endpoint, patterns)).toBe(false);
+    });
   });
 
   describe('edge cases', () => {
