@@ -1,17 +1,8 @@
 import { faker } from '@faker-js/faker';
-import { type ExpectStatic, describe, it } from 'vitest';
-import type { Plan } from '#src/lib/plan.js';
+import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gh.js';
 import * as build from '#test/builders.js';
 import { rejectionOf, runOf } from '#test/helpers.js';
-
-const assertRuns = (expect: ExpectStatic, args: readonly string[]) => {
-  expect(plan(args)).toMatchObject({ cmd: 'gh', kind: 'run' });
-};
-
-const assertRejected = (expect: ExpectStatic, result: Plan) => {
-  expect(result).toMatchObject({ kind: 'reject' });
-};
 
 describe.concurrent('gh api', () => {
   it.for(([
@@ -39,26 +30,26 @@ describe.concurrent('gh api', () => {
     'user',
   ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
     'allows api $name', ({ args }, { expect }) => {
-      assertRuns(expect, args);
+      expect(plan(args)).toRun('gh');
     },
   );
 
   it('allows api endpoint with flags', ({ expect }) => {
-    assertRuns(expect, [
+    expect(plan([
       'api', build.prCommentsPath(), '--jq', '.[].id',
-    ]);
+    ])).toRun('gh');
   });
 
   it('strips leading slash from endpoint', ({ expect }) => {
-    assertRuns(expect, [
+    expect(plan([
       'api', `/${build.prCommentsPath()}`,
-    ]);
+    ])).toRun('gh');
   });
 
   it('strips query string from endpoint', ({ expect }) => {
-    assertRuns(expect, [
+    expect(plan([
       'api', `${build.prCommentsPath()}${build.queryString()}`,
-    ]);
+    ])).toRun('gh');
   });
 
   it('injects --method GET before user flags', ({ expect }) => {
@@ -88,7 +79,8 @@ describe.concurrent('gh api', () => {
 
   it('blocks disallowed endpoint', ({ expect }) => {
     const result = plan(['api', build.template('repos/:owner/:repo/git/refs')]);
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   /*
@@ -102,7 +94,7 @@ describe.concurrent('gh api', () => {
     'repos/:owner/:repo/dependabot/secrets',
   ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
     'blocks api $name', ({ args }, { expect }) => {
-      assertRejected(expect, plan(args));
+      expect(plan(args)).toBeRejected();
     },
   );
 
@@ -115,17 +107,20 @@ describe.concurrent('gh api', () => {
 
   it('blocks bare api (no endpoint)', ({ expect }) => {
     const result = plan(['api']);
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks api with flag-like endpoint', ({ expect }) => {
     const result = plan(['api', '--jq', '.[].id']);
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('asks for the endpoint first when a flag precedes it', ({ expect }) => {
     const result = plan(['api', '--jq', '.[].id', build.prCommentsPath()]);
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
 
     expect(rejectionOf(result)).toContain('endpoint must come first');
   });
@@ -148,86 +143,102 @@ describe.concurrent('gh api', () => {
 
   it('blocks --method flag', ({ expect }) => {
     const result = plan(build.apiArgs('--method', 'POST'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -X flag', ({ expect }) => {
     const result = plan(build.apiArgs('-X', 'POST'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -XPOST (concatenated short flag)', ({ expect }) => {
     const result = plan(build.apiArgs('-XPOST'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks --input flag', ({ expect }) => {
     const result = plan(build.apiArgs('--input', build.fileName('json')));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks --hostname flag (SSRF)', ({ expect }) => {
     const result = plan(build.apiArgs('--hostname', faker.internet.domainName()));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -f flag (body field)', ({ expect }) => {
     const result = plan(build.apiArgs('-f', build.field()));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -F flag (@file read)', ({ expect }) => {
     const result = plan(build.apiArgs('-F', build.fileField()));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -Fbody=@file (concatenated -F)', ({ expect }) => {
     const result = plan(build.apiArgs('-Fbody=@/etc/passwd'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks --field flag', ({ expect }) => {
     const result = plan(build.apiArgs('--field', build.field()));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks --raw-field flag', ({ expect }) => {
     const result = plan(build.apiArgs('--raw-field', build.field()));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks --verbose flag (token leak)', ({ expect }) => {
     const result = plan(build.apiArgs('--verbose'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -H flag (header injection)', ({ expect }) => {
     const result = plan(build.apiArgs('-H', 'Accept: text/plain'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks --header flag', ({ expect }) => {
     const result = plan(build.apiArgs('--header', build.header()));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks -HAccept:text/plain (concatenated -H)', ({ expect }) => {
     const result = plan(build.apiArgs('-HAccept:text/plain'));
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('blocks full URL', ({ expect }) => {
     const result = plan(['api', `https://api.github.com/${build.prCommentsPath()}`]);
-    assertRejected(expect, result);
+
+    expect(result).toBeRejected();
   });
 
   it('allows contents without path (directory listing)', ({ expect }) => {
-    assertRuns(expect, ['api', build.template('repos/:owner/:repo/contents')]);
+    expect(plan(['api', build.template('repos/:owner/:repo/contents')])).toRun('gh');
   });
 
   it('allows contents with trailing slash (directory listing)', ({ expect }) => {
     const endpoint = build.template('repos/:owner/:repo/contents/');
-    assertRuns(expect, ['api', endpoint]);
+
+    expect(plan(['api', endpoint])).toRun('gh');
   });
 
   it('injects raw Accept header for contents endpoint', ({ expect }) => {

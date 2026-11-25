@@ -1,18 +1,11 @@
-import { type ExpectStatic, describe, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gt.js';
 import * as build from '#test/builders.js';
 import { rejectionOf, runOf } from '#test/helpers.js';
 
 // gt runs an allowed api call with GET injected right after the endpoint.
-const assertRunsAsGet = (expect: ExpectStatic, args: readonly string[]) => {
-  const [api, endpoint, ...rest] = args;
-
-  expect(runOf(plan(args)).args).toStrictEqual([api, endpoint, '--method', 'GET', ...rest]);
-};
-
-const assertFlagRejected = (expect: ExpectStatic, args: readonly string[]) => {
-  expect(rejectionOf(plan(args))).toContain('Flag not allowed: ');
-};
+const asGet = ([api = '', endpoint = '', ...rest]: readonly string[]): string[] =>
+  [api, endpoint, '--method', 'GET', ...rest];
 
 describe.concurrent('gt api', () => {
   it.for(([
@@ -34,7 +27,7 @@ describe.concurrent('gt api', () => {
     ['api', 'user'],
   ] as const).map(args => ({ name: args[1], args: args.map(build.template) })))(
     'runs api $name as GET', ({ args }, { expect }) => {
-      assertRunsAsGet(expect, args);
+      expect(plan(args)).toRun('gt', asGet(args));
     },
   );
 
@@ -49,7 +42,9 @@ describe.concurrent('gt api', () => {
     ['-R', ':owner/:repo'],
   ] as const).map(flags => ({ name: flags.join(' '), flags: flags.map(build.template) })))(
     'runs api with $name as GET', ({ flags }, { expect }) => {
-      assertRunsAsGet(expect, ['api', build.template('repos/:owner/:repo/actions/runs'), ...flags]);
+      const args = ['api', build.template('repos/:owner/:repo/actions/runs'), ...flags];
+
+      expect(plan(args)).toRun('gt', asGet(args));
     },
   );
 
@@ -131,9 +126,9 @@ describe.concurrent('gt api', () => {
     ['--cwd', ':path'],
   ] as const).map(flags => ({ name: flags.join(' '), flags: flags.map(build.template) })))(
     'blocks api flag $name', ({ flags }, { expect }) => {
-      assertFlagRejected(expect, [
-        'api', build.template('repos/:owner/:repo/actions/runs'), ...flags,
-      ]);
+      const args = ['api', build.template('repos/:owner/:repo/actions/runs'), ...flags];
+
+      expect(rejectionOf(plan(args))).toContain('Flag not allowed: ');
     },
   );
 

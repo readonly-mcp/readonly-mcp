@@ -2,6 +2,8 @@ import { rm, writeFile } from 'node:fs/promises';
 import { faker } from '@faker-js/faker';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { describe, it } from 'vitest';
+import { reject, run } from '#src/lib/plan.js';
+import * as build from '#test/builders.js';
 import { createCanary } from '#test/canary.js';
 
 const rejected = (text: string): CallToolResult => ({
@@ -85,5 +87,99 @@ describe.concurrent('toBeIntact', () => {
 
   it('rejects a value that is not a canary', async ({ expect }) => {
     await expect(expect(faker.lorem.word()).toBeIntact()).rejects.toThrow('expected a canary');
+  });
+});
+
+describe.concurrent('toRun', () => {
+  it('passes for a run of the command with those args', ({ expect }) => {
+    const cmd = faker.lorem.word();
+    const args = build.words(3);
+
+    expect(run(cmd, args)).toRun(cmd, [...args]);
+  });
+
+  it('passes for a run of the command when no args are expected', ({ expect }) => {
+    const cmd = faker.lorem.word();
+
+    expect(run(cmd, build.words(2))).toRun(cmd);
+  });
+
+  it('fails for a run of another command', ({ expect }) => {
+    const cmd = faker.lorem.word();
+    const other = `${cmd}-${faker.lorem.word()}`;
+
+    expect(() => {
+      expect(run(other, [])).toRun(cmd);
+    }).toThrow(`expected the plan to run ${cmd}`);
+  });
+
+  it('fails for a run with other args', ({ expect }) => {
+    const cmd = faker.lorem.word();
+    const args = build.words(2);
+
+    expect(() => {
+      expect(run(cmd, args)).toRun(cmd, args.slice(1));
+    }).toThrow(`it runs: ${cmd} ${args.join(' ')}`);
+  });
+
+  it('quotes an arg holding a space in its failure', ({ expect }) => {
+    const cmd = faker.lorem.word();
+    const words = build.words(2);
+    const line = words.join(' ');
+
+    expect(() => {
+      expect(run(cmd, words)).toRun(cmd, [line]);
+    }).toThrow(`expected the plan to run ${cmd} "${line}", it runs: ${cmd} ${line}`);
+  });
+
+  it('fails negated for a run of the command', ({ expect }) => {
+    const cmd = faker.lorem.word();
+
+    expect(() => {
+      expect(run(cmd, [])).not.toRun(cmd);
+    }).toThrow(`expected the plan not to run ${cmd}, it runs: ${cmd}`);
+  });
+
+  it('quotes a rejection reason in its failure', ({ expect }) => {
+    const reason = faker.lorem.sentence();
+
+    expect(() => {
+      expect(reject(reason)).toRun(faker.lorem.word());
+    }).toThrow(`it rejects: ${reason}`);
+  });
+
+  it('rejects a value that is not a plan', ({ expect }) => {
+    expect(() => {
+      expect(faker.lorem.word()).toRun(faker.lorem.word());
+    }).toThrow('expected a plan');
+  });
+});
+
+describe.concurrent('toBeRejected', () => {
+  it('passes for a rejection', ({ expect }) => {
+    expect(reject(faker.lorem.sentence())).toBeRejected();
+  });
+
+  it('fails negated for a rejection', ({ expect }) => {
+    const reason = faker.lorem.sentence();
+
+    expect(() => {
+      expect(reject(reason)).not.toBeRejected();
+    }).toThrow(`expected the plan not to be rejected, it rejects: ${reason}`);
+  });
+
+  it('names the command in its failure for a run', ({ expect }) => {
+    const cmd = faker.lorem.word();
+    const args = build.words(2);
+
+    expect(() => {
+      expect(run(cmd, args)).toBeRejected();
+    }).toThrow(`expected the plan to be rejected, it runs: ${cmd} ${args.join(' ')}`);
+  });
+
+  it('rejects a value that is not a plan', ({ expect }) => {
+    expect(() => {
+      expect(faker.lorem.word()).toBeRejected();
+    }).toThrow('expected a plan');
   });
 });

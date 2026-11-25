@@ -1,17 +1,8 @@
 import { faker } from '@faker-js/faker';
-import { type ExpectStatic, describe, it } from 'vitest';
-import type { Plan } from '#src/lib/plan.js';
+import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gh.js';
 import * as build from '#test/builders.js';
 import { rejectionOf, runOf } from '#test/helpers.js';
-
-const assertRuns = (expect: ExpectStatic, args: readonly string[]) => {
-  expect(plan(args)).toMatchObject({ cmd: 'gh', kind: 'run' });
-};
-
-const assertRejected = (expect: ExpectStatic, result: Plan) => {
-  expect(result).toMatchObject({ kind: 'reject' });
-};
 
 describe.concurrent('gh tool', () => {
   describe('allowed subcommands', () => {
@@ -54,13 +45,14 @@ describe.concurrent('gh tool', () => {
       ['workflow', 'view'],
     ].map(args => ({ name: args.join(' '), args })))(
       'allows $name', ({ args }, { expect }) => {
-        assertRuns(expect, args);
+        expect(plan(args)).toRun('gh');
       },
     );
 
     it('allows subcommand with flags', ({ expect }) => {
       const args = ['pr', 'list', '--state', 'open', '--json', 'number'];
-      assertRuns(expect, args);
+
+      expect(plan(args)).toRun('gh');
     });
   });
 
@@ -84,7 +76,8 @@ describe.concurrent('gh tool', () => {
       { args: ['pr', 'list', ...json(), '--jq', '"env"'], name: 'a string', used: 'env' },
     ])('blocks a filter using $name', ({ args, used }, { expect }) => {
       const result = plan(args);
-      assertRejected(expect, result);
+
+      expect(result).toBeRejected();
 
       expect(rejectionOf(result)).toBe(`Filter may not use ${used} for gh --jq`);
     });
@@ -102,7 +95,7 @@ describe.concurrent('gh tool', () => {
       { args: ['search', 'issues', '-Rorg/aqua', 'env'], name: 'env after a value holding q' },
       { args: ['pr', 'list', '-Squery', 'env'], name: 'env after a search holding q' },
     ])('allows $name', ({ args }, { expect }) => {
-      assertRuns(expect, args);
+      expect(plan(args)).toRun('gh');
     });
   });
 
@@ -136,7 +129,8 @@ describe.concurrent('gh tool', () => {
     ])('blocks $name naming it', ({ args }, { expect }) => {
       const sent = args();
       const result = plan(sent);
-      assertRejected(expect, result);
+
+      expect(result).toBeRejected();
 
       expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${sent.at(-1) ?? ''}`);
     });
@@ -144,14 +138,16 @@ describe.concurrent('gh tool', () => {
     it('blocks api naming it', ({ expect }) => {
       const filter = '"github.localhost"';
       const result = plan(['api', build.prCommentsPath(), '--jq', filter]);
-      assertRejected(expect, result);
+
+      expect(result).toBeRejected();
 
       expect(rejectionOf(result)).toBe(`gh may not reach github.localhost: ${filter}`);
     });
 
     it('reports a disallowed subcommand first', ({ expect }) => {
       const result = plan(['auth', 'status', '--hostname', 'github.localhost']);
-      assertRejected(expect, result);
+
+      expect(result).toBeRejected();
 
       expect(rejectionOf(result)).toMatch(/^Subcommand not allowed: auth status\./v);
     });
@@ -164,18 +160,20 @@ describe.concurrent('gh tool', () => {
       ['-h'],
     ].map(args => ({ name: args[0], args })))(
       'allows standalone $name', ({ args }, { expect }) => {
-        assertRuns(expect, args);
+        expect(plan(args)).toRun('gh');
       },
     );
 
     it('blocks --help with extra args', ({ expect }) => {
       const result = plan(['--help', 'repo', 'delete']);
-      assertRejected(expect, result);
+
+      expect(result).toBeRejected();
     });
 
     it('blocks --version with extra args', ({ expect }) => {
       const result = plan(['--version', 'repo', 'delete']);
-      assertRejected(expect, result);
+
+      expect(result).toBeRejected();
     });
   });
 });

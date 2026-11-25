@@ -12,8 +12,6 @@ export default [
   {
     files: ['e2e/**/*.ts', 'test/**/*.ts'],
     rules: {
-      // The assert* helpers in test/ wrap expect, so a test that calls one asserts.
-      'vitest/expect-expect': ['warn', { assertFunctionNames: ['expect', 'assert*'] }],
       /*
        * The suites write it throughout. Vitest requires a file-scoped
        * fixture's it.extend at the top level, where the default wants test.

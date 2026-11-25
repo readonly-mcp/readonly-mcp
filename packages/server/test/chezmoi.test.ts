@@ -1,26 +1,21 @@
 import { faker } from '@faker-js/faker';
-import { type ExpectStatic, describe, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { plan } from '#src/tools/chezmoi.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
-
-// chezmoi runs an allowed call exactly as given.
-const assertRunsAsGiven = (expect: ExpectStatic, args: readonly string[]) => {
-  const { args: argv, cmd } = runOf(plan(args));
-
-  expect([cmd, ...argv]).toStrictEqual(['chezmoi', ...args]);
-};
+import { rejectionOf } from '#test/helpers.js';
 
 describe.concurrent('chezmoi tool', () => {
   describe('allowed subcommands', () => {
     it.for(['diff', 'doctor', 'managed', 'source-path', 'status', 'target-path', 'verify'])(
       'runs %s', (sub, { expect }) => {
-        assertRunsAsGiven(expect, [sub]);
+        expect(plan([sub])).toRun('chezmoi', [sub]);
       },
     );
 
     it('runs a subcommand with flags', ({ expect }) => {
-      assertRunsAsGiven(expect, ['status', '--include', 'files']);
+      const args = ['status', '--include', 'files'];
+
+      expect(plan(args)).toRun('chezmoi', args);
     });
   });
 
@@ -147,7 +142,7 @@ describe.concurrent('chezmoi tool', () => {
       { args: ['diff', '-'], name: 'a bare - (a target, not an option)' },
       { args: ['diff', '--', build.relativeFilePath()], name: 'a target after --' },
     ])('runs $name', ({ args }, { expect }) => {
-      assertRunsAsGiven(expect, args);
+      expect(plan(args)).toRun('chezmoi', args);
     });
 
     /*
@@ -185,7 +180,7 @@ describe.concurrent('chezmoi tool', () => {
         args: [command, ...option], name: `${command} ${option.join(' ')}`,
       }))))(
       'runs $name', ({ args }, { expect }) => {
-        assertRunsAsGiven(expect, args);
+        expect(plan(args)).toRun('chezmoi', args);
       },
     );
   });

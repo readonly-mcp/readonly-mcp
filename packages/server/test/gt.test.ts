@@ -1,17 +1,7 @@
-import { type ExpectStatic, describe, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { plan } from '#src/tools/gt.js';
 import * as build from '#test/builders.js';
-import { rejectionOf, runOf } from '#test/helpers.js';
-
-const assertRunsAsGiven = (expect: ExpectStatic, args: readonly string[]) => {
-  const { args: argv, cmd } = runOf(plan(args));
-
-  expect([cmd, ...argv]).toStrictEqual(['gt', ...args]);
-};
-
-const assertRejected = (expect: ExpectStatic, args: readonly string[]) => {
-  expect(plan(args)).toMatchObject({ kind: 'reject' });
-};
+import { rejectionOf } from '#test/helpers.js';
 
 describe.concurrent('gt tool', () => {
   describe('allowed subcommands', () => {
@@ -54,7 +44,7 @@ describe.concurrent('gt tool', () => {
       ['workflow', 'view', ':file'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
       'runs $name as given', ({ args }, { expect }) => {
-        assertRunsAsGiven(expect, args);
+        expect(plan(args)).toRun('gt', args);
       },
     );
 
@@ -82,7 +72,7 @@ describe.concurrent('gt tool', () => {
       ['search', 'issue', ''],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
       'runs $name as given', ({ args }, { expect }) => {
-        assertRunsAsGiven(expect, args);
+        expect(plan(args)).toRun('gt', args);
       },
     );
   });
@@ -90,12 +80,12 @@ describe.concurrent('gt tool', () => {
   describe('global flags', () => {
     it.for([['--version'], ['--help'], ['-h']].map(args => ({ name: args[0], args })))(
       'runs standalone $name', ({ args }, { expect }) => {
-        assertRunsAsGiven(expect, args);
+        expect(plan(args)).toRun('gt', args);
       },
     );
 
     it('blocks --help with extra args', ({ expect }) => {
-      assertRejected(expect, ['--help', 'repo', 'delete']);
+      expect(plan(['--help', 'repo', 'delete'])).toBeRejected();
     });
   });
 
@@ -142,12 +132,12 @@ describe.concurrent('gt tool', () => {
       ['run list'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
       'blocks $name', ({ args }, { expect }) => {
-        assertRejected(expect, args);
+        expect(plan(args)).toBeRejected();
       },
     );
 
     it('blocks bare gt', ({ expect }) => {
-      assertRejected(expect, []);
+      expect(plan([])).toBeRejected();
     });
   });
 
@@ -207,7 +197,7 @@ describe.concurrent('gt tool', () => {
       ['run', 'logs', ':number', '--skip-existing'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })))(
       'blocks $name', ({ args }, { expect }) => {
-        assertRejected(expect, args);
+        expect(plan(args)).toBeRejected();
       },
     );
   });
