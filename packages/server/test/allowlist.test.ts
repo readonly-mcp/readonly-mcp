@@ -1,8 +1,9 @@
 import { faker } from '@faker-js/faker';
-import { describe, it } from 'vitest';
+import { type ExpectStatic, describe, it } from 'vitest';
 import { z } from 'zod';
 import {
-  ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand, shortFlags,
+  ArgsSchema, isAllowlisted, rejectBlockedFlags, rejectSubcommand, rejectUnlistedFlags,
+  shortFlags,
 } from '#src/lib/allowlist.js';
 import * as build from '#test/builders.js';
 
@@ -346,5 +347,55 @@ describe('shortFlags', () => {
     { arg: build.fileName('md'), name: 'a positional' },
   ])('reads no flags from $name', ({ arg }, { expect }) => {
     expect(shortFlags(arg, takesValue)).toStrictEqual({ flags: [], value: '' });
+  });
+});
+
+describe('rejectUnlistedFlags', () => {
+  /*
+   * A trailing `=` marks a flag that takes a value, and `?` one that takes
+   * the next arg as its value unless that arg starts with `-`.
+   */
+  const allowed = new Set(['--draft', '-d', '--json?', '--label=', '-l=', '--repo=']);
+
+  const assertAllowed = (expect: ExpectStatic, args: readonly string[]) => {
+    expect(rejectUnlistedFlags(args, allowed)).toBeUndefined();
+  };
+
+  const assertRejectedFor = (expect: ExpectStatic, args: readonly string[], flag: string) => {
+    expect(rejectUnlistedFlags(args, allowed)?.reason).toBe(`Flag not allowed: ${flag}`);
+  };
+
+  it.for([
+    { name: 'a listed switch', args: ['--draft'] },
+    { name: 'a listed flag and its value', args: ['--label', faker.lorem.word()] },
+    { name: 'a listed flag with an attached value', args: [`--label=${faker.lorem.word()}`] },
+    { name: 'a switch given a value', args: ['--draft=false'] },
+    { name: 'a group of listed short flags', args: ['-dl', faker.lorem.word()] },
+    { name: 'a value attached in a short group', args: ['-dlwontfix'] },
+    { name: 'a positional', args: [build.fileName()] },
+    { name: 'a lone dash', args: ['-'] },
+    // pflag takes the next arg as the value, whatever it looks like.
+    { name: 'a value that looks like a flag', args: ['--repo', '--web'] },
+    { name: 'anything after --', args: ['--', '--web'] },
+    { name: 'an optional-value flag alone', args: ['--json'] },
+    { name: 'an optional-value flag and its value', args: ['--json', 'number,title'] },
+    { name: 'an optional-value flag with an attached value', args: ['--json=number'] },
+  ])('allows $name', ({ args }, { expect }) => {
+    assertAllowed(expect, args);
+  });
+
+  it.for([
+    { name: 'an unlisted long flag', args: ['--web'], flag: '--web' },
+    { name: 'an unlisted long flag with a value', args: ['--cwd=/'], flag: '--cwd' },
+    { name: 'an abbreviation of a listed flag', args: ['--dra'], flag: '--dra' },
+    { name: 'an unlisted short flag', args: ['-w'], flag: '-w' },
+    { name: 'an unlisted letter in a short group', args: ['-dw'], flag: '-w' },
+    { name: 'a short form only the long flag has', args: ['-r', 'x'], flag: '-r' },
+    { name: 'a flag after a listed flag\'s value', args: ['--label', 'x', '--web'], flag: '--web' },
+    // An optional-value flag leaves an arg starting with `-` to be read as a flag.
+    { name: 'a flag after an optional-value flag', args: ['--json', '--web'], flag: '--web' },
+    { name: 'a short flag after an optional-value flag', args: ['--json', '-w'], flag: '-w' },
+  ])('rejects $name', ({ args, flag }, { expect }) => {
+    assertRejectedFor(expect, args, flag);
   });
 });

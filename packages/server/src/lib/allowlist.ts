@@ -250,6 +250,71 @@ export const findBlockedFlag = (
   );
 };
 
+interface FlagRead {
+  // The first flag in the arg that the allowlist does not hold.
+  readonly unlisted: string | undefined;
+  // Whether the arg ends on a flag that takes the next arg as its value.
+  readonly consumesNext: boolean;
+}
+
+const readFlag = (
+  arg: string, next: string | undefined, allowed: ReadonlySet<string>,
+): FlagRead => {
+  const isValueFlag = (flag: string): boolean => allowed.has(`${flag}=`);
+  const isOptionalValueFlag = (flag: string): boolean => allowed.has(`${flag}?`);
+  const isListed = (flag: string): boolean =>
+    allowed.has(flag) || isValueFlag(flag) || isOptionalValueFlag(flag);
+  if (arg.startsWith('--')) {
+    const name = arg.split('=', 1)[0] ?? arg;
+    const hasValueNext = isValueFlag(name) ||
+      (isOptionalValueFlag(name) && next !== undefined && !next.startsWith('-'));
+    return {
+      unlisted: isListed(name) ? undefined : name,
+      consumesNext: !arg.includes('=') && hasValueNext,
+    };
+  }
+  const valueLetters = new Set(
+    [...allowed].filter(flag => /^-[^\-]=$/v.test(flag)).map(flag => flag.charAt(1)),
+  );
+  const { flags, value } = shortFlags(arg, valueLetters);
+  const last = flags.at(-1);
+  return {
+    unlisted: flags.map(letter => `-${letter}`).find(flag => !isListed(flag)),
+    consumesNext: last !== undefined && valueLetters.has(last) && value === '',
+  };
+};
+
+/*
+ * Walks args as pflag reads them: `--` ends the flags, a flag that takes a
+ * value takes the next arg whatever it looks like, and in a short group the
+ * first such letter takes the rest of the group. Anything else is a
+ * positional.
+ */
+const findUnlistedFlag = (
+  args: readonly string[], allowed: ReadonlySet<string>,
+): string | undefined => {
+  const [arg, ...rest] = args;
+  if (arg === undefined || arg === '--') return undefined;
+  const { unlisted, consumesNext } = readFlag(arg, rest[0], allowed);
+  return unlisted ?? findUnlistedFlag(consumesNext ? rest.slice(1) : rest, allowed);
+};
+
+/*
+ * For CLIs whose flags are allowlisted rather than blocked. `allowed` holds
+ * each flag a command accepts, long and short, with a trailing `=` on those
+ * that take a value (`--label=`, `-l=`). A trailing `?` marks a long flag
+ * whose value is optional (`--json?`): it takes the next arg as its value
+ * only when that arg does not start with `-`, so a flag placed after it is
+ * still checked. Names match exactly, so this suits CLIs such as pflag's
+ * that read no abbreviations.
+ */
+export const rejectUnlistedFlags = (
+  args: readonly string[], allowed: ReadonlySet<string>,
+): Rejection => {
+  const flag = findUnlistedFlag(args, allowed);
+  return flag === undefined ? undefined : reject(`Flag not allowed: ${flag}`);
+};
+
 export const rejectBlockedFlags = (
   args: readonly string[], blockedFlags: ReadonlySet<string>, options?: BlockedFlagOptions,
 ): Rejection => {
