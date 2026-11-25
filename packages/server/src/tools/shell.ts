@@ -1,3 +1,23 @@
+/*
+ * Accepted risks (auto-allow surface area):
+ *
+ * - Shell metadata commands (`ls`, `stat`, `readlink`, `realpath`, `wc`, `file`,
+ *   `eza`): accept arbitrary path arguments and can enumerate filesystem metadata
+ *   (directory listings, permissions, symlink targets, line/byte counts) outside
+ *   the working directory. They cannot read file contents — `cat`/`head`/`tail`
+ *   are excluded for that reason. The host's `Read` tool with its own permission
+ *   prompts is the content-read boundary.
+ * - `jq --jsonargs` / `--args`: not handled by the file-path validator, which
+ *   may false-positive on legitimate uses. The error direction is safe (blocks
+ *   rather than allows). These flags are uncommon in MCP agent usage.
+ *
+ * Excluded by design:
+ *
+ * - `printenv` / `env`: leaks environment variables (API keys, tokens).
+ * - `rg`: redundant with host `Grep` tool; allows searching arbitrary paths.
+ * - `cat`, `head`, `tail`, `bat`, `diff`, `delta`: redundant with host `Read`
+ *   tool; accepting path args would duplicate file-read surface area.
+ */
 import { z } from 'zod';
 import { ArgsSchema, findBlockedJqName } from '#src/lib/allowlist.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';

@@ -2,6 +2,9 @@
 /**
  * Read-only MCP server for AI agents.
  *
+ * Each tool's own checks, accepted risks and exclusions are documented in
+ * the header of its file under src/tools. What follows holds for every tool.
+ *
  * Security design:
  *
  * - Allowlists, not denylists: every command/subcommand must be explicitly permitted.
@@ -20,87 +23,6 @@
  * - execFile (no shell): prevents shell metacharacter injection (;, &&, |, $(), ``)
  *   even when args contain untrusted input. On Windows, a `bash -c 'exec "$@"'`
  *   wrapper preserves this guarantee for shell utilities.
- * - gh api path allowlisting: `gh api` is restricted to a curated set of URL path
- *   patterns using segment-level wildcard matching (`*` = one segment, trailing
- *   `**` = one or more). Blocked flags: `--method`/`-X` (verb override),
- *   `--input` (file body), `-f`/`-F`/`--field`/`--raw-field` (body fields / @file
- *   read), `--hostname` (SSRF — redirects request + auth token to arbitrary host),
- *   `--verbose` (dumps Authorization header in output — token leak),
- *   `-H`/`--header` (arbitrary HTTP header injection).
- *   `--method GET` is injected immediately after the endpoint (before user flags)
- *   so a `--` end-of-options marker in user args cannot defeat it.
- *   Full URLs (http/https) are rejected — only relative paths accepted.
- *   `.`/`..` segments and encoded separators, plain, percent-encoded or
- *   double-encoded, are rejected: `contents/**` takes any depth, so a dot
- *   segment could climb out to an unlisted endpoint. So are empty segments,
- *   which servers collapse, and `#`, where the URL parser cuts the path.
- *   Short-flag concatenation (-XPOST) is caught by the prefix matcher's
- *   short-flag rule.
- * - gh --jq filters: gh evaluates `--jq`/`-q` with an embedded jq whose `env`
- *   and `$ENV` return the server's environment, `GH_TOKEN` included when it
- *   is set there. Filters are held to the same names check as the jq tool,
- *   on every gh command, `api` included.
- * - gh enterprise tokens: gh sends `GH_ENTERPRISE_TOKEN` (or its alias
- *   `GITHUB_ENTERPRISE_TOKEN`) to any host outside github.com, and a caller
- *   names the host through `-R HOST/OWNER/REPO`, a URL positional or
- *   `attestation verify --hostname`, so gh runs without both. Of the four
- *   token variables gh documents, these are the two it sends to any host at
- *   all, so a list of names is enough; the
- *   other two, `GH_TOKEN` and `GITHUB_TOKEN`, are covered by the next entry
- *   and the `*.ghe.com` accepted risk. A token `gh auth login --hostname`
- *   stored is sent only to its own host.
- * - gh github.localhost: gh treats `github.localhost` and its subdomains as
- *   github.com, so it sends `GH_TOKEN` there over plain HTTP, and many
- *   resolvers map `*.localhost` to loopback, where any local listener reads
- *   it. A gh arg naming that host anywhere, in any case or in a spelling Go's
- *   lowercasing folds into it (`gİthub`), is rejected, which
- *   covers `-R`, URL positionals and `--hostname` without parsing any.
- * - gt command position: gt reads global flags before the command as well as
- *   after it, so the command must come first, or flags ahead of it would hide
- *   it from the allowlist. An unknown first word is rejected rather than
- *   passed on, since gt runs any installed `gt-NAME` extension as `gt NAME`.
- *   Built-in commands win over user aliases, so a canonical name always
- *   means the built-in.
- * - gt flag allowlisting: each command's flags come from its `--help`, read
- *   as pflag reads them: names match exactly, since pflag reads no
- *   abbreviations, and each letter of a short group is checked until one
- *   that takes a value. A flag a later gt adds is refused until listed.
- * - gt hosts: a URL in `--repo` or a positional selects its instance, and
- *   gt refuses an instance it holds no account for, sending nothing; it
- *   sends `GITEA_TOKEN` only to the instance `GITEA_CLI_HOST` or
- *   `GITEA_INSTANCE_URL` names. So neither needs blocking, unlike gh's.
- * - gt --jq filters: held to the jq names check, as for gh, since gt's
- *   embedded jq reads the server's environment through `env` and `$ENV`.
- * - gt api path allowlisting: the same checks as gh api, with
- *   `--method GET` injected after the endpoint. Left out of its flags:
- *   `--method`/`-X`, the body flags `-f`/`--raw-field`, `-F`/`--field` and
- *   `--input` (which switch the method to POST, and `-F`/`--input` read a
- *   file or stdin), `-H`/`--header`, `--output-file` (writes the response to
- *   a file), `--verbose` (prints request headers; a token login's
- *   `Authorization` is not yet shown redacted) and `--dry-run` (prints the
- *   request unsent). `.` and `..` segments, plain or percent-encoded, are
- *   rejected: `contents/**` and `raw/**` take any depth, so a dot segment
- *   could climb out to an unlisted endpoint. Endpoints containing `#` are
- *   rejected: the URL parser cuts the path at the fragment, so
- *   `repos/admin#/x/contents/y` would request `repos/admin`. Query keys are
- *   allowlisted to those the allowed paths read: Gitea reads a `sudo` query
- *   parameter as the Sudo header, which would send an administrator token's
- *   request as another user.
- * - --registry blocked: prevents SSRF / data exfiltration to attacker-controlled registries.
- *   Uses prefix matching because npm/pnpm expand abbreviated flags internally
- *   (e.g., `--reg` resolves to `--registry`). Exact matching would be bypassable.
- *   The registry is also reachable by names `--registry` does not prefix, so
- *   those are blocked too: `--@scope:registry`, pnpm's `--config.<key>`, the
- *   .npmrc readers (`--userconfig`, `--globalconfig`, `--npmrc-auth-file`),
- *   the flags that move the project root whose .npmrc is read (npm
- *   `--prefix`/`-C`, pnpm `--dir`/`-C`), and the proxies a request can be
- *   routed through (`--proxy`, `--https-proxy`). Both expand a group of short
- *   flags, so `-lC` is matched as `-C`, and read any other single-dash arg as
- *   a long name, so `-reg` is matched as `--reg`. `--global` passes, though
- *   it prefixes `--globalconfig`: it names a flag of its own.
- * - --ignore-scripts injected: defense-in-depth for npm to prevent lifecycle scripts.
- *   `--no-ignore-scripts` is also blocked to prevent last-wins override.
- *   Not needed for pnpm: its allowed subcommands are inherently read-only and reject the flag.
  * - Resource limits (timeout, maxBuffer): prevent runaway commands from consuming
  *   excessive CPU/memory on expensive operations (e.g., recursive ls).
  * - Non-zero exit codes with output: returned as successful results (no isError)
@@ -109,81 +31,11 @@
  *   vulnerabilities are found). The output content itself conveys the meaning.
  *
  * Auto-allow implications:
+ *
  * - These tools are auto-allowed in Claude settings (no user confirmation prompt).
  *   The allowlist/blocklist logic is the sole security boundary against prompt
  *   injection. Any command reachable through the allowlists can be invoked by
  *   an attacker who compromises the agent's context.
- *
- * Accepted risks (auto-allow surface area):
- * - `git show` / `git diff`: expose the full git object store, including files
- *   from any historical commit. Accidentally committed secrets (even if since
- *   rotated/deleted) are readable without user confirmation. This is inherent
- *   to allowing read-only git operations and is accepted by design.
- * - `gh search`: can search code/commits/issues across all repos the
- *   authenticated user can access, including private repos. Results are
- *   constrained by GitHub's search API (no full file contents).
- * - Shell metadata commands (`ls`, `stat`, `readlink`, `realpath`, `wc`, `file`,
- *   `eza`): accept arbitrary path arguments and can enumerate filesystem metadata
- *   (directory listings, permissions, symlink targets, line/byte counts) outside
- *   the working directory. They cannot read file contents — `cat`/`head`/`tail`
- *   are excluded for that reason. The host's `Read` tool with its own permission
- *   prompts is the content-read boundary.
- * - `gh api`: exposes read-only data from allowlisted REST endpoint paths. The
- *   wildcard segments accept any value, so an agent can read review comments,
- *   deployments, environments, check annotations/suites, commit statuses,
- *   ref comparisons, requested reviewers, Dependabot alerts, and file
- *   contents from any repo the authenticated user can access. Dependabot
- *   alerts name a repo's unpatched vulnerable dependencies, which is
- *   reconnaissance for an attacker; accepted because reviewing them is the
- *   point of reading them. The `contents/**` pattern enables
- *   systematic file enumeration at any depth. Error messages include the full
- *   pattern list (aids agent correction but doubles as adversary reconnaissance;
- *   accepted because the patterns are already published in agent instructions).
- * - gh `GH_TOKEN` on `*.ghe.com`: gh sends `GH_TOKEN`/`GITHUB_TOKEN` to any
- *   GHE.com tenant a caller names. Every such host is one GitHub runs, so the
- *   token reaches GitHub for a tenant it does not belong to, and is refused.
- * - `az` non-invoke subcommands: no flag filtering is applied. The allowlisted
- *   commands (`list`, `show`) are inherently read-only. If future az CLI versions
- *   add mutating flags to these commands, they would pass through unchecked.
- * - gt on Forgejo: Forgejo echoes a rejected token in its error body
- *   (`access token does not exist [sha: …]`), so a call made with a revoked
- *   token prints the credential. No flag causes it, so no flag check can
- *   stop it.
- * - `jq --jsonargs` / `--args`: not handled by the file-path validator, which
- *   may false-positive on legitimate uses. The error direction is safe (blocks
- *   rather than allows). These flags are uncommon in MCP agent usage.
- *
- * Excluded by design:
- * - `chezmoi data`: leaks template variables that may contain secrets.
- * - `chezmoi cat-config`: may expose encryption keys, GPG recipient IDs, or
- *   other sensitive configuration values.
- * - chezmoi options outside its allowlist: `--source`/`-S` and `--config`/`-c`
- *   point chezmoi at templates and hooks the caller wrote, which run
- *   commands when `diff`, `status` or `verify` renders them, and `--pager`
- *   runs one directly. `--init` rewrites the config; `--output`, `--cache`
- *   and `--persistent-state` write to a caller-chosen path;
- *   `--override-data` and `--override-data-file` set data a template may
- *   pass to a command; `--destination` and `--working-tree` move what
- *   chezmoi reads; `--refresh-externals` fetches; and `--debug` may print
- *   template data. Options are allowed per command, since chezmoi defines
- *   short letters and names per command.
- * - `printenv` / `env`: leaks environment variables (API keys, tokens).
- * - `rg`: redundant with host `Grep` tool; allows searching arbitrary paths.
- * - `cat`, `head`, `tail`, `bat`, `diff`, `delta`: redundant with host `Read`
- *   tool; accepting path args would duplicate file-read surface area.
- * - `git diff --no-index`: reads arbitrary files outside the repo via git's
- *   diff machinery, bypassing the "git operations only" intent.
- * - `git --output` / `-o`: writes diff/log output to a file.
- * - `gt auth token`: prints the active account's token.
- * - `gt auth git-credential`: a git credential helper, whose protocol answers
- *   with the token on stdout. `gt auth --help` does not list it.
- * - `gt notification`: not yet confirmed to leave read state untouched.
- * - Left out of gt's flag allowlist: `--cwd` (acts as a `cwd` parameter),
- *   `--sudo` (requests as another user), `--debug` (request log not yet
- *   shown to leave credentials out), `--interactive` (allows prompts),
- *   `--web`/`-w` (opens a browser), `--select` (an interactive picker that
- *   acts on its pick), `pr checks --watch` and `run logs --follow` (poll
- *   until CI finishes), and `run logs --output`/`--dir` (write a file).
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';

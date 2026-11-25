@@ -1,3 +1,17 @@
+/*
+ * Accepted risks (auto-allow surface area):
+ *
+ * - `git show` / `git diff`: expose the full git object store, including files
+ *   from any historical commit. Accidentally committed secrets (even if since
+ *   rotated/deleted) are readable without user confirmation. This is inherent
+ *   to allowing read-only git operations and is accepted by design.
+ *
+ * Excluded by design:
+ *
+ * - `git diff --no-index`: reads arbitrary files outside the repo via git's
+ *   diff machinery, bypassing the "git operations only" intent.
+ * - `git --output` / `-o`: writes diff/log output to a file.
+ */
 import path from 'node:path';
 import { z } from 'zod';
 import {

@@ -207,13 +207,13 @@ pnpm run build   # also slow tests and the npm package
 
 ```text
 src/
-  index.ts          Server entry point
+  index.ts          Server entry point (server-wide security rationale in header comment)
   lib/
     allowlist.ts    Allowlist matching and validation
     exec.ts         Sandboxed command execution
     plan.ts         What a tool decides: run a command, or reject the call
     tool.ts         defineTool: a tool's name, schema and plan, registered by the server
-  tools/
+  tools/            One file per tool, its security rationale in its header comment
     index.ts        Tool registry
     acli.ts         Atlassian CLI tool
     az.ts           Azure DevOps CLI tool

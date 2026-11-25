@@ -1,3 +1,21 @@
+/*
+ * Security design:
+ *
+ * - --registry blocked: prevents SSRF / data exfiltration to attacker-controlled
+ *   registries. Uses prefix matching because pnpm expands abbreviated flags
+ *   internally (e.g., `--reg` resolves to `--registry`). Exact matching would be
+ *   bypassable. The registry is also reachable by names `--registry` does not
+ *   prefix, so those are blocked too: `--@scope:registry`, `--config.<key>`, the
+ *   .npmrc readers (`--userconfig`, `--globalconfig`, `--npmrc-auth-file`), the
+ *   flags that move the project root whose .npmrc is read (`--dir`/`-C`), and the
+ *   proxies a request can be routed through (`--proxy`, `--https-proxy`). pnpm
+ *   expands a group of short flags, so `-lC` is matched as `-C`, and reads any
+ *   other single-dash arg as a long name, so `-reg` is matched as `--reg`.
+ *   `--global` passes, though it prefixes `--globalconfig`: it names a flag of
+ *   its own.
+ * - --ignore-scripts not injected: the allowed subcommands are inherently
+ *   read-only and reject the flag.
+ */
 // Uses execShell instead of exec for Windows compatibility: pnpm installed via
 // npm or corepack ships as a .cmd wrapper that execFile cannot invoke directly.
 // execShell is a no-op on non-Windows and wraps with bash on Windows.

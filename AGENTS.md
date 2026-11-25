@@ -10,7 +10,7 @@ The repository is a pnpm workspace. The server is its one package, in
 
 ```text
 src/
-  index.ts          Server entry point (security rationale in header comment)
+  index.ts          Server entry point (server-wide security rationale in header comment)
   lib/
     allowlist.ts    Allowlist matching, flag blocking, JSON array coercion
     exec.ts         Sandboxed command execution (execFile, no shell); runPlan
@@ -18,7 +18,7 @@ src/
     tool.ts         defineTool: a tool's name, schema and plan, registered by the server
   tools/
     index.ts        Tool registry (barrel export)
-    <tool>.ts       One file per CLI tool (git, gh, gt, az, npm, pnpm, chezmoi, acli, shell)
+    <tool>.ts       One file per CLI tool, its security rationale in its header comment
 test/
   <tool>.test.ts    Per-tool security + functionality tests of the pure plan()
   <tool>.integration.test.ts  The same tool through a server, against real binaries
@@ -54,6 +54,8 @@ These are non-negotiable. Every change must preserve them:
 1. Export `tool = defineTool({ description, inputSchema, name, plan })` from
    `src/lib/tool.ts`, whose `plan` maps the parsed input onto your `plan()`.
    The server carries the plan out through `runPlan`
+1. Record the tool's checks, accepted risks and exclusions in a header comment
+   on its file, under the section names the other tools use
 1. Re-export `tool` under the tool's name from `src/tools/index.ts`
 1. Add tests in `test/<name>.test.ts` covering allowed commands, blocked
    subcommands, blocked flags, and injection attempts.

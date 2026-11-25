@@ -1,3 +1,10 @@
+/*
+ * Accepted risks (auto-allow surface area):
+ *
+ * - `az` non-invoke subcommands: no flag filtering is applied. The allowlisted
+ *   commands (`list`, `show`) are inherently read-only. If future az CLI versions
+ *   add mutating flags to these commands, they would pass through unchecked.
+ */
 import { ArgsSchema, isAllowlisted, rejectSubcommand } from '#src/lib/allowlist.js';
 import { type Plan, type Rejection, reject, run } from '#src/lib/plan.js';
 import { defineTool } from '#src/lib/tool.js';

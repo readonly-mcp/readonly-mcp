@@ -1,3 +1,20 @@
+/*
+ * Security design:
+ *
+ * - --registry blocked: prevents SSRF / data exfiltration to attacker-controlled
+ *   registries. Uses prefix matching because npm expands abbreviated flags
+ *   internally (e.g., `--reg` resolves to `--registry`). Exact matching would be
+ *   bypassable. The registry is also reachable by names `--registry` does not
+ *   prefix, so those are blocked too: `--@scope:registry`, the .npmrc readers
+ *   (`--userconfig`, `--globalconfig`), the flags that move the project root
+ *   whose .npmrc is read (`--prefix`/`-C`), and the proxies a request can be
+ *   routed through (`--proxy`, `--https-proxy`). npm expands a group of short
+ *   flags, so `-lC` is matched as `-C`, and reads any other single-dash arg as a
+ *   long name, so `-reg` is matched as `--reg`. `--global` passes, though it
+ *   prefixes `--globalconfig`: it names a flag of its own.
+ * - --ignore-scripts injected: defense-in-depth to prevent lifecycle scripts.
+ *   `--no-ignore-scripts` is also blocked to prevent last-wins override.
+ */
 import {
   ArgsSchema, type BlockedFlagOptions, isAllowlisted, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';

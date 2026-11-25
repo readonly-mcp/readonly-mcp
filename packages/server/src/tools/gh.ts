@@ -1,3 +1,62 @@
+/*
+ * Security design:
+ *
+ * - gh api path allowlisting: `gh api` is restricted to a curated set of URL path
+ *   patterns using segment-level wildcard matching (`*` = one segment, trailing
+ *   `**` = one or more). Blocked flags: `--method`/`-X` (verb override),
+ *   `--input` (file body), `-f`/`-F`/`--field`/`--raw-field` (body fields / @file
+ *   read), `--hostname` (SSRF — redirects request + auth token to arbitrary host),
+ *   `--verbose` (dumps Authorization header in output — token leak),
+ *   `-H`/`--header` (arbitrary HTTP header injection).
+ *   `--method GET` is injected immediately after the endpoint (before user flags)
+ *   so a `--` end-of-options marker in user args cannot defeat it.
+ *   Full URLs (http/https) are rejected — only relative paths accepted.
+ *   `.`/`..` segments and encoded separators, plain, percent-encoded or
+ *   double-encoded, are rejected: `contents/**` takes any depth, so a dot
+ *   segment could climb out to an unlisted endpoint. So are empty segments,
+ *   which servers collapse, and `#`, where the URL parser cuts the path.
+ *   Short-flag concatenation (-XPOST) is caught by the prefix matcher's
+ *   short-flag rule.
+ * - gh --jq filters: gh evaluates `--jq`/`-q` with an embedded jq whose `env`
+ *   and `$ENV` return the server's environment, `GH_TOKEN` included when it
+ *   is set there. Filters are held to the same names check as the jq tool,
+ *   on every gh command, `api` included.
+ * - gh enterprise tokens: gh sends `GH_ENTERPRISE_TOKEN` (or its alias
+ *   `GITHUB_ENTERPRISE_TOKEN`) to any host outside github.com, and a caller
+ *   names the host through `-R HOST/OWNER/REPO`, a URL positional or
+ *   `attestation verify --hostname`, so gh runs without both. Of the four
+ *   token variables gh documents, these are the two it sends to any host at
+ *   all, so a list of names is enough; the
+ *   other two, `GH_TOKEN` and `GITHUB_TOKEN`, are covered by the next entry
+ *   and the `*.ghe.com` accepted risk. A token `gh auth login --hostname`
+ *   stored is sent only to its own host.
+ * - gh github.localhost: gh treats `github.localhost` and its subdomains as
+ *   github.com, so it sends `GH_TOKEN` there over plain HTTP, and many
+ *   resolvers map `*.localhost` to loopback, where any local listener reads
+ *   it. A gh arg naming that host anywhere, in any case or in a spelling Go's
+ *   lowercasing folds into it (`gİthub`), is rejected, which
+ *   covers `-R`, URL positionals and `--hostname` without parsing any.
+ *
+ * Accepted risks (auto-allow surface area):
+ *
+ * - `gh search`: can search code/commits/issues across all repos the
+ *   authenticated user can access, including private repos. Results are
+ *   constrained by GitHub's search API (no full file contents).
+ * - `gh api`: exposes read-only data from allowlisted REST endpoint paths. The
+ *   wildcard segments accept any value, so an agent can read review comments,
+ *   deployments, environments, check annotations/suites, commit statuses,
+ *   ref comparisons, requested reviewers, Dependabot alerts, and file
+ *   contents from any repo the authenticated user can access. Dependabot
+ *   alerts name a repo's unpatched vulnerable dependencies, which is
+ *   reconnaissance for an attacker; accepted because reviewing them is the
+ *   point of reading them. The `contents/**` pattern enables
+ *   systematic file enumeration at any depth. Error messages include the full
+ *   pattern list (aids agent correction but doubles as adversary reconnaissance;
+ *   accepted because the patterns are already published in agent instructions).
+ * - gh `GH_TOKEN` on `*.ghe.com`: gh sends `GH_TOKEN`/`GITHUB_TOKEN` to any
+ *   GHE.com tenant a caller names. Every such host is one GitHub runs, so the
+ *   token reaches GitHub for a tenant it does not belong to, and is refused.
+ */
 import {
   ArgsSchema, checkApiPath, findBlockedFlag, isAllowedApiPath, isAllowlisted,
   rejectApiEndpoint, rejectBlockedFlags, rejectJqFilter, rejectSubcommand,
@@ -7,7 +66,7 @@ import { defineTool } from '#src/lib/tool.js';
 
 const globalFlags = new Set(['--version', '--help', '-h']);
 
-// gh sends these to any host a caller names; see "gh enterprise tokens" in index.ts.
+// gh sends these to any host a caller names; see "gh enterprise tokens" above.
 const ghRun: RunOptions = {
   options: { excludedEnv: ['GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'] },
 };
