@@ -38,8 +38,6 @@ node = "26.13.0"
 "npm:renovate" = { trust_policy_excludes = [
   "@yarnpkg/libzip@3.2.2",
 ], version = "44.198.3" }
-# hk evaluates hk.pkl with pkl.
-pkl = "0.32.2"
 # Duplicates `packageManager` in package.json, which turbo requires.
 pnpm = "12.22.0"
 # Lets jactionlint lint workflow run scripts.
