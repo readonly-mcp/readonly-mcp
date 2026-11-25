@@ -1,6 +1,6 @@
 // @module-tag integration
 import { describe, it } from 'vitest';
-import { type Server, assertBlocked, useServer } from '#test/helpers.js';
+import { type Server, useServer } from '#test/helpers.js';
 
 const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
@@ -16,6 +16,6 @@ describe.concurrent('chezmoi tool', () => {
       ['cat-config'],
     ].map(args => ({ name: args.join(' '), args })),
   )('blocks $name', async ({ args }, { expect, server }) => {
-    assertBlocked(expect, await server.callTool('chezmoi', { args }));
+    expect(await server.callTool('chezmoi', { args })).toBeBlocked();
   });
 });

@@ -2,7 +2,7 @@
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Call, type Server, assertBlocked, textOf, useServer,
+  type Call, type Server, textOf, useServer,
 } from '#test/helpers.js';
 
 /**
@@ -63,7 +63,7 @@ describe.concurrent('az tool', () => {
         ['pipelines', 'folder', 'update'],
       ].map(args => ({ name: args.join(' '), args })),
     )('blocks $name', async ({ args }, { call, expect }) => {
-      assertBlocked(expect, await call(args));
+      expect(await call(args)).toBeBlocked();
     });
   });
 
@@ -78,7 +78,7 @@ describe.concurrent('az tool', () => {
         { flags: [`--out-file=${build.fileName('json')}`], name: '--out-file=<file>' },
       ],
     )('blocks devops invoke $name', async ({ flags }, { call, expect }) => {
-      assertBlocked(expect, await call(buildsInvoke(...flags)));
+      expect(await call(buildsInvoke(...flags))).toBeBlocked();
     });
   });
 
@@ -94,14 +94,14 @@ describe.concurrent('az tool', () => {
         ['devops', 'invoke', '--resource', 'builds'],
       ].map(args => ({ name: args.slice(2).join(' ') || '(bare)', args })),
     )('blocks devops invoke endpoint $name', async ({ args }, { call, expect }) => {
-      assertBlocked(expect, await call(args));
+      expect(await call(args)).toBeBlocked();
     });
   });
 
   integration('blocks flags before checking endpoint', async ({ call, expect }) => {
-    assertBlocked(expect, await call(
+    expect(await call(
       ['devops', 'invoke', '--http-method', 'POST', '--area', 'git', '--resource', 'refs'],
-    ));
+    )).toBeBlocked();
   });
 
   describe('blocked abbreviated flags', () => {
@@ -115,7 +115,7 @@ describe.concurrent('az tool', () => {
       { name: '--are', args: ['devops', 'invoke', '--are', 'build', '--resource', 'builds'] },
       { name: '--res', args: ['devops', 'invoke', '--area', 'build', '--res', 'builds'] },
     ])('blocks abbreviated flag $name', async ({ args }, { call, expect }) => {
-      assertBlocked(expect, await call(args));
+      expect(await call(args)).toBeBlocked();
     });
   });
 
@@ -125,7 +125,7 @@ describe.concurrent('az tool', () => {
       { name: '-h', args: buildsInvoke('-h') },
       { name: '-o', args: buildsInvoke('-o', 'json') },
     ])('blocks single-dash flag $name', async ({ args }, { call, expect }) => {
-      assertBlocked(expect, await call(args));
+      expect(await call(args)).toBeBlocked();
     });
   });
 
@@ -162,7 +162,7 @@ describe.concurrent('az tool', () => {
         ],
       ].map(args => ({ name: args.slice(2).join(' '), args })),
     )('blocks duplicate flag $name', async ({ args }, { call, expect }) => {
-      assertBlocked(expect, await call(args));
+      expect(await call(args)).toBeBlocked();
     });
   });
 });

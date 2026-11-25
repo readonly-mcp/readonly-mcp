@@ -2,7 +2,7 @@
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Call, type Server, assertBlocked, assertNotBlocked, useServer,
+  type Call, type Server, useServer,
 } from '#test/helpers.js';
 
 const integration = it.extend<{ call: Call; server: Server }>({
@@ -19,50 +19,50 @@ describe.concurrent('git tool', () => {
       'merge', 'commit', 'add', 'rm', 'clean',
     ])(
       'blocks %s', async (sub, { call, expect }) => {
-        assertBlocked(expect, await call([sub]));
+        expect(await call([sub])).toBeBlocked();
       },
     );
   });
 
   describe('allowed subcommands', () => {
     integration('allows status', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['status']));
+      expect(await call(['status'])).not.toBeBlocked();
     });
 
     integration('allows log', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['log', '--oneline', '-5']));
+      expect(await call(['log', '--oneline', '-5'])).not.toBeBlocked();
     });
 
     integration('allows log with flags', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['log', '--all', '--oneline', '-1']));
+      expect(await call(['log', '--all', '--oneline', '-1'])).not.toBeBlocked();
     });
 
     integration('allows branch -a', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['branch', '-a']));
+      expect(await call(['branch', '-a'])).not.toBeBlocked();
     });
 
     integration('allows diff', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['diff']));
+      expect(await call(['diff'])).not.toBeBlocked();
     });
 
     integration('allows diff with flags', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['diff', '--stat']));
+      expect(await call(['diff', '--stat'])).not.toBeBlocked();
     });
 
     integration('allows show HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['show', 'HEAD', '--stat']));
+      expect(await call(['show', 'HEAD', '--stat'])).not.toBeBlocked();
     });
 
     integration('allows rev-parse HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['rev-parse', 'HEAD']));
+      expect(await call(['rev-parse', 'HEAD'])).not.toBeBlocked();
     });
 
     integration('allows rev-parse --git-dir', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['rev-parse', '--git-dir']));
+      expect(await call(['rev-parse', '--git-dir'])).not.toBeBlocked();
     });
 
     integration('allows blame HEAD -- README.md', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['blame', 'HEAD', '--', 'README.md']));
+      expect(await call(['blame', 'HEAD', '--', 'README.md'])).not.toBeBlocked();
     });
 
     integration('allows describe', async ({ call, expect }) => {
@@ -73,39 +73,39 @@ describe.concurrent('git tool', () => {
     });
 
     integration('allows merge-base HEAD HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['merge-base', 'HEAD', 'HEAD']));
+      expect(await call(['merge-base', 'HEAD', 'HEAD'])).not.toBeBlocked();
     });
 
     integration('allows shortlog -1 HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['shortlog', '-1', 'HEAD']));
+      expect(await call(['shortlog', '-1', 'HEAD'])).not.toBeBlocked();
     });
 
     integration('allows ls-files', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['ls-files']));
+      expect(await call(['ls-files'])).not.toBeBlocked();
     });
 
     integration('allows ls-files -o (--others)', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['ls-files', '-o']));
+      expect(await call(['ls-files', '-o'])).not.toBeBlocked();
     });
 
     integration('allows ls-tree HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['ls-tree', 'HEAD']));
+      expect(await call(['ls-tree', 'HEAD'])).not.toBeBlocked();
     });
 
     integration('allows worktree list', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['worktree', 'list']));
+      expect(await call(['worktree', 'list'])).not.toBeBlocked();
     });
 
     integration('allows reflog show', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['reflog', 'show']));
+      expect(await call(['reflog', 'show'])).not.toBeBlocked();
     });
 
     integration('allows bare reflog', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['reflog']));
+      expect(await call(['reflog'])).not.toBeBlocked();
     });
 
     integration('allows reflog exists HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['reflog', 'exists', 'HEAD']));
+      expect(await call(['reflog', 'exists', 'HEAD'])).not.toBeBlocked();
     });
   });
 
@@ -115,12 +115,12 @@ describe.concurrent('git tool', () => {
       '--set-upstream-to', '--unset-upstream', '--edit-description',
     ])(
       'blocks branch %s', async (flag, { call, expect }) => {
-        assertBlocked(expect, await call(['branch', flag, 'test']));
+        expect(await call(['branch', flag, 'test'])).toBeBlocked();
       },
     );
 
     integration('blocks --set-upstream-to=value (equals form)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['branch', '--set-upstream-to=origin/main', 'test']));
+      expect(await call(['branch', '--set-upstream-to=origin/main', 'test'])).toBeBlocked();
     });
   });
 
@@ -133,110 +133,110 @@ describe.concurrent('git tool', () => {
       { flag: '--forc', sub: 'branch', desc: '--force abbreviation' },
       { flag: '--edit', sub: 'branch', desc: '--edit-description abbreviation' },
     ])('blocks $desc ($flag) on $sub', async ({ flag, sub }, { call, expect }) => {
-      assertBlocked(expect, await call([sub, flag, 'test']));
+      expect(await call([sub, flag, 'test'])).toBeBlocked();
     });
   });
 
   describe('remote subcommand filtering', () => {
     integration('allows bare remote (list)', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote']));
+      expect(await call(['remote'])).not.toBeBlocked();
     });
 
     integration('allows remote -v', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote', '-v']));
+      expect(await call(['remote', '-v'])).not.toBeBlocked();
     });
 
     integration('allows remote --verbose', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote', '--verbose']));
+      expect(await call(['remote', '--verbose'])).not.toBeBlocked();
     });
 
     integration('allows remote get-url origin', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote', 'get-url', 'origin']));
+      expect(await call(['remote', 'get-url', 'origin'])).not.toBeBlocked();
     });
 
     integration('allows remote get-url --push origin', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote', 'get-url', '--push', 'origin']));
+      expect(await call(['remote', 'get-url', '--push', 'origin'])).not.toBeBlocked();
     });
 
     integration('allows remote get-url --all origin', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote', 'get-url', '--all', 'origin']));
+      expect(await call(['remote', 'get-url', '--all', 'origin'])).not.toBeBlocked();
     });
 
     integration('allows remote show -n origin', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['remote', 'show', '-n', 'origin']));
+      expect(await call(['remote', 'show', '-n', 'origin'])).not.toBeBlocked();
     });
 
     integration('blocks remote show without -n (SSRF risk)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['remote', 'show', 'origin']));
+      expect(await call(['remote', 'show', 'origin'])).toBeBlocked();
     });
 
     integration.for(['add', 'remove', 'rename', 'set-url', 'set-head', 'prune', 'update'])(
       'blocks remote %s', async (sub, { call, expect }) => {
-        assertBlocked(expect, await call(['remote', sub, 'origin']));
+        expect(await call(['remote', sub, 'origin'])).toBeBlocked();
       },
     );
 
     integration('blocks unknown flags on remote', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['remote', '--unknown-flag']));
+      expect(await call(['remote', '--unknown-flag'])).toBeBlocked();
     });
   });
 
   describe('stash subcommand filtering', () => {
     integration('allows stash list', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['stash', 'list']));
+      expect(await call(['stash', 'list'])).not.toBeBlocked();
     });
 
     integration('allows stash show', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['stash', 'show']));
+      expect(await call(['stash', 'show'])).not.toBeBlocked();
     });
 
     integration('blocks bare stash (implicit push)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['stash']));
+      expect(await call(['stash'])).toBeBlocked();
     });
 
     integration('blocks stash -- list (implicit push with pathspec)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['stash', '--', 'list']));
+      expect(await call(['stash', '--', 'list'])).toBeBlocked();
     });
 
     integration.for(['push', 'pop', 'apply', 'drop', 'clear', 'save', 'create', 'store'])(
       'blocks stash %s', async (sub, { call, expect }) => {
-        assertBlocked(expect, await call(['stash', sub]));
+        expect(await call(['stash', sub])).toBeBlocked();
       },
     );
   });
 
   describe('worktree subcommand filtering', () => {
     integration('allows worktree list', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['worktree', 'list']));
+      expect(await call(['worktree', 'list'])).not.toBeBlocked();
     });
 
     integration('blocks bare worktree', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['worktree']));
+      expect(await call(['worktree'])).toBeBlocked();
     });
 
     integration.for(['add', 'remove', 'move', 'prune', 'lock', 'unlock', 'repair'])(
       'blocks worktree %s', async (sub, { call, expect }) => {
-        assertBlocked(expect, await call(['worktree', sub]));
+        expect(await call(['worktree', sub])).toBeBlocked();
       },
     );
   });
 
   describe('reflog subcommand filtering', () => {
     integration('allows bare reflog (= reflog show)', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['reflog']));
+      expect(await call(['reflog'])).not.toBeBlocked();
     });
 
     integration('allows reflog show', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['reflog', 'show']));
+      expect(await call(['reflog', 'show'])).not.toBeBlocked();
     });
 
     integration('allows reflog exists HEAD', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['reflog', 'exists', 'HEAD']));
+      expect(await call(['reflog', 'exists', 'HEAD'])).not.toBeBlocked();
     });
 
     integration.for(['delete', 'expire'])(
       'blocks reflog %s', async (sub, { call, expect }) => {
-        assertBlocked(expect, await call(['reflog', sub]));
+        expect(await call(['reflog', sub])).toBeBlocked();
       },
     );
   });
@@ -244,47 +244,47 @@ describe.concurrent('git tool', () => {
   describe('write-flag blocking', () => {
     integration.for(['log', 'diff', 'show'])(
       'blocks %s --output=<path>', async (sub, { call, expect }) => {
-        assertBlocked(expect, await call([sub, `--output=${build.absolutePath()}`]));
+        expect(await call([sub, `--output=${build.absolutePath()}`])).toBeBlocked();
       },
     );
 
     integration('blocks log --output <path>', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['log', '--output', build.absolutePath()]));
+      expect(await call(['log', '--output', build.absolutePath()])).toBeBlocked();
     });
 
     integration('blocks diff -o', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['diff', '-o', build.absolutePath()]));
+      expect(await call(['diff', '-o', build.absolutePath()])).toBeBlocked();
     });
 
     integration('blocks diff -ofile.txt (no space)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['diff', `-o${build.fileName('txt')}`]));
+      expect(await call(['diff', `-o${build.fileName('txt')}`])).toBeBlocked();
     });
 
     integration('blocks diff -ao (combined short flags with -o)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['diff', '-ao', build.absolutePath()]));
+      expect(await call(['diff', '-ao', build.absolutePath()])).toBeBlocked();
     });
 
     integration(
       'blocks diff -abo (combined short flags with -o at end)',
       async ({ call, expect }) => {
-        assertBlocked(expect, await call(['diff', '-abo', build.absolutePath()]));
+        expect(await call(['diff', '-abo', build.absolutePath()])).toBeBlocked();
       },
     );
 
     integration('blocks diff --no-index', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['diff', '--no-index', '/etc/passwd', '/dev/null']));
+      expect(await call(['diff', '--no-index', '/etc/passwd', '/dev/null'])).toBeBlocked();
     });
   });
 
   describe('--no-pager injection', () => {
     integration('does not hang on pager', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['log', '--oneline', '-1']));
+      expect(await call(['log', '--oneline', '-1'])).not.toBeBlocked();
     });
   });
 
   describe('edge cases', () => {
     integration('blocks empty args', async ({ call, expect }) => {
-      assertBlocked(expect, await call([]));
+      expect(await call([])).toBeBlocked();
     });
   });
 });

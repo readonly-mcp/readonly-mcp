@@ -24,5 +24,6 @@ export default mergeConfig(configurePackage({
      * hook timeout. A tag's timeout covers only the tests, not the hooks.
      */
     hookTimeout: 60_000,
+    setupFiles: ['./test/matchers.ts'],
   },
 }));

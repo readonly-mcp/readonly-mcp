@@ -2,7 +2,7 @@
 // @module-tag slow
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
-import { type Call, type Server, assertBlocked, assertNotBlocked } from '#test/helpers.js';
+import type { Call, Server } from '#test/helpers.js';
 import { usePackageServer } from '#test/package-fixture.js';
 
 const integration = it.extend<{ call: Call; server: Server }>({
@@ -19,15 +19,15 @@ describe.concurrent('pnpm tool', () => {
       { name: '--help', args: ['--help'] },
       { name: '-h', args: ['-h'] },
     ])('allows $name', async ({ args }, { call, expect }) => {
-      assertNotBlocked(expect, await call(args));
+      expect(await call(args)).not.toBeBlocked();
     });
 
     integration('blocks --help with trailing args', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['--help', 'install']));
+      expect(await call(['--help', 'install'])).toBeBlocked();
     });
 
     integration('blocks -v (not in global flags)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['-v']));
+      expect(await call(['-v'])).toBeBlocked();
     });
   });
 
@@ -40,47 +40,47 @@ describe.concurrent('pnpm tool', () => {
         ['store', 'prune'], ['patch', 'lodash'],
       ].map(args => ({ name: args.join(' '), args })),
     )('blocks $name', async ({ args }, { call, expect }) => {
-      assertBlocked(expect, await call(args));
+      expect(await call(args)).toBeBlocked();
     });
   });
 
   describe('blocked flags', () => {
     integration('blocks audit --fix', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['audit', '--fix']));
+      expect(await call(['audit', '--fix'])).toBeBlocked();
     });
 
     integration('blocks --registry', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['list', '--registry', build.httpsUrl()]));
+      expect(await call(['list', '--registry', build.httpsUrl()])).toBeBlocked();
     });
 
     integration('blocks --registry=<url>', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['list', `--registry=${build.httpsUrl()}`]));
+      expect(await call(['list', `--registry=${build.httpsUrl()}`])).toBeBlocked();
     });
 
     integration('blocks abbreviated --reg (expands to --registry)', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['list', '--reg', build.httpsUrl()]));
+      expect(await call(['list', '--reg', build.httpsUrl()])).toBeBlocked();
     });
 
     integration('blocks abbreviated --reg=<url>', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['list', `--reg=${build.httpsUrl()}`]));
+      expect(await call(['list', `--reg=${build.httpsUrl()}`])).toBeBlocked();
     });
   });
 
   describe('allowed subcommands', () => {
     integration('allows list', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['list']));
+      expect(await call(['list'])).not.toBeBlocked();
     });
 
     integration('allows why', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['why', 'zod']));
+      expect(await call(['why', 'zod'])).not.toBeBlocked();
     });
 
     integration('allows licenses list', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['licenses', 'list']));
+      expect(await call(['licenses', 'list'])).not.toBeBlocked();
     });
 
     integration('allows store status', async ({ call, expect }) => {
-      assertNotBlocked(expect, await call(['store', 'status']));
+      expect(await call(['store', 'status'])).not.toBeBlocked();
     });
   });
 });

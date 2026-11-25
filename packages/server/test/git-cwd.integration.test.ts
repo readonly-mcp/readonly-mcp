@@ -8,7 +8,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Server, assertBlocked, assertNotBlocked, textOf, useServer,
+  type Server, textOf, useServer,
 } from '#test/helpers.js';
 
 const run = promisify(execFile);
@@ -69,18 +69,20 @@ describe.concurrent('git tool cwd', () => {
 
   describe('cwd parameter', () => {
     integration('rejects cwd that is not a known worktree', async ({ call, expect }) => {
-      assertBlocked(expect, await call(['status'], build.absolutePath()));
+      expect(await call(['status'], build.absolutePath())).toBeBlocked();
     });
 
     integration('accepts cwd that is the main worktree', async ({ call, expect }) => {
       const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
-      assertNotBlocked(expect, await call(['status'], toplevel));
+
+      expect(await call(['status'], toplevel)).not.toBeBlocked();
     });
 
     integration('rejects an empty cwd at the input schema', async ({ call, expect }) => {
       const result = await call(['status'], '');
-      assertBlocked(expect, result);
+
+      expect(result).toBeBlocked();
 
       expect(textOf(result)).toMatch(/Input validation error[\s\S]+\bcwd\b/v);
     });
@@ -88,13 +90,15 @@ describe.concurrent('git tool cwd', () => {
     integration('rejects path traversal from valid worktree', async ({ call, expect }) => {
       const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
-      assertBlocked(expect, await call(['status'], toplevel + '/../../../tmp'));
+
+      expect(await call(['status'], toplevel + '/../../../tmp')).toBeBlocked();
     });
 
     integration('accepts cwd with trailing slash', async ({ call, expect }) => {
       const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
-      assertNotBlocked(expect, await call(['status'], toplevel + '/'));
+
+      expect(await call(['status'], toplevel + '/')).not.toBeBlocked();
     });
   });
 
@@ -102,7 +106,7 @@ describe.concurrent('git tool cwd', () => {
     integration.beforeAll(({ worktree }) => worktree.add());
 
     integration('accepts linked worktree as cwd', async ({ call, expect, worktree }) => {
-      assertNotBlocked(expect, await call(['status'], worktree.path));
+      expect(await call(['status'], worktree.path)).not.toBeBlocked();
     });
 
     integration(

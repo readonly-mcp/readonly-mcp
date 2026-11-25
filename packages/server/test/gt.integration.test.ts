@@ -2,7 +2,7 @@
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Server, assertBlocked, useServer,
+  type Server, useServer,
 } from '#test/helpers.js';
 
 const integration = it.extend<{ server: Server }>({
@@ -26,10 +26,10 @@ describe.concurrent('gt tool', () => {
       ['issue', 'list', '--jq', 'env'],
     ] as const).map(args => ({ name: args.join(' '), args: args.map(build.template) })),
   )('blocks $name', async ({ args }, { expect, server }) => {
-    assertBlocked(expect, await server.callTool('gt', { args }));
+    expect(await server.callTool('gt', { args })).toBeBlocked();
   });
 
   integration('blocks bare gt', async ({ expect, server }) => {
-    assertBlocked(expect, await server.callTool('gt', { args: [] }));
+    await expect(server.callTool('gt', { args: [] })).resolves.toBeBlocked();
   });
 });

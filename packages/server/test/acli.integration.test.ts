@@ -1,6 +1,6 @@
 // @module-tag integration
 import { describe, it } from 'vitest';
-import { type Server, assertBlocked, useServer } from '#test/helpers.js';
+import { type Server, useServer } from '#test/helpers.js';
 
 const integration = it.extend<{ server: Server }>({
   server: [async ({}, use) => useServer(use), { scope: 'file' }],
@@ -19,6 +19,6 @@ describe.concurrent('acli tool', () => {
       ['jira', 'workitem', 'comment', 'create'],
     ].map(args => ({ name: args.join(' '), args })),
   )('blocks $name', async ({ args }, { expect, server }) => {
-    assertBlocked(expect, await server.callTool('acli', { args }));
+    expect(await server.callTool('acli', { args })).toBeBlocked();
   });
 });

@@ -10,9 +10,9 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
-import type { ExpectStatic } from 'vitest';
 import { z } from 'zod';
 import type { Plan, Run } from '#src/lib/plan.js';
+import { remember } from '#test/requests.js';
 
 const serverPath = fileURLToPath(new URL('../src/index.ts', import.meta.url));
 
@@ -23,21 +23,6 @@ const ResponseSchema = z.object({
 });
 
 type Response = z.infer<typeof ResponseSchema>;
-
-/*
- * The arguments each result answered, so a failed assertion on the result can
- * name the generated values it ran with. Keyed weakly by the result object, so
- * nothing outlives the test that made the call.
- */
-const requests = new WeakMap<CallToolResult, unknown>();
-
-const remember = (args: unknown, result: CallToolResult): CallToolResult => {
-  requests.set(result, args);
-  return result;
-};
-
-const describeRequest = (result: CallToolResult): string =>
-  `arguments: ${JSON.stringify(requests.get(result))}`;
 
 /**
  * Spawns the server in `cwd`, the directory its tools run commands in.
@@ -206,22 +191,6 @@ export const textOf = (result: CallToolResult | undefined): string => {
   if (first?.type !== 'text')
     throw new Error(`Expected a text content item, got: ${JSON.stringify(result)}`);
   return first.text;
-};
-
-export const assertBlocked = (
-  expect: ExpectStatic,
-  result: CallToolResult,
-  message = `expected blocked, ${describeRequest(result)}`,
-) => {
-  expect(result.isError, message).toBe(true);
-};
-
-export const assertNotBlocked = (
-  expect: ExpectStatic,
-  result: CallToolResult,
-  message = `expected not blocked, ${describeRequest(result)}`,
-) => {
-  expect(result.isError, message).toBeFalsy();
 };
 
 /**

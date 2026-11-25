@@ -2,7 +2,7 @@
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Call, type Server, assertNotBlocked, textOf, useServer,
+  type Call, type Server, textOf, useServer,
 } from '#test/helpers.js';
 
 const integration = it.extend<{ call: Call; server: Server }>({
@@ -20,6 +20,6 @@ describe.concurrent('git blame option allowlist', () => {
   });
 
   integration('runs an allowed option with its value', async ({ call, expect }) => {
-    assertNotBlocked(expect, await call(['blame', '-L', '1,2', 'README.md']));
+    expect(await call(['blame', '-L', '1,2', 'README.md'])).not.toBeBlocked();
   });
 });

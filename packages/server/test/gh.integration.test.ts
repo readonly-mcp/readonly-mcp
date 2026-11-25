@@ -1,7 +1,7 @@
 // @module-tag integration
 import { describe, it } from 'vitest';
 import {
-  type Server, assertBlocked, useServer,
+  type Server, useServer,
 } from '#test/helpers.js';
 
 const integration = it.extend<{ server: Server }>({
@@ -28,6 +28,6 @@ describe.concurrent('gh tool', () => {
       ['ruleset', 'create'],
     ].map(args => ({ name: args.join(' '), args })),
   )('blocks $name', async ({ args }, { expect, server }) => {
-    assertBlocked(expect, await server.callTool('gh', { args }));
+    expect(await server.callTool('gh', { args })).toBeBlocked();
   });
 });

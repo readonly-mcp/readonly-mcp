@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
 import * as build from '#test/builders.js';
 import {
-  type Server, assertBlocked, useServer,
+  type Server, useServer,
 } from '#test/helpers.js';
 
 const integration = it.extend<{ server: Server }>({
@@ -22,7 +22,7 @@ describe.concurrent('gh api', () => {
       'graphql',
     ] as const).map(template => ({ name: template, args: ['api', build.template(template)] })))(
       'blocks api $name', async ({ args }, { expect, server }) => {
-        assertBlocked(expect, await server.callTool('gh', { args }));
+        expect(await server.callTool('gh', { args })).toBeBlocked();
       },
     );
   });
@@ -53,27 +53,27 @@ describe.concurrent('gh api', () => {
       { name: '--header', args: build.apiArgs('--header', build.header()) },
       { name: '-HAccept:... (concatenated)', args: build.apiArgs('-HAccept:text/plain') },
     ])('blocks api $name', async ({ args }, { expect, server }) => {
-      assertBlocked(expect, await server.callTool('gh', { args }));
+      expect(await server.callTool('gh', { args })).toBeBlocked();
     });
   });
 
   describe('blocked api full URLs', () => {
     integration('blocks https:// URL', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('gh', {
+      await expect(server.callTool('gh', {
         args: ['api', `https://api.github.com/${build.prCommentsPath()}`],
-      }));
+      })).resolves.toBeBlocked();
     });
 
     integration('blocks http:// URL', async ({ expect, server }) => {
-      assertBlocked(expect, await server.callTool('gh', {
+      await expect(server.callTool('gh', {
         /* eslint-disable-next-line unicorn/prefer-https --
            The plain http scheme is the input under test */
         args: ['api', `http://api.github.com/${build.prCommentsPath()}`],
-      }));
+      })).resolves.toBeBlocked();
     });
   });
 
   integration('blocks bare api', async ({ expect, server }) => {
-    assertBlocked(expect, await server.callTool('gh', { args: ['api'] }));
+    await expect(server.callTool('gh', { args: ['api'] })).resolves.toBeBlocked();
   });
 });
