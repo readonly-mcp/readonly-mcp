@@ -17,7 +17,7 @@ src/
     plan.ts         What a tool decides: run a command, or reject the call
   tools/
     index.ts        Tool registry (barrel export)
-    <tool>.ts       One file per CLI tool (git, gh, az, npm, pnpm, chezmoi, acli, shell, tea)
+    <tool>.ts       One file per CLI tool (git, gh, gt, az, npm, pnpm, chezmoi, acli, shell, tea)
 test/
   <tool>.test.ts    Per-tool security + functionality tests of the pure plan()
   <tool>.integration.test.ts  The same tool through a server, against real binaries

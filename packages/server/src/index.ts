@@ -51,6 +51,22 @@
  *   it. A gh arg naming that host anywhere, in any case or in a spelling Go's
  *   lowercasing folds into it (`gİthub`), is rejected, which
  *   covers `-R`, URL positionals and `--hostname` without parsing any.
+ * - gt command position: gt reads global flags before the command as well as
+ *   after it, so the command must come first, or flags ahead of it would hide
+ *   it from the allowlist. An unknown first word is rejected rather than
+ *   passed on, since gt runs any installed `gt-NAME` extension as `gt NAME`.
+ *   Built-in commands win over user aliases, so a canonical name always
+ *   means the built-in.
+ * - gt flag allowlisting: each command's flags come from its `--help`, read
+ *   as pflag reads them: names match exactly, since pflag reads no
+ *   abbreviations, and each letter of a short group is checked until one
+ *   that takes a value. A flag a later gt adds is refused until listed.
+ * - gt hosts: a URL in `--repo` or a positional selects its instance, and
+ *   gt refuses an instance it holds no account for, sending nothing; it
+ *   sends `GITEA_TOKEN` only to the instance `GITEA_CLI_HOST` or
+ *   `GITEA_INSTANCE_URL` names. So neither needs blocking, unlike gh's.
+ * - gt --jq filters: held to the jq names check, as for gh, since gt's
+ *   embedded jq reads the server's environment through `env` and `$ENV`.
  * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
  *   `ls`, `git-credential`), so args are resolved to canonical names before
  *   matching and executed under those names. Unknown aliases stay unresolved
@@ -159,6 +175,16 @@
  * - `git diff --no-index`: reads arbitrary files outside the repo via git's
  *   diff machinery, bypassing the "git operations only" intent.
  * - `git --output` / `-o`: writes diff/log output to a file.
+ * - `gt auth token`: prints the active account's token.
+ * - `gt auth git-credential`: a git credential helper, whose protocol answers
+ *   with the token on stdout. `gt auth --help` does not list it.
+ * - `gt notification`: not yet confirmed to leave read state untouched.
+ * - Left out of gt's flag allowlist: `--cwd` (acts as a `cwd` parameter),
+ *   `--sudo` (requests as another user), `--debug` (request log not yet
+ *   shown to leave credentials out), `--interactive` (allows prompts),
+ *   `--web`/`-w` (opens a browser), `--select` (an interactive picker that
+ *   acts on its pick), `pr checks --watch` and `run logs --follow` (poll
+ *   until CI finishes), and `run logs --output`/`--dir` (write a file).
  * - `tea logins helper` (alias `git-credential`): a git credential helper,
  *   whose protocol answers with the token on stdout.
  * - `tea --debug` / `--vvv`: may print the Authorization header.

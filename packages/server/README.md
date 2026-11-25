@@ -34,6 +34,9 @@ The goal is to make auto-allow safe for read-only tools. Without enforcement at 
 | `git diff --no-index`                         | Reads arbitrary files outside the repo                                                               |
 | `git --output` / `diff -o`                    | Writes command output to a file                                                                      |
 | `gh variable get`                             | Returns plaintext values that may contain internal URLs, hostnames, or quasi-sensitive configuration |
+| `gt auth token`                               | Prints the active account's access token                                                             |
+| `gt auth git-credential`                      | Git credential helper protocol answers with the token on stdout; absent from `gt auth --help`        |
+| `gt notification`                             | Not yet confirmed that listing or viewing leaves read state untouched                                |
 | `tea logins helper` / `git-credential`        | Git credential helper protocol answers with the token on stdout                                      |
 | `tea notifications`                           | Not yet confirmed that listing leaves read state untouched                                           |
 
@@ -76,6 +79,30 @@ Also supports `--version`, `--help`, `-h` as standalone flags.
 gh runs without `GH_ENTERPRISE_TOKEN` and `GITHUB_ENTERPRISE_TOKEN`: gh sends either to any host outside github.com that `-R HOST/OWNER/REPO`, a URL positional or `attestation verify --hostname` names. To reach GitHub Enterprise Server through this tool, store a token for it with `gh auth login --hostname <host>`, which gh sends to that host only.
 
 Args naming `github.localhost` are rejected, in any case, at any position, and in spellings gh's lowercasing folds into it (`gİthub`): gh treats that host and its subdomains as github.com, so it sends `GH_TOKEN` there over plain HTTP, to wherever `*.localhost` resolves.
+
+**Schema:** `{ args: string[] }`
+
+### `gt`
+
+Read-only Gitea and Forgejo commands through `gt`, the CLI that replaces `tea`: `auth status`, `branch list`, `commit compare/diff/list/pr/status/view`, `issue list/view`, `label list`, `milestone list`, `pr checks/diff/list/status/timeline/view`, `pr review comments/list/view`, `release list/view`, `repo list/view`, `run jobs/list/logs/view`, `schema`, `search issue/pr/repo`, `version`, `workflow list/view`
+
+Also supports `--version`, `--help`, `-h` as standalone flags. Only canonical command names are accepted, not aliases such as `ls`.
+
+Additional restrictions:
+
+- The command must come first. gt reads global flags ahead of it too, but there they would hide the command from the allowlist, and an unknown first word could name a user-installed extension.
+- Flags are allowlisted per command, taken from its `--help`. gt reads no abbreviations, so names match exactly, and a flag a later gt adds is refused until it is listed. Left out:
+  - `--cwd`: it points repository discovery at a directory the caller picks
+  - `--sudo`: it sends requests as another user
+  - `--debug`, until shown to leave credentials out of its request log
+  - `--interactive`: it allows prompts
+  - `--web`/`-w`: they open a browser. On `run list`, `-w` is `--workflow` and allowed.
+  - `--select`: the interactive picker can act on the item it picks
+  - `pr checks --watch` and `run logs --follow`, with the `--interval` and `--timeout` that pace them: they poll until CI finishes
+  - `run logs --output`/`-O` and `--dir`/`-D`, with `--clobber` and `--skip-existing`: they download the logs to a file
+- `--jq`/`-q` filters may not use `env`, `$ENV`, `import`, `include` or `modulemeta`, as for `gh`: gt's embedded jq reads the server's environment
+
+A URL in `--repo` or as a positional selects its instance, which gt refuses unless it holds an account for it, and gt sends `GITEA_TOKEN` only to the instance `GITEA_CLI_HOST` or `GITEA_INSTANCE_URL` names. Neither reaches a host the caller picks, so both are allowed.
 
 **Schema:** `{ args: string[] }`
 
@@ -203,6 +230,7 @@ src/
     chezmoi.ts      Chezmoi tool
     gh.ts           GitHub CLI tool
     git.ts          Git tool
+    gt.ts           Gitea/Forgejo CLI (gt) tool
     npm.ts          npm tool
     pnpm.ts         pnpm tool
     shell.ts        Shell utilities tool
