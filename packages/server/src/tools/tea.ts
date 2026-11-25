@@ -1,6 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, isAllowedApiEndpoint,
+  ArgsSchema, checkApiEndpoint,
   rejectApiEndpoint, rejectBlockedFlags, rejectSubcommand,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
@@ -232,14 +232,11 @@ const apiBlockedFlags = new Set([
   '--output', '-o',
 ]);
 
-const isAllowedEndpoint = (endpoint: string): boolean =>
-  isAllowedApiEndpoint(endpoint, apiPaths, giteaQueryKeys);
-
 const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...rest] = args;
-  if (!endpoint || endpoint.startsWith('-') || !isAllowedEndpoint(endpoint))
-    return rejectApiEndpoint(endpoint, apiPaths);
+  if (!endpoint || endpoint.startsWith('-')) return rejectApiEndpoint(endpoint, apiPaths);
   const rejected =
+    checkApiEndpoint(endpoint, apiPaths, giteaQueryKeys) ??
     rejectFlags(args, blockedFlags) ??
     rejectFlags(args, apiBlockedFlags) ??
     rejectRepoPath(rest);

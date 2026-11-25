@@ -10,8 +10,8 @@ const assertRunsAsGet = (expect: ExpectStatic, args: readonly string[]) => {
   expect(runOf(plan(args)).args).toStrictEqual([api, endpoint, '--method', 'GET', ...rest]);
 };
 
-const assertRejected = (expect: ExpectStatic, args: readonly string[]) => {
-  expect(plan(args)).toMatchObject({ kind: 'reject' });
+const assertFlagRejected = (expect: ExpectStatic, args: readonly string[]) => {
+  expect(rejectionOf(plan(args))).toContain('Flag not allowed: ');
 };
 
 describe.concurrent('gt api', () => {
@@ -71,20 +71,32 @@ describe.concurrent('gt api', () => {
     ['api', 'user/repos'],
     ['api', 'admin/users'],
     ['api', 'https://:host/api/v1/user'],
-    ['api', 'repos/:owner/:repo/contents/../../../../admin/users'],
-    ['api', 'repos/:owner/:repo/raw/%2e%2e/%2e%2e/%2e%2e/%2e%2e/admin/users'],
-    ['api', 'repos/:owner/:repo/contents/%252e%252e/%252e%252e/admin/users'],
-    ['api', 'repos/admin#/x/contents/y'],
-    ['api', 'repos/:owner//raw/hooks'],
-    // Gitea reads a sudo query parameter as the Sudo header.
-    ['api', 'repos/:owner/:repo/raw/:file?sudo=:word'],
-    ['api', 'repos/:owner/:repo/actions/runs?limit=:number&sudo=:word'],
   ] as const).map(args => ({
     name: args.slice(1).join(' ') || '(bare)',
     args: args.map(build.template),
   })))(
-    'blocks api $name', ({ args }, { expect }) => {
-      assertRejected(expect, args);
+    'blocks api $name as an unlisted endpoint', ({ args }, { expect }) => {
+      expect(rejectionOf(plan(args))).toContain('API endpoint not allowed: ');
+    },
+  );
+
+  it.for(([
+    // contents/** and raw/** take any depth, so a dot segment could climb out.
+    ['repos/:owner/:repo/contents/../../../../admin/users', 'endpoint segment not allowed: ..'],
+    ['repos/:owner/:repo/raw/%2e%2e/%2e%2e/%2e%2e/admin/users', 'endpoint segment not allowed: '],
+    ['repos/:owner/:repo/contents/%252e%252e/%252e%252e/admin', 'endpoint segment not allowed: '],
+    // The URL parser cuts the path at `#`.
+    ['repos/admin#/x/contents/y', 'endpoint may not contain #'],
+    // Servers collapse `//`, shifting every segment after it.
+    ['repos/:owner//raw/hooks', 'endpoint may not contain an empty segment'],
+    // Gitea reads a sudo query parameter as the Sudo header.
+    ['repos/:owner/:repo/raw/:file?sudo=:word', 'query key not allowed: sudo'],
+    ['repos/:owner/:repo/actions/runs?limit=:number&sudo=:word', 'query key not allowed: sudo'],
+  ] as const).map(([endpoint, reason]) => ({
+    name: endpoint, endpoint: build.template(endpoint), reason,
+  })))(
+    'blocks api $name for its own reason', ({ endpoint, reason }, { expect }) => {
+      expect(rejectionOf(plan(['api', endpoint]))).toContain(`API ${reason}`);
     },
   );
 
@@ -119,7 +131,9 @@ describe.concurrent('gt api', () => {
     ['--cwd', ':path'],
   ] as const).map(flags => ({ name: flags.join(' '), flags: flags.map(build.template) })))(
     'blocks api flag $name', ({ flags }, { expect }) => {
-      assertRejected(expect, ['api', build.template('repos/:owner/:repo/actions/runs'), ...flags]);
+      assertFlagRejected(expect, [
+        'api', build.template('repos/:owner/:repo/actions/runs'), ...flags,
+      ]);
     },
   );
 

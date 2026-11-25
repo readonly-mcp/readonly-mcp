@@ -89,27 +89,14 @@ const isPlainSegment = (segment: string): boolean => {
   }
 };
 
-// URLSearchParams decodes each key, so `%73udo` is read as `sudo`.
-const hasOnlyQueryKeys = (endpoint: string, queryKeys: ReadonlySet<string>): boolean => {
-  const query = endpoint.slice(endpoint.indexOf('?') + 1);
-  return !endpoint.includes('?') ||
-    new URLSearchParams(query).keys().every(key => queryKeys.has(key));
-};
-
 /*
- * isAllowedApiPath, hardened for CLIs that resolve the endpoint as a URL. The
- * URL parser cuts the path at `#`, so a fragment inside a wildcard segment
- * (repos/admin#/x/contents/y) would request a truncated endpoint the
- * allowlist never named. The query reaches the server too, so its keys must
- * be in `queryKeys`: the path allowlist says nothing about them.
+ * URLSearchParams decodes each key, so `%73udo` is read as `sudo`. The query
+ * runs from the first `?`, as the server reads it.
  */
-export const isAllowedApiEndpoint = (
-  endpoint: string, patterns: readonly string[], queryKeys: ReadonlySet<string>,
-): boolean =>
-  !endpoint.includes('#') &&
-  isAllowedApiPath(endpoint, patterns) &&
-  hasOnlyQueryKeys(endpoint, queryKeys) &&
-  normalizeApiPath(endpoint).split('/').every(isPlainSegment);
+const queryKeysOf = (endpoint: string): string[] =>
+  endpoint.includes('?')
+    ? new URLSearchParams(endpoint.slice(endpoint.indexOf('?') + 1)).keys().toArray()
+    : [];
 
 export const rejectApiEndpoint = (
   endpoint: string | undefined, patterns: readonly string[],
@@ -118,6 +105,47 @@ export const rejectApiEndpoint = (
   return reject(`API endpoint not allowed: ${normalized}. ` +
     `Allowed patterns: ${patterns.join(', ')}`);
 };
+
+const rejectIf = (shouldReject: boolean, reason: string): Rejection =>
+  shouldReject ? reject(reason) : undefined;
+
+/*
+ * isAllowedApiPath, hardened for CLIs that resolve the endpoint as a URL,
+ * with each check giving its own reason. The URL parser cuts the path at
+ * `#`, so a fragment inside a wildcard segment (repos/admin#/x/contents/y)
+ * would request a truncated endpoint the allowlist never named. The query
+ * reaches the server too, so its keys must be in `queryKeys`: the path
+ * allowlist says nothing about them.
+ */
+const segmentsOf = (endpoint: string): string[] => {
+  const normalized = normalizeApiPath(endpoint);
+  return normalized === '' ? [] : normalized.split('/');
+};
+
+// The shape checks, made before the path is matched so each names its own reason.
+const rejectEndpointShape = (endpoint: string, patterns: readonly string[]): Rejection => {
+  // A full URL is a path no pattern names, not one with an empty segment.
+  const isUrl = /^https?:\/\//v.test(endpoint);
+  return rejectIf(endpoint.includes('#'), `API endpoint may not contain #: ${endpoint}`) ??
+    (isUrl ? rejectApiEndpoint(endpoint, patterns) : undefined) ??
+    rejectIf(segmentsOf(endpoint).includes(''),
+      `API endpoint may not contain an empty segment: ${endpoint}`);
+};
+
+const rejectEndpointParts = (endpoint: string, queryKeys: ReadonlySet<string>): Rejection => {
+  const segment = segmentsOf(endpoint).find(part => !isPlainSegment(part));
+  const key = queryKeysOf(endpoint).find(name => !queryKeys.has(name));
+  return rejectIf(segment !== undefined, `API endpoint segment not allowed: ${segment ?? ''}`) ??
+    rejectIf(key !== undefined,
+      `API query key not allowed: ${key ?? ''}. Allowed: ${[...queryKeys].join(', ')}`);
+};
+
+export const checkApiEndpoint = (
+  endpoint: string, patterns: readonly string[], queryKeys: ReadonlySet<string>,
+): Rejection =>
+  rejectEndpointShape(endpoint, patterns) ??
+  (isAllowedApiPath(endpoint, patterns) ? undefined : rejectApiEndpoint(endpoint, patterns)) ??
+  rejectEndpointParts(endpoint, queryKeys);
 
 /*
  * Names a jq filter must not use: env and $ENV print the server's

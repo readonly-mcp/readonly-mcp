@@ -1,6 +1,6 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, isAllowedApiEndpoint, rejectApiEndpoint, rejectJqFilter, rejectSubcommand,
+  ArgsSchema, checkApiEndpoint, rejectApiEndpoint, rejectJqFilter, rejectSubcommand,
   rejectUnlistedFlags,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
@@ -165,21 +165,19 @@ const apiPaths = [
  * Inject --method GET immediately after the endpoint, before any
  * user-supplied flags, so a `--` in user args cannot turn it positional.
  */
-const planAllowedApi = (
+const planEndpoint = (
   args: readonly string[], endpoint: string, rest: readonly string[],
 ): Plan =>
+  checkApiEndpoint(endpoint, apiPaths, giteaQueryKeys) ??
   rejectUnlistedFlags(rest, apiFlags) ??
   rejectJqFilter(args, 'gt') ??
   run('gt', ['api', endpoint, '--method', 'GET', ...rest]);
 
-const isAllowedEndpoint = (endpoint: string): boolean =>
-  isAllowedApiEndpoint(endpoint, apiPaths, giteaQueryKeys);
-
 // The endpoint must come first, so a flag cannot stand in its place.
 const planApi = (args: readonly string[]): Plan => {
   const [, endpoint, ...rest] = args;
-  return endpoint && !endpoint.startsWith('-') && isAllowedEndpoint(endpoint)
-    ? planAllowedApi(args, endpoint, rest)
+  return endpoint && !endpoint.startsWith('-')
+    ? planEndpoint(args, endpoint, rest)
     : rejectApiEndpoint(endpoint, apiPaths);
 };
 

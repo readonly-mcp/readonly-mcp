@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { describe, it } from 'vitest';
-import { isAllowedApiEndpoint, isAllowedApiPath, rejectApiEndpoint } from '#src/lib/allowlist.js';
+import { checkApiEndpoint, isAllowedApiPath, rejectApiEndpoint } from '#src/lib/allowlist.js';
 import * as build from '#test/builders.js';
 
 describe('isAllowedApiPath', () => {
@@ -141,7 +141,7 @@ describe('isAllowedApiPath', () => {
   });
 });
 
-describe('isAllowedApiEndpoint query keys', () => {
+describe('checkApiEndpoint query keys', () => {
   const patterns = ['repos/*/*/contents/**'];
   const queryKeys = new Set(['limit', 'ref']);
   const endpoint = `${build.repoApiPath()}/contents/${build.fileName()}`;
@@ -151,7 +151,7 @@ describe('isAllowedApiEndpoint query keys', () => {
     { name: 'a listed key', query: `?ref=${faker.git.branch()}` },
     { name: 'several listed keys', query: '?ref=main&limit=5' },
   ])('allows $name', ({ query }, { expect }) => {
-    expect(isAllowedApiEndpoint(`${endpoint}${query}`, patterns, queryKeys)).toBe(true);
+    expect(checkApiEndpoint(`${endpoint}${query}`, patterns, queryKeys)).toBeUndefined();
   });
 
   /*
@@ -164,7 +164,8 @@ describe('isAllowedApiEndpoint query keys', () => {
     { name: 'an unlisted key without a value', query: '?sudo' },
     { name: 'a percent-encoded unlisted key', query: '?%73udo=admin' },
   ])('rejects $name', ({ query }, { expect }) => {
-    expect(isAllowedApiEndpoint(`${endpoint}${query}`, patterns, queryKeys)).toBe(false);
+    expect(checkApiEndpoint(`${endpoint}${query}`, patterns, queryKeys)?.reason)
+      .toContain('API query key not allowed: sudo.');
   });
 });
 
