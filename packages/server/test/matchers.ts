@@ -3,12 +3,12 @@
  * file has them.
  */
 
-import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
+import { type CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { type MatcherState, expect } from 'vitest';
 import { z } from 'zod';
 import { rejectedMetaKey } from '#src/lib/exec.js';
-import type { Reject, Run } from '#src/lib/plan.js';
-import { readCanary } from '#test/canary.js';
+import type { Plan, Reject, Run } from '#src/lib/plan.js';
+import { type Canary, readCanary } from '#test/canary.js';
 import { commandLine } from '#test/command-line.js';
 import { describeRequest } from '#test/requests.js';
 
@@ -42,28 +42,35 @@ const describePlan = (plan: ParsedPlan): string => (plan.kind === 'run'
 const haveSameItems = (actual: readonly string[], expected: readonly string[]): boolean =>
   actual.length === expected.length && actual.every((item, index) => item === expected[index]);
 
+/*
+ * A matcher's signature for a value of type T: callable when T is the value
+ * the matcher reads, or unknown or any, which a test widening a value on
+ * purpose and an asymmetric matcher both give it. The brackets keep a union
+ * such as Plan | undefined from being split and half accepted.
+ */
+type For<T, Expected, Signature> =
+  unknown extends T ? Signature : [T] extends [Expected] ? Signature : never;
+
 declare module 'vitest' {
-  /* eslint-disable-next-line @typescript-eslint/no-unused-vars --
-     Merging requires the same type parameters as vitest's declaration */
   interface Matchers<R extends void | Promise<void> = void | Promise<void>, T = unknown> {
     /*
      * Passes when the server refused the call: its result carries the marker
      * runPlan adds to a rejection. A command that ran and failed is not
      * blocked, though it also sets isError.
      */
-    toBeBlocked: () => R;
+    toBeBlocked: For<T, CallToolResult, () => R>;
     // Passes when a canary file still holds the content it was created with.
-    toBeIntact: () => Promise<void>;
+    toBeIntact: For<T, Canary, () => Promise<void>>;
     /*
      * Passes when a plan rejects its call, for `reason` when it is given: a
      * string, or an asymmetric matcher such as expect.stringContaining. Those
      * are typed any, which only an unknown parameter takes without a lint error.
      */
-    toBeRejected: (reason?: unknown) => R;
+    toBeRejected: For<T, Plan, (reason?: unknown) => R>;
     // Passes when a plan runs `cmd`, with exactly `args` when they are given.
-    toRun: (cmd: string, args?: readonly string[]) => R;
+    toRun: For<T, Plan, (cmd: string, args?: readonly string[]) => R>;
     // Passes when the call ran its command and the command succeeded.
-    toSucceed: () => R;
+    toSucceed: For<T, CallToolResult, () => R>;
   }
 }
 

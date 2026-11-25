@@ -66,7 +66,7 @@ describe.concurrent('toBeBlocked', () => {
 
   it('rejects a value that is not a tool result', ({ expect }) => {
     expect(() => {
-      expect(faker.lorem.word()).toBeBlocked();
+      expect(faker.lorem.word() as unknown).toBeBlocked();
     }).toThrow('expected a tool result');
   });
 });
@@ -92,7 +92,7 @@ describe.concurrent('toSucceed', () => {
 
   it('rejects a value that is not a tool result', ({ expect }) => {
     expect(() => {
-      expect(faker.lorem.word()).toSucceed();
+      expect(faker.lorem.word() as unknown).toSucceed();
     }).toThrow('expected a tool result');
   });
 });
@@ -127,7 +127,8 @@ describe.concurrent('toBeIntact', () => {
   });
 
   it('rejects a value that is not a canary', async ({ expect }) => {
-    await expect(expect(faker.lorem.word()).toBeIntact()).rejects.toThrow('expected a canary');
+    await expect(expect(faker.lorem.word() as unknown).toBeIntact())
+      .rejects.toThrow('expected a canary');
   });
 });
 
@@ -191,7 +192,7 @@ describe.concurrent('toRun', () => {
 
   it('rejects a value that is not a plan', ({ expect }) => {
     expect(() => {
-      expect(faker.lorem.word()).toRun(faker.lorem.word());
+      expect(faker.lorem.word() as unknown).toRun(faker.lorem.word());
     }).toThrow('expected a plan');
   });
 });
@@ -241,7 +242,7 @@ describe.concurrent('toBeRejected', () => {
 
   it('rejects a value that is not a plan', ({ expect }) => {
     expect(() => {
-      expect(faker.lorem.word()).toBeRejected();
+      expect(faker.lorem.word() as unknown).toBeRejected();
     }).toThrow('expected a plan');
   });
 });
