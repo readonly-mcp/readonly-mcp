@@ -84,7 +84,7 @@ describe('git branch list mode', () => {
   integration('lists branches matching a positional pattern', async ({ call, expect, repo }) => {
     const result = await call(['branch', repo.side]);
 
-    expect(result).not.toBeBlocked();
+    expect(result).toSucceed();
 
     expect(textOf(result)).toContain(repo.side);
   });

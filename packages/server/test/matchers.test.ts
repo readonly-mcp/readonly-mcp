@@ -56,6 +56,32 @@ describe.concurrent('toBeBlocked', () => {
   });
 });
 
+describe.concurrent('toSucceed', () => {
+  it('passes for a call that ran', ({ expect }) => {
+    expect(ran(faker.lorem.sentence())).toSucceed();
+  });
+
+  it('fails for an error result', ({ expect }) => {
+    expect(() => {
+      expect(rejected(faker.lorem.sentence())).toSucceed();
+    }).toThrow('expected the call to succeed');
+  });
+
+  it('quotes the result text in its failure', ({ expect }) => {
+    const text = faker.lorem.sentence();
+
+    expect(() => {
+      expect(rejected(text)).toSucceed();
+    }).toThrow(text);
+  });
+
+  it('rejects a value that is not a tool result', ({ expect }) => {
+    expect(() => {
+      expect(faker.lorem.word()).toSucceed();
+    }).toThrow('expected a tool result');
+  });
+});
+
 describe.concurrent('toBeIntact', () => {
   it('passes for an untouched canary', async ({ expect }) => {
     await using canary = await createCanary();

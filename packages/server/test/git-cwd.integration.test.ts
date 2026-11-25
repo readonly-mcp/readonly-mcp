@@ -76,7 +76,7 @@ describe.concurrent('git tool cwd', () => {
       const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
 
-      expect(await call(['status'], toplevel)).not.toBeBlocked();
+      expect(await call(['status'], toplevel)).toSucceed();
     });
 
     integration('rejects an empty cwd at the input schema', async ({ call, expect }) => {
@@ -98,7 +98,7 @@ describe.concurrent('git tool cwd', () => {
       const topResult = await call(['rev-parse', '--show-toplevel']);
       const toplevel = textOf(topResult).trim();
 
-      expect(await call(['status'], toplevel + '/')).not.toBeBlocked();
+      expect(await call(['status'], toplevel + '/')).toSucceed();
     });
   });
 
@@ -106,7 +106,7 @@ describe.concurrent('git tool cwd', () => {
     integration.beforeAll(({ worktree }) => worktree.add());
 
     integration('accepts linked worktree as cwd', async ({ call, expect, worktree }) => {
-      expect(await call(['status'], worktree.path)).not.toBeBlocked();
+      expect(await call(['status'], worktree.path)).toSucceed();
     });
 
     integration(

@@ -19,7 +19,7 @@ describe.concurrent('pnpm tool', () => {
       { name: '--help', args: ['--help'] },
       { name: '-h', args: ['-h'] },
     ])('allows $name', async ({ args }, { call, expect }) => {
-      expect(await call(args)).not.toBeBlocked();
+      expect(await call(args)).toSucceed();
     });
 
     integration('blocks --help with trailing args', async ({ call, expect }) => {
@@ -68,19 +68,19 @@ describe.concurrent('pnpm tool', () => {
 
   describe('allowed subcommands', () => {
     integration('allows list', async ({ call, expect }) => {
-      expect(await call(['list'])).not.toBeBlocked();
+      expect(await call(['list'])).toSucceed();
     });
 
     integration('allows why', async ({ call, expect }) => {
-      expect(await call(['why', 'zod'])).not.toBeBlocked();
+      expect(await call(['why', 'zod'])).toSucceed();
     });
 
     integration('allows licenses list', async ({ call, expect }) => {
-      expect(await call(['licenses', 'list'])).not.toBeBlocked();
+      expect(await call(['licenses', 'list'])).toSucceed();
     });
 
     integration('allows store status', async ({ call, expect }) => {
-      expect(await call(['store', 'status'])).not.toBeBlocked();
+      expect(await call(['store', 'status'])).toSucceed();
     });
   });
 });

@@ -43,7 +43,7 @@ describe.concurrent('shell tool', () => {
   describe('allowed commands', () => {
     integration('allows ls', async ({ expect, server }) => {
       await expect(server.callTool('shell', { command: 'ls', args: ['.'] }))
-        .resolves.not.toBeBlocked();
+        .resolves.toSucceed();
     });
   });
 });

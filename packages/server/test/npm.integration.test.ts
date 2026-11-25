@@ -79,15 +79,15 @@ describe.concurrent('npm tool', () => {
 
   describe('allowed subcommands', () => {
     integration('allows ls', async ({ call, expect }) => {
-      expect(await call(['ls'])).not.toBeBlocked();
+      expect(await call(['ls'])).toSucceed();
     });
 
     integration('allows explain', async ({ call, expect }) => {
-      expect(await call(['explain', 'zod'])).not.toBeBlocked();
+      expect(await call(['explain', 'zod'])).toSucceed();
     });
 
     integration('allows view', async ({ call, expect }) => {
-      expect(await call(['view', 'zod'])).not.toBeBlocked();
+      expect(await call(['view', 'zod'])).toSucceed();
     });
   });
 });

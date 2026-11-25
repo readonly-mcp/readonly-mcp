@@ -26,43 +26,43 @@ describe.concurrent('git tool', () => {
 
   describe('allowed subcommands', () => {
     integration('allows status', async ({ call, expect }) => {
-      expect(await call(['status'])).not.toBeBlocked();
+      expect(await call(['status'])).toSucceed();
     });
 
     integration('allows log', async ({ call, expect }) => {
-      expect(await call(['log', '--oneline', '-5'])).not.toBeBlocked();
+      expect(await call(['log', '--oneline', '-5'])).toSucceed();
     });
 
     integration('allows log with flags', async ({ call, expect }) => {
-      expect(await call(['log', '--all', '--oneline', '-1'])).not.toBeBlocked();
+      expect(await call(['log', '--all', '--oneline', '-1'])).toSucceed();
     });
 
     integration('allows branch -a', async ({ call, expect }) => {
-      expect(await call(['branch', '-a'])).not.toBeBlocked();
+      expect(await call(['branch', '-a'])).toSucceed();
     });
 
     integration('allows diff', async ({ call, expect }) => {
-      expect(await call(['diff'])).not.toBeBlocked();
+      expect(await call(['diff'])).toSucceed();
     });
 
     integration('allows diff with flags', async ({ call, expect }) => {
-      expect(await call(['diff', '--stat'])).not.toBeBlocked();
+      expect(await call(['diff', '--stat'])).toSucceed();
     });
 
     integration('allows show HEAD', async ({ call, expect }) => {
-      expect(await call(['show', 'HEAD', '--stat'])).not.toBeBlocked();
+      expect(await call(['show', 'HEAD', '--stat'])).toSucceed();
     });
 
     integration('allows rev-parse HEAD', async ({ call, expect }) => {
-      expect(await call(['rev-parse', 'HEAD'])).not.toBeBlocked();
+      expect(await call(['rev-parse', 'HEAD'])).toSucceed();
     });
 
     integration('allows rev-parse --git-dir', async ({ call, expect }) => {
-      expect(await call(['rev-parse', '--git-dir'])).not.toBeBlocked();
+      expect(await call(['rev-parse', '--git-dir'])).toSucceed();
     });
 
     integration('allows blame HEAD -- README.md', async ({ call, expect }) => {
-      expect(await call(['blame', 'HEAD', '--', 'README.md'])).not.toBeBlocked();
+      expect(await call(['blame', 'HEAD', '--', 'README.md'])).toSucceed();
     });
 
     integration('allows describe', async ({ call, expect }) => {
@@ -73,39 +73,39 @@ describe.concurrent('git tool', () => {
     });
 
     integration('allows merge-base HEAD HEAD', async ({ call, expect }) => {
-      expect(await call(['merge-base', 'HEAD', 'HEAD'])).not.toBeBlocked();
+      expect(await call(['merge-base', 'HEAD', 'HEAD'])).toSucceed();
     });
 
     integration('allows shortlog -1 HEAD', async ({ call, expect }) => {
-      expect(await call(['shortlog', '-1', 'HEAD'])).not.toBeBlocked();
+      expect(await call(['shortlog', '-1', 'HEAD'])).toSucceed();
     });
 
     integration('allows ls-files', async ({ call, expect }) => {
-      expect(await call(['ls-files'])).not.toBeBlocked();
+      expect(await call(['ls-files'])).toSucceed();
     });
 
     integration('allows ls-files -o (--others)', async ({ call, expect }) => {
-      expect(await call(['ls-files', '-o'])).not.toBeBlocked();
+      expect(await call(['ls-files', '-o'])).toSucceed();
     });
 
     integration('allows ls-tree HEAD', async ({ call, expect }) => {
-      expect(await call(['ls-tree', 'HEAD'])).not.toBeBlocked();
+      expect(await call(['ls-tree', 'HEAD'])).toSucceed();
     });
 
     integration('allows worktree list', async ({ call, expect }) => {
-      expect(await call(['worktree', 'list'])).not.toBeBlocked();
+      expect(await call(['worktree', 'list'])).toSucceed();
     });
 
     integration('allows reflog show', async ({ call, expect }) => {
-      expect(await call(['reflog', 'show'])).not.toBeBlocked();
+      expect(await call(['reflog', 'show'])).toSucceed();
     });
 
     integration('allows bare reflog', async ({ call, expect }) => {
-      expect(await call(['reflog'])).not.toBeBlocked();
+      expect(await call(['reflog'])).toSucceed();
     });
 
     integration('allows reflog exists HEAD', async ({ call, expect }) => {
-      expect(await call(['reflog', 'exists', 'HEAD'])).not.toBeBlocked();
+      expect(await call(['reflog', 'exists', 'HEAD'])).toSucceed();
     });
   });
 
@@ -139,31 +139,31 @@ describe.concurrent('git tool', () => {
 
   describe('remote subcommand filtering', () => {
     integration('allows bare remote (list)', async ({ call, expect }) => {
-      expect(await call(['remote'])).not.toBeBlocked();
+      expect(await call(['remote'])).toSucceed();
     });
 
     integration('allows remote -v', async ({ call, expect }) => {
-      expect(await call(['remote', '-v'])).not.toBeBlocked();
+      expect(await call(['remote', '-v'])).toSucceed();
     });
 
     integration('allows remote --verbose', async ({ call, expect }) => {
-      expect(await call(['remote', '--verbose'])).not.toBeBlocked();
+      expect(await call(['remote', '--verbose'])).toSucceed();
     });
 
     integration('allows remote get-url origin', async ({ call, expect }) => {
-      expect(await call(['remote', 'get-url', 'origin'])).not.toBeBlocked();
+      expect(await call(['remote', 'get-url', 'origin'])).toSucceed();
     });
 
     integration('allows remote get-url --push origin', async ({ call, expect }) => {
-      expect(await call(['remote', 'get-url', '--push', 'origin'])).not.toBeBlocked();
+      expect(await call(['remote', 'get-url', '--push', 'origin'])).toSucceed();
     });
 
     integration('allows remote get-url --all origin', async ({ call, expect }) => {
-      expect(await call(['remote', 'get-url', '--all', 'origin'])).not.toBeBlocked();
+      expect(await call(['remote', 'get-url', '--all', 'origin'])).toSucceed();
     });
 
     integration('allows remote show -n origin', async ({ call, expect }) => {
-      expect(await call(['remote', 'show', '-n', 'origin'])).not.toBeBlocked();
+      expect(await call(['remote', 'show', '-n', 'origin'])).toSucceed();
     });
 
     integration('blocks remote show without -n (SSRF risk)', async ({ call, expect }) => {
@@ -183,11 +183,11 @@ describe.concurrent('git tool', () => {
 
   describe('stash subcommand filtering', () => {
     integration('allows stash list', async ({ call, expect }) => {
-      expect(await call(['stash', 'list'])).not.toBeBlocked();
+      expect(await call(['stash', 'list'])).toSucceed();
     });
 
     integration('allows stash show', async ({ call, expect }) => {
-      expect(await call(['stash', 'show'])).not.toBeBlocked();
+      expect(await call(['stash', 'show'])).toSucceed();
     });
 
     integration('blocks bare stash (implicit push)', async ({ call, expect }) => {
@@ -207,7 +207,7 @@ describe.concurrent('git tool', () => {
 
   describe('worktree subcommand filtering', () => {
     integration('allows worktree list', async ({ call, expect }) => {
-      expect(await call(['worktree', 'list'])).not.toBeBlocked();
+      expect(await call(['worktree', 'list'])).toSucceed();
     });
 
     integration('blocks bare worktree', async ({ call, expect }) => {
@@ -223,15 +223,15 @@ describe.concurrent('git tool', () => {
 
   describe('reflog subcommand filtering', () => {
     integration('allows bare reflog (= reflog show)', async ({ call, expect }) => {
-      expect(await call(['reflog'])).not.toBeBlocked();
+      expect(await call(['reflog'])).toSucceed();
     });
 
     integration('allows reflog show', async ({ call, expect }) => {
-      expect(await call(['reflog', 'show'])).not.toBeBlocked();
+      expect(await call(['reflog', 'show'])).toSucceed();
     });
 
     integration('allows reflog exists HEAD', async ({ call, expect }) => {
-      expect(await call(['reflog', 'exists', 'HEAD'])).not.toBeBlocked();
+      expect(await call(['reflog', 'exists', 'HEAD'])).toSucceed();
     });
 
     integration.for(['delete', 'expire'])(
@@ -278,7 +278,7 @@ describe.concurrent('git tool', () => {
 
   describe('--no-pager injection', () => {
     integration('does not hang on pager', async ({ call, expect }) => {
-      expect(await call(['log', '--oneline', '-1'])).not.toBeBlocked();
+      expect(await call(['log', '--oneline', '-1'])).toSucceed();
     });
   });
 

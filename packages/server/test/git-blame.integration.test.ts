@@ -20,6 +20,6 @@ describe.concurrent('git blame option allowlist', () => {
   });
 
   integration('runs an allowed option with its value', async ({ call, expect }) => {
-    expect(await call(['blame', '-L', '1,2', 'README.md'])).not.toBeBlocked();
+    expect(await call(['blame', '-L', '1,2', 'README.md'])).toSucceed();
   });
 });

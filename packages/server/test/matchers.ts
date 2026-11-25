@@ -57,26 +57,37 @@ declare module 'vitest' {
     toBeRejected: () => R;
     // Passes when a plan runs `cmd`, with exactly `args` when they are given.
     toRun: (cmd: string, args?: readonly string[]) => R;
+    // Passes when the call ran its command and the command succeeded.
+    toSucceed: () => R;
   }
 }
+
+type ToolResult = z.infer<typeof CallToolResultSchema>;
+
+const parseResult = (received: unknown): ToolResult => {
+  const parsed = CallToolResultSchema.safeParse(received);
+  if (!parsed.success)
+    throw new TypeError(`expected a tool result, got: ${JSON.stringify(received)}`);
+  return parsed.data;
+};
+
+// The request a result answered and what it printed, for a failure message.
+const describeResult = (received: unknown, { content }: ToolResult): string => {
+  const output = content.map(item => (item.type === 'text' ? item.text : `[${item.type}]`));
+  return `${describeRequest(received)}\nreceived: ${output.join('\n')}`;
+};
 
 // What a failure message inserts before its verb when the assertion was negated.
 const negation = (isNot: boolean): string => (isNot ? 'not ' : '');
 
 expect.extend({
   toBeBlocked(this: MatcherState, received: unknown) {
-    const { isNot, utils } = this;
-    const parsed = CallToolResultSchema.safeParse(received);
-    if (!parsed.success)
-      throw new TypeError(`expected a tool result, got: ${utils.stringify(received)}`);
-    const { content, isError } = parsed.data;
-    const output = content.map(item => (item.type === 'text' ? item.text : `[${item.type}]`));
+    const { isNot } = this;
+    const result = parseResult(received);
     return {
-      message: () => [
-        `expected the call ${negation(isNot)}to be blocked, ${describeRequest(received)}`,
-        `received: ${output.join('\n')}`,
-      ].join('\n'),
-      pass: isError === true,
+      message: () =>
+        `expected the call ${negation(isNot)}to be blocked, ${describeResult(received, result)}`,
+      pass: result.isError === true,
     };
   },
   async toBeIntact(received: unknown) {
@@ -106,6 +117,15 @@ expect.extend({
         `expected the plan ${negation(isNot)}to run ${expected}, ${describePlan(plan)}`,
       pass: plan.kind === 'run' && plan.cmd === cmd &&
         (args === undefined || haveSameItems(plan.args, args)),
+    };
+  },
+  toSucceed(this: MatcherState, received: unknown) {
+    const { isNot } = this;
+    const result = parseResult(received);
+    return {
+      message: () =>
+        `expected the call ${negation(isNot)}to succeed, ${describeResult(received, result)}`,
+      pass: result.isError !== true,
     };
   },
 });

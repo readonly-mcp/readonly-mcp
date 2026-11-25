@@ -18,31 +18,31 @@ describe.concurrent('jq file argument blocking', () => {
 
   describe('allowed (no file args)', () => {
     integration('allows -n empty', async ({ call, expect }) => {
-      expect(await call(['-n', 'empty'])).not.toBeBlocked();
+      expect(await call(['-n', 'empty'])).toSucceed();
     });
 
     integration('allows --arg with filter only', async ({ call, expect }) => {
-      expect(await call(['--arg', 'k', faker.lorem.word(), '-n', '.foo'])).not.toBeBlocked();
+      expect(await call(['--arg', 'k', faker.lorem.word(), '-n', '.foo'])).toSucceed();
     });
 
     integration('allows --argjson with filter only', async ({ call, expect }) => {
       const value = String(faker.number.int());
 
-      expect(await call(['--argjson', 'k', value, '-n', '$k'])).not.toBeBlocked();
+      expect(await call(['--argjson', 'k', value, '-n', '$k'])).toSucceed();
     });
 
     integration('allows -r -n with filter only', async ({ call, expect }) => {
-      expect(await call(['-r', '-n', '.foo'])).not.toBeBlocked();
+      expect(await call(['-r', '-n', '.foo'])).toSucceed();
     });
   });
 
   describe('--args and --jsonargs handling', () => {
     integration('allows --args flag before filter', async ({ call, expect }) => {
-      expect(await call(['--args', '-n', '$ARGS.positional'])).not.toBeBlocked();
+      expect(await call(['--args', '-n', '$ARGS.positional'])).toSucceed();
     });
 
     integration('allows --jsonargs flag before filter', async ({ call, expect }) => {
-      expect(await call(['--jsonargs', '-n', '$ARGS.positional'])).not.toBeBlocked();
+      expect(await call(['--jsonargs', '-n', '$ARGS.positional'])).toSucceed();
     });
 
     integration(
@@ -94,7 +94,7 @@ describe.concurrent('jq file argument blocking', () => {
 
     // Without --, jq would reject -length as an unknown option.
     integration('allows a dash-led filter after --', async ({ call, expect }) => {
-      expect(await call(['-n', '--', '-length'])).not.toBeBlocked();
+      expect(await call(['-n', '--', '-length'])).toSucceed();
     });
   });
 
@@ -126,7 +126,7 @@ describe.concurrent('jq file argument blocking', () => {
       ['-nrc', 'empty'], ['--tab', '-n', '.'], ['--indent', '2', '-n', '.'],
       ['--seq', '-n', '.'], ['--null-input', '--compact-output', '.'],
     ])('allows %s', async (args, { call, expect }) => {
-      expect(await call(args)).not.toBeBlocked();
+      expect(await call(args)).toSucceed();
     });
   });
 
@@ -156,7 +156,7 @@ describe.concurrent('jq file argument blocking', () => {
 
     integration.for(['.env', '.a.env', '.ENV', '.environment'])(
       'allows the field access %s', async (filter, { call, expect }) => {
-        expect(await call(['-n', filter])).not.toBeBlocked();
+        expect(await call(['-n', filter])).toSucceed();
       },
     );
   });
@@ -179,7 +179,7 @@ describe.concurrent('jq file argument blocking', () => {
     });
 
     integration('allows -rn (no file chars)', async ({ call, expect }) => {
-      expect(await call(['-rn', 'empty'])).not.toBeBlocked();
+      expect(await call(['-rn', 'empty'])).toSucceed();
     });
   });
 });
