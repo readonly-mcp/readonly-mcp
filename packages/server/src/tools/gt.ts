@@ -1,8 +1,10 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ArgsSchema, rejectJqFilter, rejectSubcommand, rejectUnlistedFlags,
+  ArgsSchema, isAllowedApiEndpoint, rejectApiEndpoint, rejectJqFilter, rejectSubcommand,
+  rejectUnlistedFlags,
 } from '#src/lib/allowlist.js';
 import { runPlan } from '#src/lib/exec.js';
+import { giteaQueryKeys } from '#src/lib/gitea.js';
 import { type Plan, run } from '#src/lib/plan.js';
 
 const standaloneFlags = new Set(['--help', '--version', '-h']);
@@ -121,10 +123,71 @@ const planCommand = (args: readonly string[], command: string): Plan =>
   rejectJqFilter(args, 'gt') ??
   run('gt', args);
 
+/*
+ * --method / -X overrides the GET injected in planAllowedApi; --raw-field /
+ * -f, --field / -F and --input send a request body, which switches the method
+ * to POST, and -F @FILE and --input also read a file or stdin; --header / -H
+ * injects a header; --output-file writes the response to a new file;
+ * --verbose prints the request headers, a token login's Authorization
+ * unconfirmed as redacted; --dry-run prints the request instead of sending it.
+ */
+const apiFlags = new Set([
+  ...sharedFlags, '--include', '-i', '--jq=', '-q=', '--max-pages=', '--paginate', '--silent',
+  '--slurp', ...repoFlags,
+]);
+
+// gt fills {owner}, {repo} and {branch} from the checkout; `*` matches them as literal segments.
+const apiPaths = [
+  /*
+   * Forgejo answers gt run view's jobs request with a bare array that gt
+   * cannot parse, so its runs are read here. runs maps the web UI's run
+   * number (index_in_repo) to the API id.
+   */
+  'repos/*/*/actions/jobs/*/logs',
+  'repos/*/*/actions/runs',
+  'repos/*/*/actions/runs/*/jobs',
+  'repos/*/*/commits/*/status',
+  'repos/*/*/commits/*/statuses',
+  /*
+   * Bare = directory listing, ** = file or nested path. Files come back as
+   * base64 in JSON; raw/** serves them as plain text.
+   */
+  'repos/*/*/contents',
+  'repos/*/*/contents/**',
+  'repos/*/*/pulls/*/reviews',
+  'repos/*/*/pulls/*/reviews/*/comments',
+  'repos/*/*/raw/**',
+  // Authenticated viewer identity. Single segment, so user/repos stays blocked.
+  'user',
+];
+
+/*
+ * Inject --method GET immediately after the endpoint, before any
+ * user-supplied flags, so a `--` in user args cannot turn it positional.
+ */
+const planAllowedApi = (
+  args: readonly string[], endpoint: string, rest: readonly string[],
+): Plan =>
+  rejectUnlistedFlags(rest, apiFlags) ??
+  rejectJqFilter(args, 'gt') ??
+  run('gt', ['api', endpoint, '--method', 'GET', ...rest]);
+
+const isAllowedEndpoint = (endpoint: string): boolean =>
+  isAllowedApiEndpoint(endpoint, apiPaths, giteaQueryKeys);
+
+// The endpoint must come first, so a flag cannot stand in its place.
+const planApi = (args: readonly string[]): Plan => {
+  const [, endpoint, ...rest] = args;
+  return endpoint && !endpoint.startsWith('-') && isAllowedEndpoint(endpoint)
+    ? planAllowedApi(args, endpoint, rest)
+    : rejectApiEndpoint(endpoint, apiPaths);
+};
+
 export const plan = (args: readonly string[]): Plan => {
   const [only, ...rest] = args;
   const isStandalone = only !== undefined && rest.length === 0 && standaloneFlags.has(only);
   if (isStandalone) return run('gt', args);
+  if (only === 'api') return planApi(args);
   /*
    * gt reads global flags before the command too, but the command must come
    * first: flags ahead of it would hide it from the allowlist.
@@ -143,8 +206,11 @@ export const register = (server: McpServer): RegisteredTool =>
         'status, branch list, commit compare/diff/list/pr/status/view, issue list/view, label ' +
         'list, milestone list, pr checks/diff/list/status/timeline/view, pr review ' +
         'comments/list/view, release list/view, repo list/view, run jobs/list/logs/view, ' +
-        'schema, search issue/pr/repo, version, workflow list/view). The command comes ' +
-        'before any flags. Flags are allowlisted per command from its --help.',
+        'schema, search issue/pr/repo, version, workflow list/view, api GET: actions ' +
+        'runs+jobs+job logs, pulls/reviews, commits/status+statuses, contents, raw, user). ' +
+        'The command, and the api endpoint, come before any flags. Flags are allowlisted ' +
+        'per command from its --help. On Forgejo, where gt run view fails, read runs through ' +
+        'api actions/runs.',
       inputSchema: ArgsSchema,
     },
     async ({ args }) => runPlan(plan(args)),

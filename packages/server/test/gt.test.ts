@@ -111,7 +111,6 @@ describe.concurrent('gt tool', () => {
       ['auth', 'login'], ['auth', 'logout'], ['auth', 'refresh'],
       ['auth', 'setup-git'], ['auth', 'switch'],
       ['alias', 'set', ':word', 'pr merge'],
-      ['api', 'user'],
       ['browse'],
       ['config', 'set', ':word', ':word'],
       ['extension', 'install', ':owner/:repo'],

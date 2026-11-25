@@ -104,6 +104,12 @@ Additional restrictions:
 
 A URL in `--repo` or as a positional selects its instance, which gt refuses unless it holds an account for it, and gt sends `GITEA_TOKEN` only to the instance `GITEA_CLI_HOST` or `GITEA_INSTANCE_URL` names. Neither reaches a host the caller picks, so both are allowed.
 
+`api` is restricted to GET requests against `repos/*/*/actions/runs`, `repos/*/*/actions/runs/*/jobs`, `repos/*/*/actions/jobs/*/logs`, `repos/*/*/pulls/*/reviews`, `repos/*/*/pulls/*/reviews/*/comments`, `repos/*/*/commits/*/status`, `repos/*/*/commits/*/statuses`, `repos/*/*/contents[/**]`, `repos/*/*/raw/**` and `user`, with the endpoint first. `{owner}` and `{repo}` placeholders are accepted. `--method GET` is injected after the endpoint. Its flags are allowlisted too, leaving out `-X`, the request-body flags `-f`, `-F` and `--input` (which switch the method to POST and read a file or stdin), `-H`, `--output-file` (writes the response to a new file), `--verbose` (prints request headers, not yet shown to redact a token login's `Authorization`) and `--dry-run` (prints the request instead of sending it). `.`/`..` segments, encoded separators, `#` and unlisted query keys such as `sudo` are rejected as for `tea api`.
+
+On Forgejo, `gt run view` fails, since Forgejo returns a run's jobs as a bare array that gt cannot parse. Read the run through `api` instead: `actions/runs` maps the web UI's run number (`index_in_repo`) to the API id, `actions/runs/*/jobs` lists its jobs, and `actions/jobs/*/logs` returns a job's log as plain text.
+
+**Token exposure the tool cannot block:** Forgejo echoes a rejected token in its error body, as described for `tea`, so a `gt` call made with a revoked token prints it.
+
 **Schema:** `{ args: string[] }`
 
 ### `tea`

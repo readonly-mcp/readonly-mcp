@@ -67,6 +67,13 @@
  *   `GITEA_INSTANCE_URL` names. So neither needs blocking, unlike gh's.
  * - gt --jq filters: held to the jq names check, as for gh, since gt's
  *   embedded jq reads the server's environment through `env` and `$ENV`.
+ * - gt api path allowlisting: the tea api checks, with `--method GET`
+ *   injected after the endpoint. Left out of its flags: `--method`/`-X`, the body
+ *   flags `-f`/`--raw-field`, `-F`/`--field` and `--input` (which switch the
+ *   method to POST, and `-F`/`--input` read a file or stdin),
+ *   `-H`/`--header`, `--output-file` (writes the response to a file) and
+ *   `--verbose` (prints request headers; a token login's `Authorization` is
+ *   not yet shown redacted) and `--dry-run` (prints the request unsent).
  * - tea alias resolution: every tea noun and verb has aliases (`pr`, `ms`,
  *   `ls`, `git-credential`), so args are resolved to canonical names before
  *   matching and executed under those names. Unknown aliases stay unresolved
@@ -150,6 +157,7 @@
  * - `tea api`: Forgejo echoes a rejected token in its error body (`access
  *   token does not exist [sha: …]`), so a call made with a revoked token
  *   prints the credential. No flag causes it, so no flag check can stop it.
+ *   The same holds for any gt call that reaches a Forgejo instance.
  * - `jq --jsonargs` / `--args`: not handled by the file-path validator, which
  *   may false-positive on legitimate uses. The error direction is safe (blocks
  *   rather than allows). These flags are uncommon in MCP agent usage.
